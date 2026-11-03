@@ -20,5 +20,18 @@ jobs:
       - run: python collector/tests/test_calibrate.py
       - run: python tools/tests/test_check_dump.py
       - run: node meters-app/tests/test_meters_app.js
+      - name: Pull the BusyBox image the AA-touch suite runs in
+        run: docker version --format '{{.Server.Version}}' && docker pull busybox:1.25
       # The AA-touch suite includes the Meters scenarios, which need real symlinks and BusyBox.
-      - run: MO_DOCKER_IMAGE=busybox:1.25 python aa-touch-stick/tests/test_aa_touch_stick.py
+      # On failure its last lines are also shown as an annotation, which is readable without signing in.
+      - name: AA-touch suite under BusyBox
+        run: |
+          set +e
+          MO_DOCKER_IMAGE=busybox:1.25 python aa-touch-stick/tests/test_aa_touch_stick.py > aa-touch.log 2>&1
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            tail=$(grep -vE '^(PASS|Stick )' aa-touch.log | tail -40 | sed ':a;N;$!ba;s/%/%25/g;s//%0D/g;s/
+/%0A/g')
+            echo "::error title=AA-touch suite failed (exit $rc)::$tail"
+          fi
+          exit $rc
