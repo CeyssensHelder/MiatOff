@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>MiatOff Meters — overview</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- PC preview only: every meter page side by side, each with its own simulator. Not for the car. -->
+<style>
+body { margin: 0; padding: 20px 16px 40px; background: #111114; color: #ececf0; font: 15px Arial, sans-serif; }
+h1 { margin: 0 0 4px; font-size: 22px; }
+p.sub { margin: 0 0 20px; color: #85858e; }
+h2 { margin: 28px 0 10px; font-size: 15px; letter-spacing: 2px; color: #e0262f; }
+.grid { display: flex; flex-wrap: wrap; gap: 18px; }
+figure { margin: 0; }
+.frame { width: 400px; height: 240px; overflow: hidden; border-radius: 8px; border: 1px solid #2a2a31; background: #000; }
+.frame iframe { width: 800px; height: 480px; border: 0; transform: scale(0.5); transform-origin: 0 0; pointer-events: none; }
+figcaption { margin-top: 6px; color: #85858e; font-size: 13px; }
+figcaption b { color: #ececf0; }
+</style>
+</head>
+<body>
+<h1>MiatOff Meters</h1>
+<p class="sub">All pages at half size, each running the built-in simulator. Open a page on its own with the link under it.</p>
+
+<h2>STREET</h2>
+<div class="grid" id="street"></div>
+
+<h2>TRACK</h2>
+<div class="grid" id="track"></div>
+
+<h2>CYBER</h2>
+<div class="grid" id="cyber"></div>
+
+<h2>2077</h2>
+<div class="grid" id="y2077"></div>
+
+<script>
+var PAGES = {
+    street: [['DRIVE', 'tachometer, speed, gear (shift light), coolant, fuel'],
+             ['G-METER', 'G-meter with trail, peak G, throttle, braking'],
+             ['POWER', 'estimated PS / Nm and a dyno curve of the last full-throttle pull'],
+             ['INFO', 'temperatures, fuel, trip, average fuel use']],
+    track:  [['TRACK', 'full-width shift bar, giant gear, speed, rpm'],
+             ['LAP', 'tap-to-lap timer, delta to best, last / best / top speed'],
+             ['G-METER', 'same G-meter page'],
+             ['POWER', 'same POWER page'],
+             ['SESSION', 'maxima since reset, laps, session time']],
+    cyber:  [['CYBER DRIVE', 'neon tach, speed, gear, coolant, fuel'],
+             ['CYBER G', 'octagon G-meter, peak G, throttle, braking'],
+             ['CYBER TRACK', 'equaliser shift bar, giant gear, lap strip']],
+    y2077:  [['2077 DRIVE', 'rev ramp, speed, gear block, coolant, fuel'],
+             ['2077 G-FORCE', 'boxed G-meter, peak G, 3 s pedal chart'],
+             ['2077 TRACK', 'shift bars, gear block, lap strip']]
+};
+Object.keys(PAGES).forEach(function (set) {
+    PAGES[set].forEach(function (p, i) {
+        var url = 'index.html?set=' + set + '&page=' + i;
+        var f = document.createElement('figure');
+        f.innerHTML = '<div class="frame"><iframe src="' + url + '" loading="lazy"></iframe></div>' +
+            '<figcaption><b>' + p[0] + '</b> · ' + p[1] + ' · <a href="' + url + '" style="color:#3b8fe8">open</a></figcaption>';
+        document.getElementById(set).appendChild(f);
+    });
+});
+// Narrow screens: shrink the frames to fit.
+function fit() {
+    var w = Math.min(400, window.innerWidth - 32), k = w / 800;
+    Array.prototype.forEach.call(document.querySelectorAll('.frame'), function (el) {
+        el.style.width = w + 'px'; el.style.height = (w * 0.6) + 'px';
+        el.firstChild.style.transform = 'scale(' + k + ')';
+    });
+}
+window.addEventListener('resize', fit);
+fit();
+</script>
+</body>
+</html>

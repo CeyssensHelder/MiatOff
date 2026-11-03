@@ -1,0 +1,13 @@
+# Private firmware dumps from the owner's own head unit (copyrighted Mazda files + personal data)
+dumps/
+miatoff-dumps/
+
+# Local tooling
+.claude/
+
+# Built USB sticks and Python cruft
+*.up
+__pycache__/
+*.pyc
+build/
+dist/

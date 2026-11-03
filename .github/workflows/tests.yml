@@ -1,0 +1,22 @@
+name: tests
+on: [push, pull_request]
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    env:
+      MO_SYNTHETIC: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: python dump-stick/tests/test_dump_stick.py
+      - run: python collector/tests/test_collector.py
+      - run: python collector/tests/test_calibrate.py
+      - run: python tools/tests/test_check_dump.py
+      - run: node meters-app/tests/test_meters_app.js
+      # The AA-touch suite includes the Meters scenarios, which need real symlinks and BusyBox.
+      - run: MO_DOCKER_IMAGE=busybox:1.25 python aa-touch-stick/tests/test_aa_touch_stick.py

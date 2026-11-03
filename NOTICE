@@ -1,0 +1,26 @@
+MiatOff
+=======
+
+MiatOff's own code (stick scripts, builders, collector, Meters, GUI, tests) is
+GPL-3.0-or-later; see LICENSE.
+
+Third-party components
+----------------------
+vendor/touchtune/TouchTune-1.2.1.zip
+  TouchTune 1.2.1, GPL-3.0-or-later (copyright holder and source: see NOTICE and SOURCE.txt in the zip)
+  Shipped unmodified; the USB launcher mechanism and the root remount, watchdog
+  and SafeReboot handling follow it.
+
+vendor/oem-aa-mod/oem-aa-mod-0.10.0.zip
+  oem-aa-mod 0.10.0 by Vitaliy Kurokhtin, AGPL-3.0,
+  https://github.com/VitaliyKurokhtin/oem-aa-mod
+  Only libpatch-blmjciaapa.so is used, unmodified.
+
+meters/fonts/
+  Chakra Petch and Share Tech Mono (google/fonts), SIL Open Font License 1.1,
+  with their license texts alongside.
+
+Idea credits: MZD-AIO additionalApps.js (GPL-3.0) for the userscript approach.
+
+No Mazda or JCI files are included. The scripts only contain hashes of the stock
+files they expect and the lines they insert. MiatOff is not affiliated with or endorsed by Mazda.

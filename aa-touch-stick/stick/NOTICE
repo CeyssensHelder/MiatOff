@@ -1,0 +1,38 @@
+MiatOff AA-touch stick
+======================
+
+aa-touch.sh, AATOUCH.ID and oem-aa-mod/libpatch.conf
+  Part of MiatOff. GPL-3.0-or-later (see LICENSE).
+  The USB launcher (the *.up file name and its ZIP), the root remount and
+  watchdog handling and the SafeReboot request follow TouchTune 1.2.1
+  (GPL-3.0-or-later)
+
+touchtune/
+  The complete, unmodified TouchTune 1.2.1 release (GPL-3.0-or-later),
+  with its own LICENSE, NOTICE and SOURCE.txt. aa-touch.sh only starts its
+  install-patches.sh when step 1 is chosen in the dialog.
+
+miatoff-app/
+  MiatOff Meters (the HMI app, the gauges page, the collector, the userscript).
+  Part of MiatOff, GPL-3.0-or-later. The userscript's idea (adding an item to
+  Applications by borrowing a disabled app) comes from MZD-AIO's
+  additionalApps.js (GPL-3.0), https://github.com/Trevelopment/MZD-AIO
+  The fonts in miatoff-app/app/meters/fonts/ are unmodified files from
+  google/fonts under the SIL Open Font License 1.1, with their license texts:
+    ChakraPetch-Bold.ttf       (OFL-ChakraPetch.txt)
+    ShareTechMono-Regular.ttf  (OFL-ShareTechMono.txt)
+
+oem-aa-mod/libpatch-blmjciaapa.so
+  Unmodified binary from oem-aa-mod 0.10.0 by Vitaliy Kurokhtin.
+  License: GNU Affero General Public License v3.0 (AGPL-3.0).
+  Release:  https://github.com/VitaliyKurokhtin/oem-aa-mod/releases (0.10.0)
+  Source:   https://github.com/VitaliyKurokhtin/oem-aa-mod (tag for 0.10.0)
+  sha256 of the release file oem-aa-mod-0.10.0.zip:
+    ba7a0c285269a87e8a199e38517de05da749a67df7ca016abb6d15e65112dc6a
+  sha256 of libpatch-blmjciaapa.so:
+    a6b87f72ae31429cebe14eea5c6d3a4a2749d4ea643a8c73303b3437533ad5b5
+  The corresponding source code is available from the repository above.
+  Full license text: https://www.gnu.org/licenses/agpl-3.0.txt
+
+No Mazda/JCI files are distributed on this stick. The script only contains the
+sha256 values of the stock files and the exact lines it inserts.

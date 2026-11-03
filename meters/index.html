@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Meters</title>
+<meta name="viewport" content="width=800, height=480, user-scalable=no">
+<style>
+/* Fonts for the cyberpunk sets (OFL); without the files the pages fall back to the system fonts. */
+@font-face { font-family: 'MO Chakra'; src: url(fonts/ChakraPetch-Bold.ttf); font-weight: bold; }
+@font-face { font-family: 'MO Mono'; src: url(fonts/ShareTechMono-Regular.ttf); font-weight: bold; }
+#fontload { position: absolute; left: -999px; top: 0; font: bold 10px 'MO Chakra'; }
+#fontload span { font-family: 'MO Mono'; }
+html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
+#stage { position: relative; width: 800px; height: 480px; margin: 0 auto; background: #000; overflow: hidden;
+         -webkit-user-select: none; -o-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+#stage canvas { position: absolute; left: 0; top: 0; }
+#dots { position: absolute; left: 0; right: 0; bottom: 6px; height: 12px; text-align: center; }
+#dots span { display: inline-block; vertical-align: top; width: 12px; height: 12px; margin: 0 8px; border-radius: 6px; background: #34343b; }
+#dots span.on { background: #e0262f; }
+#src { position: absolute; right: 8px; bottom: 4px; font: bold 10px Arial, sans-serif; color: #4c4c54; letter-spacing: 1px; }
+.nav { position: absolute; bottom: 0; width: 60px; height: 44px; font: 40px Arial, sans-serif; line-height: 40px;
+       color: #3a3a42; text-align: center; }
+#prev { left: 0; }
+#next { right: 40px; }
+#nodata { display: none; position: absolute; left: 250px; top: 205px; width: 300px; height: 70px; border-radius: 10px;
+          background: #000; border: 2px solid #f2a422; color: #f2a422; font: bold 22px/70px Arial, sans-serif;
+          text-align: center; letter-spacing: 2px; }
+/* Menus (style list, page previews) use the whole screen. */
+.mode-menu .nav, .mode-menu #dots, .mode-menu #src { display: none; }
+/* Cyberpunk sets: their bottom lines run where the arrows sit (the corners still work), themed dots. */
+.set-cyber .nav, .set-y2077 .nav, .set-cyber #src, .set-y2077 #src { display: none; }
+.set-cyber #dots span { background: #2e2052; }
+.set-cyber #dots span.on { background: #ff2bd6; }
+.set-y2077 #dots span { background: #3a3a36; }
+.set-y2077 #dots span.on { background: #fcee0a; }
+</style>
+</head>
+<body>
+<div id="stage">
+    <canvas id="bg" width="800" height="480"></canvas>
+    <canvas id="fg" width="800" height="480"></canvas>
+    <div id="prev" class="nav">&#8249;</div>
+    <div id="next" class="nav">&#8250;</div>
+    <div id="dots"></div>
+    <div id="src"></div>
+    <div id="nodata">NO DATA</div>
+    <div id="fontload">x<span>x</span></div>
+</div>
+<script src="js/gauges.js"></script>
+<script src="js/data.js"></script>
+<script src="js/power.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/cyber.js"></script>
+<script src="js/y2077.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" viewBox="0 0 800 480">
+<defs>
+  <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="glowBig" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="1" fill="#ffffff" opacity="0.04"/></pattern>
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#3a3510" stroke-width="1" opacity="0.45"/></pattern>
+  <pattern id="haz" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="14" fill="#fcee0a"/></pattern>
+  <pattern id="hazk" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="12" fill="#0b0b0c"/></pattern>
+  <radialGradient id="vign" cx="50%" cy="50%" r="75%"><stop offset="55%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.75"/></radialGradient>
+</defs>
+<rect width="800" height="480" fill="#0b0b0c"/>
+<rect width="800" height="480" fill="url(#grid)"/>
+<polygon points="0.0,0.0 300.0,0.0 280.0,40.0 0.0,40.0" fill="#fcee0a" />
+<text x="16" y="34" font-family="'Agency FB', Bahnschrift, sans-serif" font-size="34" font-weight="700" fill="#0b0b0c" text-anchor="start" letter-spacing="2" >G-FORCE</text>
+<line x1="300" y1="1" x2="800" y2="1" stroke="#fcee0a" stroke-width="2"/>
+<polygon points="82.0,70.0 390.0,70.0 424.0,104.0 424.0,412.0 390.0,446.0 82.0,446.0 48.0,412.0 48.0,104.0" fill="#121210" stroke="#fcee0a" stroke-width="3"/>
+<polygon points="205.2,220.4 266.8,220.4 273.6,227.2 273.6,288.8 266.8,295.6 205.2,295.6 198.4,288.8 198.4,227.2" fill="none" stroke="#5a5410" stroke-opacity="1" stroke-width="1.5" stroke-dasharray="4 5"/>
+<polygon points="174.4,182.8 297.6,182.8 311.2,196.4 311.2,319.6 297.6,333.2 174.4,333.2 160.8,319.6 160.8,196.4" fill="none" stroke="#fcee0a" stroke-opacity="0.7" stroke-width="1.5" />
+<text x="281.2" y="198.8" font-family="Consolas, 'Courier New', monospace" font-size="14" font-weight="700" fill="#fcee0a" text-anchor="start" letter-spacing="0" >0.5</text>
+<polygon points="143.6,145.2 328.4,145.2 348.8,165.6 348.8,350.4 328.4,370.8 143.6,370.8 123.2,350.4 123.2,165.6" fill="none" stroke="#5a5410" stroke-opacity="1" stroke-width="1.5" stroke-dasharray="4 5"/>
+<polygon points="112.8,107.6 359.2,107.6 386.4,134.8 386.4,381.2 359.2,408.4 112.8,408.4 85.6,381.2 85.6,134.8" fill="none" stroke="#fcee0a" stroke-opacity="0.7" stroke-width="1.5" />
+<text x="356.4" y="123.6" font-family="Consolas, 'Courier New', monospace" font-size="14" font-weight="700" fill="#fcee0a" text-anchor="start" letter-spacing="0" >1.0</text>
+<g stroke="#fcee0a" stroke-opacity="0.35"><line x1="48" y1="258" x2="424" y2="258"/><line x1="236" y1="70" x2="236" y2="446"/></g>
+<text x="236" y="100" font-family="'Agency FB', Bahnschrift, sans-serif" font-size="22" font-weight="700" fill="#fcee0a" text-anchor="middle" letter-spacing="3" opacity="0.8">BRAKE</text>
+<text x="236" y="432" font-family="'Agency FB', Bahnschrift, sans-serif" font-size="22" font-weight="700" fill="#fcee0a" text-anchor="middle" letter-spacing="3" opacity="0.8">ACCEL</text>
+<text x="62" y="248" font-family="'Agency FB', Bahnschrift, sans-serif" font-size="24" font-weight="700" fill="#fcee0a" text-anchor="start" letter-spacing="0" opacity="0.8">R</text>
+<text x="410" y="248" font-family="'Agency FB', Bahnschrift, sans-serif" font-size="24" font-weight="700" fill="#fcee0a" text-anchor="end" letter-spacing="0" opacity="0.8">L</text>
+<line x1="236" y1="258" x2="244" y2="238" stroke="#fcee0a" stroke-width="2.6" stroke-opacity="0.29"/>
+<line x1="244" y1="238" x2="262" y2="212" stroke="#fcee0a" stroke-width="3.1" stroke-opacity="0.43"/>
+<line x1="262" y1="212" x2="292" y2="196" stroke="#fcee0a" stroke-width="3.7" stroke-opacity="0.57"/>
+<line x1="292" y1="196" x2="326" y2="192" stroke="#fcee0a" stroke-width="4.3" stroke-opacity="0.72"/>
+<line x1="326" y1="192" x2="350" y2="200" stroke="#fcee0a" stroke-width="4.9" stroke-opacity="0.86"/>
+<line x1="350" y1="200" x2="360" y2="208" stroke="#fcee0a" stroke-width="5.4" stroke-opacity="1.00"/>
+<g fill="none" stroke="#fcee0a" stroke-width="2.5"><path d="M340,198 V188 H350"/><path d="M380,198 V188 H370"/><path d="M380,218 V228 H370"/><path d="M340,218 V228 H350"/></g><polygon points="360.0,196.0 372.0,208.0 360.0,220.0 348.0,208.0" fill="#ff003c" />
+<polygon points="386.0,162.0 468.0,162.0 468.0,178.0 458.0,188.0 386.0,188.0" fill="#fcee0a" /><text x="426" y="184" font-family="'Agency FB', Bahnschrift, sans-serif" font-size="26" font-weight="700" fill="#0b0b0c" text-anchor="middle" letter-spacing="0" >0.89G</text>
+
+<polygon points="470.0,64.0 478.0,64.0 478.0,108.0 470.0,100.0" fill="#fcee0a" /><text x="490" y="82" font-family="Consolas, 'Courier New', monospace" font-size="13" font-weight="700" fill="#8c8550" text-anchor="start" letter-spacing="2" >L-TURN</text>
+<text x="490" y="102" font-family="Consolas, 'Courier New', monospace" font-size="11" font-weight="400" fill="#8c8550" text-anchor="start" letter-spacing="0" >PEAK</text>
+<text x="784" y="108" font-family="'Agency FB', Bahnschrift, sans-serif" font-size="58" font-weight="700" fill="#fcee0a" text-anchor="end" letter-spacing="0" >0.94</text>
+
+<polygon points="470.0,120.0 478.0,120.0 478.0,164.0 470.0,156.0" fill="#fcee0a" /><text x="490" y="138" font-family="Consolas, 'Courier New', monospace" font-size="13" font-weight="700" fill="#8c8550" text-anchor="start" letter-spacing="2" >R-TURN</text>
+<text x="490" y="158" font-family="Consolas, 'Courier New', monospace" font-size="11" font-weight="400" fill="#8c8550" text-anchor="start" letter-spacing="0" >PEAK</text>
+<text x="784" y="164" font-family="'Agency FB', Bahnschrift, sans-serif" font-size="58" font-weight="700" fill="#fcee0a" text-anchor="end" letter-spacing="0" >0.88</text>
+
+<polygon points="470.0,176.0 478.0,176.0 478.0,220.0 470.0,212.0" fill="#02d7f2" /><text x="490" y="194" font-family="Consolas, 'Courier New', monospace" font-size="13" font-weight="700" fill="#8c8550" text-anchor="start" letter-spacing="2" >ACCEL</text>
+<text x="490" y="214" font-family="Consolas, 'Courier New', monospace" font-size="11" font-weight="400" fill="#8c8550" text-anchor="start" letter-spacing="0" >PEAK</text>
+<text x="784" y="220" font-family="'Agency FB', Bahnschrift, sans-serif" font-size="58" font-weight="700" fill="#02d7f2" text-anchor="end" letter-spacing="0" >0.41</text>
+
+<polygon points="470.0,232.0 478.0,232.0 478.0,276.0 470.0,268.0" fill="#ff003c" /><text x="490" y="250" font-family="Consolas, 'Courier New', monospace" font-size="13" font-weight="700" fill="#8c8550" text-anchor="start" letter-spacing="2" >BRAKE</text>
+<text x="490" y="270" font-family="Consolas, 'Courier New', monospace" font-size="11" font-weight="400" fill="#8c8550" text-anchor="start" letter-spacing="0" >PEAK</text>
+<text x="784" y="276" font-family="'Agency FB', Bahnschrift, sans-serif" font-size="58" font-weight="700" fill="#ff003c" text-anchor="end" letter-spacing="0" >1.02</text>
+
+<text x="470" y="312" font-family="Consolas, 'Courier New', monospace" font-size="13" font-weight="700" fill="#8c8550" text-anchor="start" letter-spacing="1" >THROTTLE / BRAKE  &#183;  LAST 3S</text>
+<rect x="470" y="322" width="17" height="118" fill="#3a3a36"/><rect x="470" y="322.0" width="17" height="118.0" fill="#fcee0a"/><rect x="492" y="322" width="17" height="118" fill="#3a3a36"/><rect x="492" y="322.0" width="17" height="118.0" fill="#fcee0a"/><rect x="514" y="322" width="17" height="118" fill="#3a3a36"/><rect x="514" y="322.0" width="17" height="118.0" fill="#fcee0a"/><rect x="536" y="322" width="17" height="118" fill="#3a3a36"/><rect x="536" y="322.0" width="17" height="118.0" fill="#fcee0a"/><rect x="558" y="322" width="17" height="118" fill="#3a3a36"/><rect x="558" y="327.9" width="17" height="112.1" fill="#fcee0a"/><rect x="580" y="322" width="17" height="118" fill="#3a3a36"/><rect x="580" y="369.2" width="17" height="70.8" fill="#fcee0a"/><rect x="602" y="322" width="17" height="118" fill="#3a3a36"/><rect x="602" y="440.0" width="17" height="0.0" fill="#fcee0a"/><rect x="624" y="322" width="17" height="118" fill="#3a3a36"/><rect x="624" y="357.4" width="17" height="82.6" fill="#ff003c"/><rect x="646" y="322" width="17" height="118" fill="#3a3a36"/><rect x="646" y="333.8" width="17" height="106.2" fill="#ff003c"/><rect x="668" y="322" width="17" height="118" fill="#3a3a36"/><rect x="668" y="345.6" width="17" height="94.4" fill="#ff003c"/><rect x="690" y="322" width="17" height="118" fill="#3a3a36"/><rect x="690" y="392.8" width="17" height="47.2" fill="#ff003c"/><rect x="712" y="322" width="17" height="118" fill="#3a3a36"/><rect x="712" y="404.6" width="17" height="35.4" fill="#fcee0a"/><rect x="734" y="322" width="17" height="118" fill="#3a3a36"/><rect x="734" y="351.5" width="17" height="88.5" fill="#fcee0a"/><rect x="756" y="322" width="17" height="118" fill="#3a3a36"/><rect x="756" y="331.4" width="17" height="108.6" fill="#fcee0a"/><text x="764.5" y="318" font-family="'Agency FB', Bahnschrift, sans-serif" font-size="18" font-weight="700" fill="#fcee0a" text-anchor="middle" letter-spacing="0" >92%</text>
+
+<rect width="800" height="480" fill="url(#scan)"/>
+<rect width="800" height="480" fill="url(#vign)"/>
+</svg>

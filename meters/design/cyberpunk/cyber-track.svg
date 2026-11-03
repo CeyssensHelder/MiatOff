@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" viewBox="0 0 800 480">
+<defs>
+  <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="glowBig" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="1" fill="#ffffff" opacity="0.04"/></pattern>
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#24154a" stroke-width="1" opacity="0.45"/></pattern>
+  <pattern id="haz" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="14" fill="#fcee0a"/></pattern>
+  <pattern id="hazk" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="12" fill="#0b0b0c"/></pattern>
+  <radialGradient id="vign" cx="50%" cy="50%" r="75%"><stop offset="55%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.75"/></radialGradient>
+</defs>
+<rect width="800" height="480" fill="#07060d"/>
+<rect width="800" height="480" fill="url(#grid)"/>
+<rect x="3" y="3" width="794" height="474" fill="none" stroke="#ff2bd6" stroke-width="6" filter="url(#glowBig)"/>
+<polygon points="694.2,29.8 712.2,29.8 706.2,120.0 688.2,120.0" fill="#140d26" stroke="#2e2052"/><polygon points="718.2,26.6 736.2,26.6 730.2,120.0 712.2,120.0" fill="#140d26" stroke="#2e2052"/><polygon points="742.1,23.3 760.1,23.3 754.1,120.0 736.1,120.0" fill="#140d26" stroke="#2e2052"/><polygon points="766.1,20.0 784.1,20.0 778.1,120.0 760.1,120.0" fill="#140d26" stroke="#2e2052"/>
+<g filter="url(#glow)"><polygon points="24.0,94.0 42.0,94.0 36.0,120.0 18.0,120.0" fill="#00f0ff"/><polygon points="47.9,93.4 65.9,93.4 59.9,120.0 41.9,120.0" fill="#00f0ff"/><polygon points="71.9,92.4 89.9,92.4 83.9,120.0 65.9,120.0" fill="#00f0ff"/><polygon points="95.8,91.2 113.8,91.2 107.8,120.0 89.8,120.0" fill="#00f0ff"/><polygon points="119.8,89.8 137.8,89.8 131.8,120.0 113.8,120.0" fill="#00f0ff"/><polygon points="143.7,88.2 161.7,88.2 155.7,120.0 137.7,120.0" fill="#00f0ff"/><polygon points="167.6,86.6 185.6,86.6 179.6,120.0 161.6,120.0" fill="#00f0ff"/><polygon points="191.6,84.8 209.6,84.8 203.6,120.0 185.6,120.0" fill="#00f0ff"/><polygon points="215.5,82.9 233.5,82.9 227.5,120.0 209.5,120.0" fill="#00f0ff"/><polygon points="239.4,80.9 257.4,80.9 251.4,120.0 233.4,120.0" fill="#00f0ff"/><polygon points="263.4,78.8 281.4,78.8 275.4,120.0 257.4,120.0" fill="#00f0ff"/><polygon points="287.3,76.7 305.3,76.7 299.3,120.0 281.3,120.0" fill="#00f0ff"/><polygon points="311.2,74.4 329.2,74.4 323.2,120.0 305.2,120.0" fill="#00f0ff"/><polygon points="335.2,72.1 353.2,72.1 347.2,120.0 329.2,120.0" fill="#00f0ff"/><polygon points="359.1,69.7 377.1,69.7 371.1,120.0 353.1,120.0" fill="#00f0ff"/><polygon points="383.1,67.2 401.1,67.2 395.1,120.0 377.1,120.0" fill="#00f0ff"/><polygon points="407.0,64.7 425.0,64.7 419.0,120.0 401.0,120.0" fill="#00f0ff"/><polygon points="430.9,62.1 448.9,62.1 442.9,120.0 424.9,120.0" fill="#00f0ff"/><polygon points="454.9,59.4 472.9,59.4 466.9,120.0 448.9,120.0" fill="#00f0ff"/><polygon points="478.8,56.7 496.8,56.7 490.8,120.0 472.8,120.0" fill="#00f0ff"/><polygon points="502.8,53.9 520.8,53.9 514.8,120.0 496.8,120.0" fill="#00f0ff"/><polygon points="526.7,51.1 544.7,51.1 538.7,120.0 520.7,120.0" fill="#00f0ff"/><polygon points="550.6,48.2 568.6,48.2 562.6,120.0 544.6,120.0" fill="#00f0ff"/><polygon points="574.6,45.3 592.6,45.3 586.6,120.0 568.6,120.0" fill="#00f0ff"/><polygon points="598.5,42.3 616.5,42.3 610.5,120.0 592.5,120.0" fill="#ff2bd6"/><polygon points="622.4,39.2 640.4,39.2 634.4,120.0 616.4,120.0" fill="#ff2bd6"/><polygon points="646.4,36.2 664.4,36.2 658.4,120.0 640.4,120.0" fill="#ff2bd6"/><polygon points="670.3,33.0 688.3,33.0 682.3,120.0 664.3,120.0" fill="#ff2bd6"/></g>
+<text x="18.0" y="140" font-family="Consolas, 'Courier New', monospace" font-size="14" font-weight="700" fill="#8b7bb5" text-anchor="middle" letter-spacing="0" >3</text>
+<text x="188.2" y="140" font-family="Consolas, 'Courier New', monospace" font-size="14" font-weight="700" fill="#8b7bb5" text-anchor="middle" letter-spacing="0" >4</text>
+<text x="358.4" y="140" font-family="Consolas, 'Courier New', monospace" font-size="14" font-weight="700" fill="#8b7bb5" text-anchor="middle" letter-spacing="0" >5</text>
+<text x="528.7" y="140" font-family="Consolas, 'Courier New', monospace" font-size="14" font-weight="700" fill="#8b7bb5" text-anchor="middle" letter-spacing="0" >6</text>
+<text x="698.9" y="140" font-family="Consolas, 'Courier New', monospace" font-size="14" font-weight="700" fill="#ff2bd6" text-anchor="middle" letter-spacing="0" >7</text>
+<text x="396" y="382" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="280" font-weight="700" fill="#ff2bd6" text-anchor="middle" letter-spacing="0" opacity="0.75">3</text>
+<text x="404" y="382" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="280" font-weight="700" fill="#00f0ff" text-anchor="middle" letter-spacing="0" opacity="0.75">3</text>
+<text x="400" y="382" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="280" font-weight="700" fill="#eafcff" text-anchor="middle" letter-spacing="0" filter="url(#glow)">3</text>
+<clipPath id="cl4"><rect x="304.0" y="297.3" width="192.0" height="16.1"/></clipPath>
+<g clip-path="url(#cl4)"><rect x="304.0" y="297.3" width="192.0" height="16.1" fill="#07060d"/><text x="414" y="382" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="280" font-weight="700" fill="#eafcff" text-anchor="middle" letter-spacing="0" >3</text></g>
+<clipPath id="cl5"><rect x="304.0" y="224.8" width="192.0" height="10.1"/></clipPath>
+<g clip-path="url(#cl5)"><rect x="304.0" y="224.8" width="192.0" height="10.1" fill="#07060d"/><text x="390" y="382" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="280" font-weight="700" fill="#eafcff" text-anchor="middle" letter-spacing="0" >3</text></g>
+<clipPath id="cl6"><rect x="304.0" y="347.7" width="192.0" height="6.0"/></clipPath>
+<g clip-path="url(#cl6)"><rect x="304.0" y="347.7" width="192.0" height="6.0" fill="#07060d"/><text x="406" y="382" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="280" font-weight="700" fill="#eafcff" text-anchor="middle" letter-spacing="0" >3</text></g>
+<text x="128" y="300" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="92" font-weight="700" fill="#ff2bd6" text-anchor="middle" letter-spacing="0" opacity="0.75">131</text>
+<text x="136" y="300" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="92" font-weight="700" fill="#00f0ff" text-anchor="middle" letter-spacing="0" opacity="0.75">131</text>
+<text x="132" y="300" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="92" font-weight="700" fill="#00f0ff" text-anchor="middle" letter-spacing="0" filter="url(#glow)">131</text>
+<clipPath id="cl7"><rect x="37.2" y="266.9" width="189.6" height="4.0"/></clipPath>
+<g clip-path="url(#cl7)"><rect x="37.2" y="266.9" width="189.6" height="4.0" fill="#07060d"/><text x="138" y="300" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="92" font-weight="700" fill="#00f0ff" text-anchor="middle" letter-spacing="0" >131</text></g>
+<text x="132" y="334" font-family="Consolas, 'Courier New', monospace" font-size="16" font-weight="700" fill="#00f0ff" text-anchor="middle" letter-spacing="6" opacity="0.8">KM/H</text>
+<text x="668" y="300" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="76" font-weight="700" fill="#ff2bd6" text-anchor="middle" letter-spacing="0" filter="url(#glow)">7050</text>
+<text x="668" y="334" font-family="Consolas, 'Courier New', monospace" font-size="16" font-weight="700" fill="#ff2bd6" text-anchor="middle" letter-spacing="6" opacity="0.8">RPM</text>
+<polygon points="34.0,398.0 784.0,398.0 784.0,444.0 766.0,462.0 16.0,462.0 16.0,416.0" fill="#0d0a1c" stroke="#00f0ff" stroke-width="1.5" stroke-opacity="0.6"/>
+<text x="36" y="438" font-family="Consolas, 'Courier New', monospace" font-size="18" font-weight="700" fill="#8b7bb5" text-anchor="start" letter-spacing="3" >LAP 07</text>
+<text x="140" y="446" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="46" font-weight="700" fill="#eafcff" text-anchor="start" letter-spacing="0" filter="url(#glow)">1:23.4</text>
+<polygon points="340.0,410.0 450.0,410.0 450.0,440.0 440.0,450.0 330.0,450.0 330.0,420.0" fill="#002b30" stroke="#00f0ff" stroke-width="1.5" stroke-opacity="1"/>
+<text x="390" y="440" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="28" font-weight="700" fill="#00f0ff" text-anchor="middle" letter-spacing="0" filter="url(#glow)">-0.42</text>
+<text x="764" y="438" font-family="Consolas, 'Courier New', monospace" font-size="18" font-weight="700" fill="#fcee0a" text-anchor="end" letter-spacing="2" >BEST 1:22.98</text>
+<rect width="800" height="480" fill="url(#scan)"/>
+<rect width="800" height="480" fill="url(#vign)"/>
+</svg>
