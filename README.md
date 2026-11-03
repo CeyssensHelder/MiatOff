@@ -1,93 +1,138 @@
 # MiatOff
 
-Open-source project to tweak the Mazda Connect (CMU) head unit — for your **own** car:
-**(1) touchscreen while driving** and **(2) faster startup** by switching off things you don't need.
+Open-source tweaks for the Mazda Connect infotainment in the **Mazda MX-5 (ND)**. You build a USB stick on your PC,
+plug it into the car, and choose what to install. Every change can be undone, and the tool checks your car first and
+refuses to touch anything it does not recognise.
 
-## Disclaimer
-Modifying a head unit can leave it unusable and is not covered by Mazda's warranty. You use this at your own risk.
-MiatOff is not affiliated with or endorsed by Mazda. It contains no Mazda files. Touch while
-driving removes a distraction safeguard; follow your local law and keep your eyes on the road.
+> ⚠️ **Early release.** Modifying a head unit can leave it unusable and is not covered by Mazda's warranty. You use this at
+> your own risk. Read [Is it safe?](#is-it-safe) and the [support status](#support-status) first.
+
+## What you can do
+
+| Tweak | What it does |
+|---|---|
+| **Touch while driving** | The touchscreen keeps working in the Mazda menus while the car moves (uses TouchTune). |
+| **Touch in Android Auto** | Tap, swipe and drag in Android Auto (uses the oem-aa-mod touch shim). |
+| **Boot trim** | Stops things you don't use from starting at boot, each on its own: DVD/TV, SiriusXM, Pandora, Stitcher, Aha. |
+| **Startup warning** | Skips the warning screen at startup. |
+| **Meters** | Gauges under *Applications*: speed, rpm, G-meter, lap timer, fed by the car's own data. No OBD adapter needed. |
+
+You choose per tweak: **Install**, **Remove** or **Leave as-is**. The tool never changes anything you did not pick.
 
 ## Support status
-Only one combination has been analysed, and **nothing has been fully accepted in a car yet**.
 
-| Firmware | Market | Feature | Status |
+Only one combination has been analysed so far, and **nothing has been fully accepted in a car yet**.
+
+| Firmware | Car | Feature | Status |
 |---|---|---|---|
-| 74.00.324A | EU (MX-5 ND1) | Check my car (read-only dump) | Tested in the car |
-| 74.00.324A | EU (MX-5 ND1) | Touch in Android Auto, boot trim, startup warning | Experimental: host-tested, in-car acceptance open |
-| 74.00.324A | EU (MX-5 ND1) | Meters | Experimental: one in-car failure (busy root remount, 28-10-2026), fixed but not re-tested |
-| anything else | any | all | Unsupported: the tools refuse to change anything |
+| 74.00.324A | EU MX-5 ND1 | Check my car (read-only dump) | Tested in the car |
+| 74.00.324A | EU MX-5 ND1 | Touch in Android Auto, boot trim, startup warning | Experimental: tested on a simulator, in-car acceptance still open |
+| 74.00.324A | EU MX-5 ND1 | Meters | Experimental: one in-car failure (busy root remount) was fixed but not re-tested |
+| anything else | any | everything | Unsupported: the tools refuse to change anything |
 
-The installer only acts when every file it touches matches a known sha256. For another firmware, run the
-"Check my car" stick and open an issue with only `SUMMARY.txt` (see [CONTRIBUTING.md](CONTRIBUTING.md)).
+Stay on firmware **74.00.324A** and do **not** upgrade to 74.00.331: it breaks wireless CarPlay more often and cannot be
+rolled back. Check yours under *Settings → System → About → Version Information*.
 
-## Quick start (Windows)
-1. Use an empty USB stick of 32 GB or less, formatted FAT32 with an MBR partition table.
-2. Run `python miatoff_gui.py` and pick the drive. Tab 1, **Check my car**: build the check stick, run it in the car
-   (choose FULL), then press **Read last dump**. You get a deterministic report that compares every file with the hashes
-   the installer knows. Tab 2, **Install / remove**: per part choose *Install*, *Remove* or *Leave as-is*; after a check, options
-   the car cannot take are greyed out. Press **Build install stick**.
-   Command line: `python tools/check_dump.py E:\`, `python dump-stick/build_stick.py E:\` and
-   `python aa-touch-stick/build_stick.py E:\`.
-3. Engine on, wait for the home screen, plug the stick into the car's USB hub, and follow the dialog. It offers your
-   chosen steps one at a time; each is confirmed and restarts the unit, and the stick can stay in for the next step. Never confirm a
-   Mazda software-update screen: cancel and remove the stick.
-4. Everything can be undone from the same dialog. If the menu misbehaves, put an empty file `MIATOFF-RESTORE` on the stick.
-   Last resort: reflash EU 74.00.324A. Details: [aa-touch-stick/README.md](aa-touch-stick/README.md).
+Another car or firmware? Run the check (below) and open an issue with only `SUMMARY.txt` from the dump. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Car / target
-| | |
+## What you need
+
+- A Windows PC with **Python 3** (including Tk, which the python.org installer has) and this repository
+  (`git clone https://github.com/CeyssensHelder/MiatOff` or *Code → Download ZIP*).
+- An **empty USB stick**, 32 GB or smaller, formatted **FAT32** with an **MBR** partition table.
+- A 2017 **EU MX-5 ND1** with Mazda Connect on firmware 74.00.324A (see the support status above).
+
+## How to use it
+
+1. **Open the builder:** `python miatoff_gui.py`, and pick your USB stick in the drive box.
+2. **Check your car first** (tab *Check my car*):
+   - Press **Build check stick**, put the stick in the car (engine on, home screen showing) and choose **FULL**. It only
+     reads; it changes nothing. Bring the stick back.
+   - Press **Read last dump**. You get a report that compares every file with the versions the installer knows, per
+     tweak: *available*, *installed*, *blocked* or *not checked*. The same dump always gives the same report.
+3. **Choose what you want** (tab *Install / remove*): per tweak *Install*, *Remove* or *Leave as-is*. Anything the car
+   cannot take is greyed out after a check. Press **Build install stick**.
+4. **In the car:** engine on, wait for the home screen, plug the stick into the USB hub. A dialog offers your next step with
+   **INSTALL** (or **REMOVE**) and **CANCEL**. Each step restarts the unit; leave the stick in and the next step appears
+   once the screen is back. When everything is done you see "Your plan is complete".
+
+For a first try, choose **CANCEL** at the first dialog: nothing changes, but you get a log and a state file on the stick
+that show the unit is recognised.
+
+> Never confirm a Mazda *software update* screen. If one appears, cancel and remove the stick.
+
+### Going back
+
+- Choose **Remove** for the tweak and build a new stick; every change is restored byte for byte.
+- If the Mazda menu misbehaves after Meters or the startup-warning tweak: put an empty file named `MIATOFF-RESTORE`
+  in the root of the stick and plug it in. It puts those two back without any dialog.
+- Last resort: reflash the official EU 74.00.324A firmware.
+
+Details per stick, including exactly which files change on the car: [aa-touch-stick/README.md](aa-touch-stick/README.md).
+
+## Is it safe?
+
+MiatOff changes the **head unit only**. It never touches the engine computer or the CAN bus, and it needs no OBD adapter.
+
+- **It refuses anything unknown.** Every file is recognised by its exact sha256, as stock or as already patched. A different
+  firmware, a modified file or an unknown state: nothing is changed, and the state is written to the stick.
+- **No half-installed state.** Each file is staged, verified and swapped in with one atomic rename, in an order where
+  every in-between state still boots. A power cut or a failure is rolled back or finished by the next run.
+- **Backups and byte-exact removal.** Stock copies are kept on the unit and removal restores them exactly.
+- **No boot loops from the Android Auto shim.** A crash can at most switch Android Auto off, not restart the whole unit.
+- **Tested without a car:** a simulator replays installs, removals, power cuts and failures under BusyBox, including against
+  the real stock files. What it cannot cover is the real unit, so **start with the dry run** described above.
+
+Touch while driving removes a deliberate distraction limit. Follow your local law and keep your eyes on the road.
+
+## Troubleshooting
+
+- **Nothing happens when I plug the stick in.** Look for `miatoff-aa-touch.log` (or `miatoff-dump.log`) on the stick. If it
+  is missing the script did not start: check FAT32 + MBR, that only one such stick is plugged in, and that the home screen
+  was showing.
+- **"This unit differs from the analysed state."** The firmware or a file is not the known one. Nothing was changed. Run
+  the check and see the report.
+- **The dialog comes back every time I start the car.** The stick is still plugged in. Remove it.
+
+## Documentation
+
+| For | Where |
 |---|---|
-| Vehicle | 2017 Mazda MX-5 **ND1** 1.5L |
-| Market | EU |
-| Infotainment | Mazda Connect **Gen-6 (CMU)**, Visteon hardware, JCI software |
-| Firmware | **74.00.324** (check: Settings → System → About → Version Information) |
-| SoC | Freescale/NXP **i.MX6** (ARM), Linux kernel 3.0.35 |
+| Exactly what each stick does on the car | [aa-touch-stick/README.md](aa-touch-stick/README.md), [dump-stick/README.md](dump-stick/README.md) |
+| The Meters gauges and their data | [meters/README.md](meters/README.md), [meters-app/README.md](meters-app/README.md), [collector/README.md](collector/README.md) |
+| How the head unit works, research and design notes | [docs/README.md](docs/README.md) |
 
-> ⚠️ Stay on **74.00.324**. Do **not** upgrade to 74.00.331 (it breaks wireless CarPlay more often and cannot be rolled back).
+## Contributing
 
-## TL;DR (research status)
-- **Touchscreen** → a solved path already exists: **TouchTune** (GPL-3.0, open source). Surgical:
-  1 line in `Common.js` + 2 NVRAM flags, with backup/hash/rollback. See [docs/03](docs/03-touch-feature.md).
-- **Android Auto touch** → TouchTune does **not** do this. Open-source path: **`oem-aa-mod`** (AGPL-3.0), an
-  `LD_PRELOAD` shim in `jciAAPA` + a touch declaration in `aap_system_attributes.xml`. See [docs/10](docs/10-implementation-plan.md).
-- **Faster boot** → mechanism and levers known (core scheduling, hard-coded `sleep`s, the AHA gate, services for
-  hardware that isn't present). The exact `sm.conf` lines still have to be verified on an **EU dump**. See [docs/04](docs/04-boot-speedup.md).
-- **UI tweaks** (remove the disclaimer, shorter page delay) → well-known AIO tweaks; values known, exact regex still to be dumped.
-  See [docs/05](docs/05-ui-tweaks.md).
-- **Biggest lesson:** keep it **surgical** (like TouchTune). MZD-AIO sometimes breaks wireless CarPlay because it overwrites
-  broad system files. See [docs/07](docs/07-risks.md).
+Bug reports, new-firmware reports and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Never
+upload a firmware dump; it contains copyrighted Mazda files and personal data.
 
-## Documents
-| # | File | Contents |
-|---|---|---|
-| 00 | [HANDOFF.md](HANDOFF.md) | **Read this first** — instructions + open questions for the reviewer |
-| 01 | [docs/01-context.md](docs/01-context.md) | Goal, car, firmware, core conclusions |
-| 02 | [docs/02-cmu-internals.md](docs/02-cmu-internals.md) | Hardware, boot chain, tweak mechanism (USB/serial/terminal) |
-| 03 | [docs/03-touch-feature.md](docs/03-touch-feature.md) | Touch while driving: verified **TouchTune** deep-dive |
-| 04 | [docs/04-boot-speedup.md](docs/04-boot-speedup.md) | Boot ordering, services, delays, core scheduling |
-| 05 | [docs/05-ui-tweaks.md](docs/05-ui-tweaks.md) | Disclaimer + page-delay tweaks |
-| 06 | [docs/06-ecosystem-and-repos.md](docs/06-ecosystem-and-repos.md) | Open-source projects/repos |
-| 07 | [docs/07-risks.md](docs/07-risks.md) | Brick/CarPlay/warranty/legal/safety |
-| 08 | [docs/08-approach-roadmap.md](docs/08-approach-roadmap.md) | Proposed architecture + phased plan |
-| 09 | [docs/09-open-questions.md](docs/09-open-questions.md) | Open questions / next research steps |
-| 10 | [docs/10-implementation-plan.md](docs/10-implementation-plan.md) | **Implementation plan** for this car: AA touch + boot, phased with a recovery ladder |
-| 11 | [docs/11-dump-analysis.md](docs/11-dump-analysis.md) | **Analysis of the first dump**: go/no-go, exact AA-touch changes, boot profile |
-| 12 | [docs/12-handoff-aa-touch.md](docs/12-handoff-aa-touch.md) | Handoff for the AA-touch builder: goal, facts, requirements, acceptance |
-| 13 | [docs/13-gauges.md](docs/13-gauges.md) | Gauges/meters: data source, what is on the unit, approach |
-| — | [docs/sources.md](docs/sources.md) | All sources |
-| tool | [dump-stick/](dump-stick/README.md) | Phase 1: read-only USB dump of the CMU (TouchTune launcher) |
-| tool | [collector/](collector/README.md) | Live vehicle data for Meters: D-Bus signals (6–10 Hz, lock-free) + slow smdb round → `/tmp/miatoff/live.txt` |
-| tool | [aa-touch-stick/](aa-touch-stick/README.md) | Phase 3: touch in Android Auto (oem-aa-mod, touch shim only), reversible |
+### Developing with an AI assistant
 
-## Reliability of the sources
-Much of the information comes from enthusiast forums, commercial vendors' websites (so partly vendor
-claims) and security research (ZDI/Trend Micro). Where something is a **vendor claim** or an **unconfirmed forum report**,
-that is stated. Performance figures (e.g. 48→32 s) are vendor measurements on specific units, not independently verified.
+If you use an AI coding assistant, point it at [`AGENTS.md`](AGENTS.md) first: it explains the layout, the safety rules
+and how to run the tests. Background and open questions are in [`docs/ai/`](docs/ai/).
+
+## Credits and thanks
+
+MiatOff stands on the work of the Mazda Connect modding community. Thank you to:
+
+- **Miatafy** for **[TouchTune](https://github.com/Miatafy/TouchTune)**, the free, open-source (GPL-3.0) touch-while-driving
+  tool. MiatOff ships TouchTune 1.2.1 unmodified, uses its launcher mechanism and its install/verify/rollback approach as
+  the blueprint for everything else, and hands over to it for the touch-while-driving step.
+- **Vitaliy Kurokhtin** for **[oem-aa-mod](https://github.com/VitaliyKurokhtin/oem-aa-mod)** (AGPL-3.0), the Android Auto touch shim.
+- **Trevor G Martin (Trevelopment)** for **[MZD-AIO](https://github.com/Trevelopment/MZD-AIO)** and MZD_Speedometer, which
+  TouchTune and the Meters menu integration build on.
+- **jmgao** ([mazda-connector](https://github.com/jmgao/mazda-connector)) for the safe boot-hook pattern, **junoh-moon**
+  ([mazda-aa-dr](https://github.com/junoh-moon/mazda-aa-dr)) for hard-won warnings about the vehicle data service, and
+  **silverchris** ([Mazda CMU documentation](https://silverchris.github.io/mazda-cmu-documentation/)) for the boot and recovery notes.
+- The security researchers at ZDI/Trend Micro whose public work documents how the unit boots.
+- The **Chakra Petch** and **Share Tech Mono** fonts (SIL Open Font License).
+
+See [NOTICE](NOTICE) for the exact licences. MiatOff is not affiliated with or endorsed by Mazda. It contains no Mazda files;
+the scripts only hold the hashes of the stock files they expect.
 
 ## Licence
-MiatOff is GPL-3.0-or-later (see [LICENSE](LICENSE)). Third-party components and their licences are listed in [NOTICE](NOTICE).
 
-## Licensing background
-TouchTune and the AIO lineage are **GPL-3.0**. If MiatOff (re)uses that code, this project becomes copyleft (GPL-3.0) too.
-See [docs/07](docs/07-risks.md).
+MiatOff is GPL-3.0-or-later; see [LICENSE](LICENSE). Because it builds on GPL-3.0 and AGPL-3.0 work, anyone who
+redistributes it must keep the notices in [NOTICE](NOTICE) and provide the source.

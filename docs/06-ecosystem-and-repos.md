@@ -2,7 +2,7 @@
 
 | Project | What | Status / usability |
 |---|---|---|
-| **TouchTune** | Free & open-source "touch while driving" | **Starting point #1** for touch. GPL-3.0, v1.2.1, FW 74.00.324(A). Verified — see [docs/03](03-touch-feature.md). |
+| **`Miatafy/TouchTune`** | Free & open-source "touch while driving" | **Starting point #1** for touch. GPL-3.0, v1.2.1, FW 74.00.324(A). Verified — see [docs/03](03-touch-feature.md). |
 | **`Trevelopment/MZD-AIO-TI`** | *All-In-One Tweaks Installer* (touch, disclaimer, page delay, speedometer, …) | The reference. Latest release v2.8.6 (Apr 2020). **GitHub DMCA-blocked (HTTP 451)**; mirror via **mazdatweaks.com**. Works manually on v74. Overwrites broad system files → CarPlay risk. |
 | **`Trevelopment/MZD-AIO`** | Desktop app that builds the AIO USB stick | Publicly reachable (changelog readable). Contains the tweak-selection UI. |
 | **`Trevelopment/mazdatweaks`** | Source of mazdatweaks.com | Distribution side. |

@@ -4,7 +4,7 @@
 > ZDI/Trend Micro = security research (more reliable). See also the warning in [07-risks.md](07-risks.md).
 
 ## Open source / repos
-- TouchTune 1.2.1 (GPL-3.0-or-later): copyright and source location are in `vendor/touchtune/TouchTune-1.2.1.zip` (NOTICE, SOURCE.txt)
+- [GitHub — Miatafy/TouchTune](https://github.com/Miatafy/TouchTune) · [release v1.2.1](https://github.com/Miatafy/TouchTune/releases/tag/v1.2.1)
 - [GitHub — Trevelopment/MZD-AIO](https://github.com/Trevelopment/MZD-AIO) · [CHANGELOG](https://github.com/Trevelopment/MZD-AIO/blob/master/CHANGELOG.md)
 - [GitHub — Trevelopment/mazdatweaks](https://github.com/Trevelopment/mazdatweaks)
 - MZD-AIO-TI (`Trevelopment/MZD-AIO-TI`) — GitHub returns HTTP 451 (DMCA); mirror via mazdatweaks.com

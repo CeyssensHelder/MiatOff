@@ -7,7 +7,8 @@ GPL-3.0-or-later; see LICENSE.
 Third-party components
 ----------------------
 vendor/touchtune/TouchTune-1.2.1.zip
-  TouchTune 1.2.1, GPL-3.0-or-later (copyright holder and source: see NOTICE and SOURCE.txt in the zip)
+  TouchTune 1.2.1 by Miatafy, GPL-3.0-or-later, https://github.com/Miatafy/TouchTune
+  Thank you to Miatafy for releasing it as free, open-source software.
   Shipped unmodified; the USB launcher mechanism and the root remount, watchdog
   and SafeReboot handling follow it.
 

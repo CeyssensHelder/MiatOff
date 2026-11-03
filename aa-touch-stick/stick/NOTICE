@@ -4,11 +4,11 @@ MiatOff AA-touch stick
 aa-touch.sh, AATOUCH.ID and oem-aa-mod/libpatch.conf
   Part of MiatOff. GPL-3.0-or-later (see LICENSE).
   The USB launcher (the *.up file name and its ZIP), the root remount and
-  watchdog handling and the SafeReboot request follow TouchTune 1.2.1
-  (GPL-3.0-or-later)
+  watchdog handling and the SafeReboot request follow TouchTune 1.2.1 by Miatafy
+  (GPL-3.0-or-later), https://github.com/Miatafy/TouchTune
 
 touchtune/
-  The complete, unmodified TouchTune 1.2.1 release (GPL-3.0-or-later),
+  The complete, unmodified TouchTune 1.2.1 release by Miatafy (GPL-3.0-or-later),
   with its own LICENSE, NOTICE and SOURCE.txt. aa-touch.sh only starts its
   install-patches.sh when step 1 is chosen in the dialog.
 

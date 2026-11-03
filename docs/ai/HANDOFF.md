@@ -15,26 +15,26 @@ modification of your own hardware (2017 MX-5 ND1, FW 74.00.324).
 ## The core in 5 points
 1. **Touch** is in effect solved: TouchTune (GPL-3.0) comments out a single line in `Common.js` (the
    `"Global.AtSpeed"` handler) and sets two NVRAM settings (`bus_bcm_speed_restriction`, `lvds_speed_restriction`)
-   to `disable`, with backup + SHA-256 verification + rollback. (verified — see [docs/03](docs/03-touch-feature.md))
+   to `disable`, with backup + SHA-256 verification + rollback. (verified — see [docs/03](../03-touch-feature.md))
 2. **Boot** runs through the JCI Service Manager based on `/jci/sm/sm.conf` + stage scripts; the biggest gain is in
    **core scheduling** + removing hard-coded `sleep`s + the AHA gate + trimming services for hardware that isn't
-   present. (see [docs/04](docs/04-boot-speedup.md))
-3. **UI tweaks**: the disclaimer timer in the HMI JS (3.5 → 0.5 s) and the page delay (1.5 → 0.3 s). (see [docs/05](docs/05-ui-tweaks.md))
+   present. (see [docs/04](../04-boot-speedup.md))
+3. **UI tweaks**: the disclaimer timer in the HMI JS (3.5 → 0.5 s) and the page delay (1.5 → 0.3 s). (see [docs/05](../05-ui-tweaks.md))
 4. **Risk #1**: broad system-file overwrites (as MZD-AIO does) can break wireless CarPlay → **keep it
-   surgical**, TouchTune style. (see [docs/07](docs/07-risks.md))
+   surgical**, TouchTune style. (see [docs/07](../07-risks.md))
 5. The exact `sm.conf` lines and the disclaimer/page-delay locations differ **per region/build** and still have to be
    determined for our **EU 74.00.324** against the actual files.
 
 ## What we want your review on
-See [docs/09-open-questions.md](docs/09-open-questions.md) for the full list. In short:
-1. **Architecture review** of the proposed installer design in [docs/08](docs/08-approach-roadmap.md): is the
+See [docs/09-open-questions.md](../09-open-questions.md) for the full list. In short:
+1. **Architecture review** of the proposed installer design in [docs/08](../08-approach-roadmap.md): is the
    TouchTune approach (stage → verify → publish → rollback) the right basis, and where are the weak spots?
 2. **Boot strategy**: which of the levers named (core affinity, `sleep` removal, service trimming) give the best
    gain/risk ratio, and which must absolutely not be touched without a recovery path?
 3. **Modifying safely**: how do we guarantee a reliable recovery path (failsafe boot / reflash) before we change anything,
    so that a failed change never leads to an unrecoverable unit?
 4. **Licence**: is our GPL-3.0 analysis correct, and what does it mean if we take TouchTune code as a base?
-5. **Scope check**: are there better/newer open-source projects than those named here (see [docs/06](docs/06-ecosystem-and-repos.md))?
+5. **Scope check**: are there better/newer open-source projects than those named here (see [docs/06](../06-ecosystem-and-repos.md))?
 
 ## Main uncertainties / assumptions to challenge
 - "Core scheduling is the biggest lever" comes from a commercial vendor — not independently verified.

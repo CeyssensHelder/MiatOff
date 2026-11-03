@@ -10,7 +10,7 @@ shell command that the scanner runs. That command looks in `/tmp/mnt/sd[a-d]1` f
 `MIATOFF.ID` (checked via `cksum`) and starts `dump.sh` there. The `.up` itself is TouchTune's launcher ZIP
 (`main_instructions.ini` + `versions.ini`, byte-identical).
 
-This approach is taken from TouchTune v1.2.1, which was bench-tested on 74.00.324A.
+This approach is taken from [TouchTune](https://github.com/Miatafy/TouchTune) v1.2.1 by Miatafy, which was bench-tested on 74.00.324A.
 In its tests, `build_stick.py` checks that the same template produces exactly TouchTune's launcher name.
 
 ## What `dump.sh` does and does not do
@@ -146,5 +146,5 @@ Every step is best-effort: a missing or deviating command ends up in `errors.txt
 `.txt` file, and the dump simply continues. Read `errors.txt` after the first run in the car.
 
 ## Licence
-GPL-3.0-or-later (see `LICENSE`). The launch mechanism and `launcher/*.ini` come from TouchTune
+GPL-3.0-or-later (see `LICENSE`). The launch mechanism and `launcher/*.ini` come from Miatafy's TouchTune
 (GPL-3.0-or-later).

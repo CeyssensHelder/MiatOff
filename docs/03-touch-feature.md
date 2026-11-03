@@ -1,7 +1,7 @@
 # 03 — Touch while driving: TouchTune (the foundation)
 
 ## TouchTune — verified deep-dive (main source for our touch feature)
-**Licence:** **GPL-3.0-or-later** (`LICENSE`, `NOTICE`, `DISCLAIMER.md`; builds on
+**Repo:** `Miatafy/TouchTune` · **Licence:** **GPL-3.0-or-later** (`LICENSE`, `NOTICE`, `DISCLAIMER.md`; builds on
 the MZD-AIO community, credited in `NOTICE`). **Latest release:** v1.2.1 (22 Sep 2026). Bench-tested on a
 2019 CX-5 CMU (NA 74.00.324A). Target FW: **74.00.324 / 74.00.324A**; refuses other versions and unknown modifications.
 

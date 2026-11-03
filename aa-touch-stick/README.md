@@ -285,7 +285,7 @@ are not checked in the host test (Windows); on the CMU they are.
 
 ## Licence
 `aa-touch.sh`, `libpatch.conf` and the builder: GPL-3.0-or-later (see `LICENSE`). Launcher, remount/watchdog and
-SafeReboot follow TouchTune 1.2.1 (GPL-3.0-or-later); the complete TouchTune release is in `touchtune/` with its own
+SafeReboot follow Miatafy's TouchTune 1.2.1 (GPL-3.0-or-later); the complete TouchTune release is in `touchtune/` with its own
 `LICENSE`, `NOTICE` and `SOURCE.txt`. `libpatch-blmjciaapa.so` is an unmodified binary
 from oem-aa-mod 0.10.0 (**AGPL-3.0**); `NOTICE` on the stick states the source. There are no Mazda files on the
 stick: the script only contains the hashes of the stock files and the lines it inserts.
