@@ -241,7 +241,14 @@ AAP = b"\x7fELF fake aap_service"
 def write(root: Path, rel: str, data):
     path = root / rel
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(data if isinstance(data, bytes) else data.encode())
+    data = data if isinstance(data, bytes) else data.encode()
+    try:
+        path.write_bytes(data)
+    except PermissionError:
+        # A file the root container made or replaced is not writable for the host user, but the folder is:
+        # replace it instead (the container's modes and owners stay untouched).
+        path.unlink()
+        path.write_bytes(data)
     return path
 
 
@@ -327,10 +334,7 @@ class Car:
             # The CMU has /usr/bin/openssl (TouchTune hashes only with it); the
             # busybox image does not, so give it an `openssl dgst` stand-in.
             (self.tmp / "openssl").write_text(OPENSSL_SHIM, newline="\n")
-            # The container runs as root; on a Linux host the files it creates would stay unwritable for the test,
-            # so make the shared tree writable again whenever the container exits.
-            setup = ("trap 'chmod -R a+rwX /w 2>/dev/null' EXIT; "
-                     "mkdir -p /usr/bin && cp /w/openssl /usr/bin/openssl && chmod 755 /usr/bin/openssl && ")
+            setup = "mkdir -p /usr/bin && cp /w/openssl /usr/bin/openssl && chmod 755 /usr/bin/openssl && "
             args = ["docker", "run", "--rm", "-v", f"{self.tmp}:/w"]
             for k, v in env.items():
                 args += ["-e", f"{k}={v}"]
