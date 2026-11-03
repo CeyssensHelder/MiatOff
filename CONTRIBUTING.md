@@ -15,7 +15,7 @@ python tools/tests/test_check_dump.py
 node meters-app/tests/test_meters_app.js
 MO_DOCKER_IMAGE=busybox:1.25 python aa-touch-stick/tests/test_aa_touch_stick.py
 ```
-`MO_SYNTHETIC=1` runs on fabricated files, so no private dump is needed. The shell-script suites need `sh` (Git Bash,
+`MO_SYNTHETIC=1` runs on fabricated files, so no private dump is needed. On Linux install `gawk` (Ubuntu's default `mawk` reads pipes in blocks and fails the collector test). The shell-script suites need `sh` (Git Bash,
 WSL or Docker); they do not run in plain PowerShell, where you also set the variable with `$env:MO_SYNTHETIC = "1"`.
 
 ## Adding support for another firmware

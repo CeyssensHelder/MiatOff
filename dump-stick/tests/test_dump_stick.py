@@ -84,7 +84,7 @@ def make_fixture(root: Path):
     write(root, "jci/smdb/vdm.xml", '<vdm>\n    <PID_Drv1Dstnc_curr type="int" value="0" />\n</vdm>\n')
     os.chmod(write(root, "jci/bin/smdb-read",
                    '#!/bin/sh\n[ "$1" = -n ] && [ "$3" = -e ] || { echo usage >&2; exit 1; }\n'
-                   'case "$4" in EngineSpeed) echo "$RANDOM" ;; *) echo "42" ;; esac\n'), 0o755)
+                   'case "$4" in EngineSpeed) echo "$$" ;; *) echo "42" ;; esac\n'), 0o755)
     os.chmod(write(root, "usr/bin/dbus-send",
                    '#!/bin/sh\necho "method return sender=:1.7"\n'
                    'case "$*" in\n'

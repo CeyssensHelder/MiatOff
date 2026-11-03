@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      # Ubuntu's default awk (mawk) buffers input from pipes; the car runs BusyBox awk, so the tests use gawk.
+      - run: sudo apt-get update && sudo apt-get install -y gawk
       - run: python dump-stick/tests/test_dump_stick.py
       - run: python collector/tests/test_collector.py
       - run: python collector/tests/test_calibrate.py
