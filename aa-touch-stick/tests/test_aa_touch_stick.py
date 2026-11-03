@@ -327,7 +327,10 @@ class Car:
             # The CMU has /usr/bin/openssl (TouchTune hashes only with it); the
             # busybox image does not, so give it an `openssl dgst` stand-in.
             (self.tmp / "openssl").write_text(OPENSSL_SHIM, newline="\n")
-            setup = "mkdir -p /usr/bin && cp /w/openssl /usr/bin/openssl && chmod 755 /usr/bin/openssl && "
+            # The container runs as root; on a Linux host the files it creates would stay unwritable for the test,
+            # so make the shared tree writable again whenever the container exits.
+            setup = ("trap 'chmod -R a+rwX /w 2>/dev/null' EXIT; "
+                     "mkdir -p /usr/bin && cp /w/openssl /usr/bin/openssl && chmod 755 /usr/bin/openssl && ")
             args = ["docker", "run", "--rm", "-v", f"{self.tmp}:/w"]
             for k, v in env.items():
                 args += ["-e", f"{k}={v}"]
