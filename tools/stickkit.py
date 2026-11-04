@@ -10,6 +10,10 @@ import hashlib
 import io
 import os
 from pathlib import Path
+import plistlib
+import re
+import subprocess
+import sys
 import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -162,6 +166,12 @@ def require_stick_root(target: Path) -> None:
     if os.name != "nt":
         if not os.path.ismount(target):
             raise SystemExit(f"ERROR: {target} is not a mount point; give the stick's mount root")
+        if sys.platform == "darwin":
+            _require_mac_stick(target)
+        elif sys.platform.startswith("linux"):
+            problem = _linux_stick_problem(target)
+            if problem:
+                raise SystemExit(f"ERROR: {problem}")
         return
     import ctypes
 
@@ -179,6 +189,108 @@ def require_stick_root(target: Path) -> None:
         raise SystemExit(f"ERROR: cannot read volume information for {anchor}")
     if fs_name.value.upper() != "FAT32":
         raise SystemExit(f"ERROR: {anchor} is {fs_name.value}; the car needs FAT32 (MBR)")
+
+
+def _mac_info(target: str) -> dict:
+    """`diskutil info` for a mount point or disk identifier ({} if unknown)."""
+    try:
+        out = subprocess.run(["diskutil", "info", "-plist", target],
+                             capture_output=True, check=True, timeout=15).stdout
+        return plistlib.loads(out)
+    except (OSError, subprocess.SubprocessError, plistlib.InvalidFileException, ValueError):
+        return {}
+
+
+def _mac_stick_problem(target: Path):
+    """None if target is the root of an external FAT32 volume on an MBR disk, else why not."""
+    info = _mac_info(str(target))
+    if not info:
+        return f"cannot read volume information for {target}"
+    if info.get("Internal", True) or info.get("SystemImage"):
+        return f"{target} is not an external USB drive"
+    if info.get("MountPoint") != str(target.resolve()):
+        return f"give the root of the stick (e.g. /Volumes/MAZDA), not {target}"
+    if info.get("FilesystemName") != "MS-DOS FAT32":
+        name = info.get("FilesystemUserVisibleName") or info.get("FilesystemType") or "unknown"
+        return f"{target} is {name}; the car needs FAT32 (MBR)"
+    whole = _mac_info(info.get("ParentWholeDisk", ""))
+    if whole.get("Content") != "FDisk_partition_scheme":
+        return f"{target} is not on an MBR-partitioned disk; the car needs FAT32 (MBR)"
+    return None
+
+
+def _require_mac_stick(target: Path) -> None:
+    problem = _mac_stick_problem(target)
+    if problem:
+        raise SystemExit(f"ERROR: {problem}")
+
+
+def _unescape_mount(field: str) -> str:
+    """/proc/mounts writes space, tab, newline and backslash as octal escapes (\\040 ...)."""
+    return re.sub(r"\\([0-7]{3})", lambda m: chr(int(m.group(1), 8)), field)
+
+
+def _linux_mounts() -> dict:
+    """mount point -> (device, filesystem type), from /proc/mounts."""
+    mounts = {}
+    try:
+        with open("/proc/mounts", encoding="utf-8") as handle:
+            for line in handle:
+                parts = line.split()
+                if len(parts) >= 3:
+                    mounts[_unescape_mount(parts[1])] = (_unescape_mount(parts[0]), parts[2])
+    except OSError:
+        pass
+    return mounts
+
+
+def _linux_removable(device: str) -> bool:
+    """True if the block device (e.g. /dev/sdb1) belongs to a disk the kernel reports as removable or USB."""
+    name = Path(device).name
+    block = Path("/sys/class/block") / name
+    if not block.exists():
+        return False
+    disk = block.resolve()
+    if (disk / "partition").exists():
+        disk = disk.parent
+    try:
+        if (disk / "removable").read_text().strip() == "1":
+            return True
+    except OSError:
+        pass
+    return "/usb" in str(disk.resolve())
+
+
+def _linux_stick_problem(target: Path):
+    """None if target is the mount root of a vfat volume on a removable/USB disk, else why not."""
+    entry = _linux_mounts().get(str(Path(target).resolve()))
+    if entry is None:
+        return f"{target} is not in /proc/mounts; give the stick's mount root"
+    device, fs = entry
+    if fs != "vfat":
+        return f"{target} is {fs}; the car needs FAT32 (MBR)"
+    if not _linux_removable(device):
+        return f"{target} ({device}) is not on a removable USB drive"
+    return None
+
+
+def removable_sticks() -> list:
+    """Mount roots that look like USB sticks the car can read (FAT32), per platform."""
+    if os.name == "nt":
+        import ctypes
+        import string
+
+        mask = ctypes.windll.kernel32.GetLogicalDrives()
+        return [f"{letter}:\\" for index, letter in enumerate(string.ascii_uppercase)
+                if mask & (1 << index) and ctypes.windll.kernel32.GetDriveTypeW(f"{letter}:\\") == 2]
+    if sys.platform == "darwin":
+        volumes = Path("/Volumes")
+        roots = sorted(str(p) for p in volumes.iterdir() if p.is_dir() and os.path.ismount(p)) \
+            if volumes.is_dir() else []
+        return [root for root in roots if _mac_stick_problem(Path(root)) is None]
+    if sys.platform.startswith("linux"):
+        return sorted(point for point in _linux_mounts() if _linux_stick_problem(Path(point)) is None)
+    return []
 
 
 def launcher_bytes() -> bytes:

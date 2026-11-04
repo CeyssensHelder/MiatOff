@@ -19,7 +19,6 @@ SPDX-License-Identifier: GPL-3.0-or-later
 from pathlib import Path
 import importlib.util
 import os
-import string
 import sys
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -27,6 +26,7 @@ from tkinter import messagebox, ttk
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "tools"))
 import check_dump  # noqa: E402
+import stickkit  # noqa: E402
 
 DUMP_BUILDER = ROOT / "dump-stick" / "build_stick.py"
 INSTALL_BUILDER = ROOT / "aa-touch-stick" / "build_stick.py"
@@ -99,18 +99,11 @@ def load_builder(path: Path):
 
 
 def removable_drives() -> list:
-    """Drive roots that Windows reports as removable; empty elsewhere."""
-    if os.name != "nt":
+    """Stick roots: removable drives on Windows, external FAT32 volumes on macOS/Linux."""
+    try:
+        return stickkit.removable_sticks()
+    except Exception:  # never block the window on drive detection
         return []
-    import ctypes
-
-    mask = ctypes.windll.kernel32.GetLogicalDrives()
-    drives = []
-    for index, letter in enumerate(string.ascii_uppercase):
-        root = f"{letter}:\\"
-        if mask & (1 << index) and ctypes.windll.kernel32.GetDriveTypeW(root) == 2:
-            drives.append(root)
-    return drives
 
 
 class Scrolled(tk.Frame):
@@ -131,7 +124,10 @@ class Scrolled(tk.Frame):
         self.canvas.bind("<Leave>", lambda _e: self.canvas.unbind_all("<MouseWheel>"))
 
     def _wheel(self, event):
-        self.canvas.yview_scroll(int(-event.delta / 120), "units")
+        # Windows reports 120 per notch; macOS reports small steps (1, 2, ...).
+        step = -event.delta if sys.platform == "darwin" else int(-event.delta / 120)
+        if step:
+            self.canvas.yview_scroll(step, "units")
 
 
 class App(tk.Tk):
@@ -186,7 +182,7 @@ class App(tk.Tk):
         bar = tk.Frame(self, bg=BG)
         bar.pack(fill="x", padx=16, pady=(10, 0))
         tk.Label(bar, text="USB stick", bg=BG, fg=INK, font=("Segoe UI", 10, "bold")).pack(side="left")
-        self.drive = ttk.Combobox(bar, values=removable_drives(), width=8, font=("Segoe UI", 10))
+        self.drive = ttk.Combobox(bar, values=removable_drives(), width=24, font=("Segoe UI", 10))
         self.drive.pack(side="left", padx=8)
         if self.drive["values"]:
             self.drive.current(0)
@@ -303,13 +299,27 @@ class App(tk.Tk):
         seg.pack(side="right")
         seg.pack_propagate(False)
         self.options[key] = {}
+        # Labels drawn by hand: Tk on macOS ignores the colours of button-style
+        # radio buttons, so a choice would not show there.
         for value, label in (("keep", "Leave as-is"), ("install", install_label), ("remove", remove_label)):
-            button = tk.Radiobutton(seg, text=label, value=value, variable=var, indicatoron=False, bd=0,
-                                    bg=CARD, fg=INK, selectcolor=OPTION_FILL[value], activebackground=OPTION_FILL[value],
-                                    font=("Segoe UI", 9), relief="flat",
-                                    disabledforeground="#d1d5db", cursor="hand2")
-            button.pack(side="left", fill="both", expand=True, padx=(0, 1), pady=1)
-            self.options[key][value] = button
+            option = tk.Label(seg, text=label, bg=CARD, fg=INK, font=("Segoe UI", 9),
+                              disabledforeground="#d1d5db", cursor="hand2")
+            option.pack(side="left", fill="both", expand=True, padx=(0, 1), pady=1)
+            option.bind("<Button-1>", lambda _e, k=key, v=value: self._choose(k, v))
+            self.options[key][value] = option
+        var.trace_add("write", lambda *_a, k=key: self._paint(k))
+        self._paint(key)
+
+    def _choose(self, key, value):
+        if str(self.options[key][value].cget("state")) != "disabled":
+            self.vars[key].set(value)
+
+    def _paint(self, key):
+        chosen = self.vars[key].get()
+        for value, option in self.options[key].items():
+            on = value == chosen
+            option.configure(bg=OPTION_FILL[value] if on else CARD,
+                             font=("Segoe UI", 9, "bold") if on else ("Segoe UI", 9))
 
     def apply_verdict(self, verdict):
         """Badges from a check, and options the car cannot take greyed out."""
@@ -320,13 +330,18 @@ class App(tk.Tk):
             self.badges[key].configure(text=state.upper(), bg=bg, fg=fg)
             ok = allowed_options(state)
             for value in ("install", "remove"):
-                self.options[key][value].configure(state="normal" if value in ok else "disabled")
+                self.options[key][value].configure(state="normal" if value in ok else "disabled",
+                                                   cursor="hand2" if value in ok else "arrow")
             if self.vars[key].get() not in ("keep", *ok):
                 self.vars[key].set("keep")
 
     # ---------------------------------------------------------------- actions
     def refresh(self):
-        self.drive["values"] = removable_drives()
+        drives = removable_drives()
+        self.drive["values"] = drives
+        # Pick the first stick only when nothing is chosen; a path typed by hand stays.
+        if drives and not self.drive.get().strip():
+            self.drive.current(0)
 
     def checking(self) -> bool:
         return self.tabs.index(self.tabs.select()) == 0
