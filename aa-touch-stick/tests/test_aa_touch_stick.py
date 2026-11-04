@@ -788,6 +788,34 @@ def main():
         check(car.state() != "unknown" and r.returncode == 0 and car.digest() == stock_digest,
               "with AA stock, a leftover backup folder is cleaned by REMOVE")
 
+        # power loss inside backup creation and removal: never a fake half-done AA install
+        for action, point, then in (("delay_on", "backup-list", "delay_on"), ("safety_on", "image-backup-safety", "safety_on"),
+                                    ("safety_off", "image-unbackup-safety", "safety_on")):
+            car = fresh(base, f"kill-{point}")
+            stock_digest = car.digest()
+            if action == "safety_off":
+                car.run("safety_on")
+            car.run(action, fault=f"kill:{point}")
+            car.run("cancel")
+            check(car.state() == "stock", f"power loss at {point}: AA touch still reads stock ({car.state()})")
+            r = car.run(then)
+            off = "delay_off" if then == "delay_on" else "safety_off"
+            r2 = car.run(off)
+            check(r.returncode == 0 and r2.returncode == 0 and car.digest() == stock_digest,
+                  f"power loss at {point}: the feature works afterwards and RESTORE gives byte-exact stock")
+        car = fresh(base, "stale-feature-backup")
+        stock_digest = car.digest()
+        write(car.root, "data_persist/miatoff/aa-touch/List2Ctrl.js.stock.new", b"half a copy")
+        r = car.run("cancel")
+        check(r.returncode == 0 and car.digest() == stock_digest, "leftover feature backups with everything stock are tidied")
+        car = fresh(base, "unknown-keeps-backup")
+        car.run("delay_on")
+        car.run("install")
+        write(car.root, LIST2, LIST2_STOCK_BYTES + b"// another mod\n")
+        car.run("remove")
+        check((car.root / "data_persist/miatoff/aa-touch/List2Ctrl.js.stock").read_bytes() == LIST2_STOCK_BYTES,
+              "AA REMOVE keeps the List2Ctrl.js backup while the file is unknown (the only good copy)")
+
         refused("safety-unknown-image", lambda c: write(c.root, f"{NATIVE}/{SAFETY_NAMES[5]}", b"\x89PNG other"), action="safety_on")
         refused("safety-image-missing", lambda c: (c.root / NATIVE / SAFETY_NAMES[7]).unlink(), action="safety_on")
         refused("safety-damaged-blank-on-stick", lambda c: write(c.stick, f"images/safety/{SAFETY_NAMES[9]}", SAFETY_BLANK[:-1]),

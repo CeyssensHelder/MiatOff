@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "aa-touch-stick" / "stick" / "aa-touch.sh"
 REPORT_NAME = "CHECK-REPORT.txt"
 
-CFG_ATTRS = "775 1000 1000"          # the SM config and both AAP XMLs, as aa-touch.sh checks
+CFG_ATTRS = "775 1000 1000"          # the SM config, both AAP XMLs, List2Ctrl.js and the tweak images, as aa-touch.sh checks
 OURS_PRELOAD = "/data_persist/oem-aa-mod/libpatch-blmjciaapa.so"
 
 # Order the report lists components in.
@@ -254,6 +254,9 @@ def check(dump_path: Path, pinned: dict = None) -> dict:
     comps["delay"] = result({"stock": AVAILABLE, "patched": INSTALLED, "unknown": BLOCKED}.get(delay, UNCHECKED),
                             {"stock": "List2Ctrl.js is stock", "patched": "the delay is shorter",
                              "unknown": "List2Ctrl.js is an unknown version"}.get(delay, "needs a FULL dump"))
+    list_attrs = dump.attrs("/jci/gui/common/controls/List2/js/List2Ctrl.js")
+    if comps["delay"]["state"] in (AVAILABLE, INSTALLED) and list_attrs not in (None, CFG_ATTRS):
+        comps["delay"] = {"state": BLOCKED, "detail": f"List2Ctrl.js has unexpected permissions ({list_attrs})"}
 
     # Camera text: every SafetyText image, stock or the blank (dumps from 1.4.0 on hash them).
     rows = [line.split() for line in pin.get("SAFETY_TABLE", "").splitlines() if len(line.split()) == 3]
@@ -262,6 +265,8 @@ def check(dump_path: Path, pinned: dict = None) -> dict:
         comps["safety"] = {"state": UNCHECKED, "detail": "needs a FULL dump from MiatOff dump 1.4.0 or later"}
     elif any(digest not in (row[1], row[2]) for row, digest in images):
         comps["safety"] = {"state": BLOCKED, "detail": "a SafetyText image is an unknown version"}
+    elif any(dump.attrs("/jci/nativegui/images/" + row[0]) not in (None, CFG_ATTRS) for row in rows):
+        comps["safety"] = {"state": BLOCKED, "detail": "a SafetyText image has unexpected permissions"}
     elif all(digest == row[1] for row, digest in images):
         comps["safety"] = result(AVAILABLE, f"all {len(rows)} SafetyText images are stock")
     elif all(digest == row[2] for row, digest in images):

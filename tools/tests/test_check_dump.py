@@ -175,6 +175,11 @@ def main():
         v = verdict(make_dump(base / "img3", images={}))
         check(states(v)["safety"] == "not checked" and v["overall"] == "incomplete",
               "camera text: a dump without the images (before 1.4.0) is incomplete, not guessed")
+        d = make_dump(base / "img4")
+        (d / "inventory/key-files.tsv").write_text((d / "inventory/key-files.tsv").read_text()
+                                                   + f"/jci/nativegui/images/{names[0]}\t1\t644 0 0\t1:1\tx\t{sha(SAFETY[names[0]])}\n")
+        v = verdict(d)
+        check(states(v)["safety"] == "blocked", "camera text: an image with other permissions is blocked")
         v = verdict(make_dump(base / "list", **{"list": b"other"}))
         check(states(v)["delay"] == "blocked" and states(v)["warning"] == "available", "an unknown List2Ctrl.js blocks only the delay")
 

@@ -1085,8 +1085,10 @@ refresh_state() {
     esac
     if [ -n "$FOREIGN" ]; then
         STATE=unknown
-    elif [ -z "$LEFTOVERS" ] && aa_files_stock && { other_features_on || ! exists "$STATE_DIR"; }; then
-        STATE=stock     # with the boot trim or the warning patch on, their backups stay in STATE_DIR
+    elif [ -z "$LEFTOVERS" ] && aa_files_stock && { other_features_on || ! exists "$BACKUP"; }; then
+        # STATE_DIR may still hold backups of features (on, or left by an interrupted
+        # RESTORE); only the AA backup set without any feature on means an AA run was cut.
+        STATE=stock
     elif [ -z "$LEFTOVERS" ] && [ "$S_SM $S_XML $S_UCP $S_CONF $S_SHIM" = "patched patched patched ours on" ]; then
         STATE=installed
     elif [ -z "$LEFTOVERS" ] && [ "$S_SM $S_XML $S_UCP $S_CONF $S_SHIM" = "patched patched patched ours off" ]; then
@@ -1100,9 +1102,9 @@ aa_files_stock() {
     [ "$S_SM $S_XML $S_UCP $S_SHIM $S_CONF" = "stock stock stock absent absent" ] && ! exists "$MOD_DIR"
 }
 
-# Boot trim or warning patch installed: STATE_DIR then holds their backups.
+# A feature that is on, half done or unknown: its backup in STATE_DIR must stay.
 other_features_on() {
-    [ "$S_TRIM" != 0 ] || [ "$S_DISC" = patched ] || [ "$S_METERS" != off ] || [ "$S_DELAY" = patched ] || \
+    [ "$S_TRIM" != 0 ] || [ "$S_DISC" != stock ] || [ "$S_METERS" != off ] || [ "$S_DELAY" != stock ] || \
         [ "$S_SAFETY" != stock ]
 }
 
@@ -1494,6 +1496,7 @@ ensure_file_backup() {
     mkdir -p "$STATE_DIR" || return 1
     make_stock "$1" "$bak.new" || return 1
     chmod 444 "$bak.new" && fsync_path "$bak.new" || return 1
+    fault "backup-$1" || return 1
     mv "$bak.new" "$bak" && fsync_path "$STATE_DIR" || return 1
     log "backup of stock ${bak##*/} written to ${STATE_DIR#"$R"}"
 }
@@ -1607,6 +1610,13 @@ image_set_state() {  # stock | patched | partial | unknown
     for name in $(image_names "$set"); do
         is_file "$dir/$name" || { echo unknown; return 0; }
     done
+    if [ "$CHECK_ATTRS" = 1 ]; then
+        # one stat for all: "mode uid:gid" per file, all must be the stock attributes
+        # shellcheck disable=SC2046
+        (cd "$dir" && stat -c '%a %u:%g' $(image_names "$set")) 2>/dev/null | \
+            awk -v want="$CFG_MODE $CFG_OWNER" -v n="$(image_names "$set" | wc -l)" '$0 == want { ok++ } END { exit ok == n ? 0 : 1 }' || \
+            { echo unknown; return 0; }
+    fi
     image_check "$set" live | awk '
         { c[$2]++ }
         END {
@@ -1656,6 +1666,7 @@ ensure_image_backup() {
         cp "$dir/$name" "$new/$name" && chmod 444 "$new/$name" && fsync_path "$new/$name" || return 1
     done
     fsync_path "$new" || return 1
+    fault "image-backup-$set" || return 1
     mv "$new" "$bak" && fsync_path "$STATE_DIR" || return 1
     image_backup_valid "$set" || { log "ERROR: backup of the $set images failed verification"; rm -rf "$bak"; return 1; }
     log "backup of the stock $set images written to ${bak#"$R"}"
@@ -1670,7 +1681,8 @@ remove_image_backup() {
         rm -f "$bak/$name" || return 1
     done
     for name in $(image_names "$1" | awk -F/ 'NF > 1 { print $1 }' | sort -u); do
-        rmdir "$bak/$name" || return 1
+        [ ! -d "$bak/$name" ] || rmdir "$bak/$name" || return 1
+        fault "image-rmdir-$1" || return 1
     done
     rmdir "$bak"
 }
@@ -1728,6 +1740,7 @@ do_images() {
     log "$set images: $n replaced"
     [ "$(image_set_state "$set")" = "$want" ] || { log "ERROR: $set images are not all $want"; return 1; }
     if [ "$want" = stock ]; then
+        fault "image-unbackup-$set" || return 1
         remove_image_backup "$set" || return 1
         refresh_state
         if aa_files_stock && ! other_features_on; then remove_state_dir || return 1; fi
@@ -2288,6 +2301,13 @@ hmi_emergency() {
 }
 if [ -f "$RESTORE" ]; then
     hmi_emergency "MIATOFF-RESTORE on the stick"
+fi
+
+# Backups left in STATE_DIR by an interrupted RESTORE of a feature that is stock
+# again (and no AA backup): not needed any more, so they go (only /data_persist).
+if [ "$STATE" = stock ] && ! other_features_on && ! exists "$BACKUP" && exists "$STATE_DIR"; then
+    log "removing leftover backups of features that are stock again"
+    remove_state_dir && refresh_state
 fi
 
 if [ "$STATE" = unknown ]; then
