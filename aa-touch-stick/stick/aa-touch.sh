@@ -334,6 +334,9 @@ if [ "$SM_NAME" = sm_WCP.conf ]; then
     SM_LINE_PATCHED=$SM_WCP_LINE_PATCHED
 fi
 SM="$R/jci/sm/${SM_NAME:-sm.conf}"
+# The config that is not running. A backup or edits of it mean the unit switched
+# configs since MiatOff changed it: refused (see backup_state, describe_state).
+case "$SM_NAME" in sm_WCP.conf) SM_OTHER=sm.conf ;; *) SM_OTHER=sm_WCP.conf ;; esac
 SM_STOCK=$(printf '%s\n' "$SM_TABLE" | awk '$1 == "00" { print $2 }')
 SM_PATCHED=$(printf '%s\n' "$SM_TABLE" | awk '$1 == "10" { print $2 }')   # + AA touch
 XML="$R/etc/aap_system_attributes.xml"
@@ -906,6 +909,7 @@ backup_state() {    # absent | valid | invalid
     local key live
     exists "$BACKUP" || { echo absent; return 0; }
     [ -d "$BACKUP" ] && [ ! -L "$BACKUP" ] || { echo invalid; return 0; }
+    exists "$BACKUP/$SM_OTHER" && { echo invalid; return 0; }   # made while the other config ran
     for key in sm xml ucp; do
         live=$(cfg_path "$key")
         content_is "$key" "$BACKUP/${live##*/}" stock || { echo invalid; return 0; }
@@ -950,6 +954,7 @@ remove_state_dir() {
             live=$(cfg_path "$key")
             rm -f "$BACKUP/${live##*/}" || return 1
         done
+        rm -f "$BACKUP/$SM_OTHER" || return 1
         rmdir "$BACKUP" || return 1
     fi
     for key in sys opera gap2; do
@@ -1032,6 +1037,10 @@ describe_state() {
     printf 'boot trim:    %s (groups on:%s)\n' "$(trim_name "$S_TRIM")" "$( [ "$S_TRIM" = unknown ] && echo ' ?' || trim_list "$S_TRIM")"
     printf 'disclaimer:   %s (stock = startup warning shown, patched = skipped)\n' "$S_DISC"
     printf 'meters:       %s (app %s, userscript %s)\n' "$S_METERS" "$(area_state app)" "$(area_state userjs)"
+    if exists "$BACKUP/$SM_OTHER"; then
+        printf 'NOTE:         the backup was made while the unit ran %s; it now runs %s.\n' "$SM_OTHER" "${SM_NAME:-?}"
+        printf '              Nothing is changed. Switch wireless CarPlay back, run REMOVE, then switch again.\n'
+    fi
     [ -z "$FOREIGN" ] || printf 'foreign:      %s\n' $FOREIGN
     [ -z "$LEFTOVERS" ] || printf 'leftovers:    %s\n' $LEFTOVERS
     f=$(meters_leftovers)

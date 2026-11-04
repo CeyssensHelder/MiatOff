@@ -268,7 +268,8 @@ Among other things, the test checks:
 - that the awk edits in the script produce exactly the same files as a separate Python implementation;
 - a wireless-CarPlay unit (`sm_WCP.conf` active): install, boot trim, power loss and remove change only
   `sm_WCP.conf` (never the unused `sm.conf`, and its `args="new_hw"` on jciAAPA stays) and end byte-exact stock;
-  an unknown `sm_WCP.conf` is an unknown state, so nothing changes;
+  an unknown `sm_WCP.conf` is an unknown state, so nothing changes; a unit that switched configs after an install
+  is refused with an explanation in `aa-touch-state.txt` (switch back, REMOVE, then switch);
 - the boot trim with and without Aha: alone, combined with AA touch, and every transition between the levels
   (`sm.conf` is then always exactly the expected variant; another service waiting on `stage_ir` is left
   alone), a power loss during the trim, an error (nothing is left behind), and refusing on a modified

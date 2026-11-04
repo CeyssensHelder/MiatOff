@@ -414,8 +414,10 @@ def main():
                            and wcp_rows[0::2] == sorted(sm_table())),
           "SM_WCP_TABLE is empty or 64 distinct variants in order")
     if REAL:
-        check(sha(STOCK["jci/sm/sm.conf"]) == bs.pinned("SM_STOCK"), "SM_STOCK matches the dump")
-        check(sha(PATCHED["jci/sm/sm.conf"]) == bs.pinned("SM_PATCHED"), "SM_PATCHED matches the Python edit")
+        sm_rows = dict(line.split() for line in re.search(
+            r"^SM_TABLE='(.*?)'$", (bs.STICK / "aa-touch.sh").read_text(), re.M | re.S).group(1).split("\n"))
+        check(sha(STOCK["jci/sm/sm.conf"]) == sm_rows["00"], "SM_TABLE 00 (stock) matches the dump")
+        check(sha(PATCHED["jci/sm/sm.conf"]) == sm_rows["10"], "SM_TABLE 10 (AA touch) matches the Python edit")
         check(sha(STOCK["etc/aap_system_attributes.xml"]) == bs.pinned("XML_STOCK"), "XML_STOCK matches the dump")
         check(sha(PATCHED["etc/aap_system_attributes.xml"]) == bs.pinned("XML_PATCHED"), "XML_PATCHED matches")
         check(sha(STOCK["etc/aap_system_attributes_UCP.xml"]) == bs.pinned("UCP_STOCK"), "UCP_STOCK matches the dump")
@@ -614,6 +616,20 @@ def main():
         refused("wcp-stock-sm.conf-but-unknown-sm_WCP", lambda c: (write(c.root, WCP, b"<sm_config/>\n"),
                                                                    write(c.root, "proc/252/cmdline", WCP_CMDLINE)),
                 action="trim_on")
+        # Installed on sm.conf, then the unit switches to sm_WCP.conf: refused, and the report says why.
+        car = fresh(base, "wcp-switched")
+        car.run("install")
+        write(car.root, WCP, WCP_STOCK)
+        write(car.root, "proc/252/cmdline", WCP_CMDLINE)
+        before = car.digest()
+        r = car.run("remove")
+        report = (car.stick / "aa-touch-state.txt").read_text()
+        check(r.returncode != 0 and car.digest() == before and "the backup was made while the unit ran sm.conf" in report,
+              "switched to sm_WCP.conf after an install: refused, the report explains")
+        write(car.root, "proc/252/cmdline", b"/jci/sm/sm\x00-f\x00/jci/sm/sm.conf\x00-e\x00/tmp/smevents.txt\x00")
+        r = car.run("remove")
+        check(r.returncode == 0 and car.state() == "stock", "switched back to sm.conf: REMOVE works again")
+
         # As with an unknown sm.conf, an unknown active config is an unknown state: nothing changes.
         refused("wcp-unknown-sm_WCP-warning", lambda c: (write(c.root, WCP, WCP_STOCK + b" "),
                                                          write(c.root, "proc/252/cmdline", WCP_CMDLINE)),
