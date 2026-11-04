@@ -51,6 +51,12 @@ def make_fixture(root: Path):
     write(root, "jci/gui/common/js/Common.js", "// not the real Common.js\n")
     write(root, "jci/gui/apps/system/js/systemApp.js", "var disclaimerTime = 3500;\n")
     write(root, "jci/gui/apps/system/images/bg.png", b"\x89PNG fake")
+    write(root, "jci/gui/common/controls/List2/js/List2Ctrl.js", "autoscrollTier1Timeout : 1500,\n")
+    write(root, "jci/nativegui/images/SafetyText_UK_English.png", b"\x89PNG safety")
+    write(root, "jci/nativegui/images/HorizontalSensors/Car_lg.png", b"\x89PNG car lg")
+    write(root, "jci/nativegui/images/VerticalSensors/Car_md.png", b"\x89PNG car md")
+    write(root, "jci/nativegui/images/MiniView/Car_sm.png", b"\x89PNG car sm")
+    write(root, "jci/nativegui/images/Other.png", b"\x89PNG other")
     write(root, "jci/gui/apps/big/huge.js", "x" * (2 * 1024 * 1024 + 1))
     write(root, "etc/aap_system_attributes.xml", "<attributes/>\n")
     write(root, "etc/aap_system_attributes_UCP.xml", "<attributes/>\n")
@@ -214,6 +220,21 @@ def main():
             check(md5_blm in keys, "blmjciaapa.so md5 is correct")
         crc_blm = bs.posix_cksum((root / "usr/lib/blmjciaapa.so").read_bytes())
         check(f"\t{crc_blm}:13\t" in keys, "blmjciaapa.so cksum is correct")
+        tweak_images = ["jci/nativegui/images/SafetyText_UK_English.png",
+                        "jci/nativegui/images/HorizontalSensors/Car_lg.png",
+                        "jci/nativegui/images/VerticalSensors/Car_md.png",
+                        "jci/nativegui/images/MiniView/Car_sm.png"]
+        check(all((files / rel).read_bytes() == (root / rel).read_bytes() for rel in tweak_images
+                  if (files / rel).exists()) and all((files / rel).exists() for rel in tweak_images),
+              "tweak images copied byte for byte")
+        check(not (files / "jci/nativegui/images/Other.png").exists(), "other native images not copied")
+        check((files / "jci/gui/common/controls/List2/js/List2Ctrl.js").exists(), "List2Ctrl.js copied")
+        check(all("/" + rel in keys for rel in tweak_images) and "/List2Ctrl.js" in keys
+              and "/Other.png" not in keys, "tweak images and List2Ctrl.js in key-files.tsv")
+        if not DEGRADED:
+            sha_safety = hashlib.sha256((root / tweak_images[0]).read_bytes()).hexdigest()
+            check(sha_safety in keys, "safety text sha256 is correct")
+        check("tweak images:     4 hashed" in summary, "summary counts the tweak images")
         check("sm_WCP" in (out / "inventory/sm-config-references.txt").read_text(), "sm_WCP references found")
         procs = (out / "runtime/processes.tsv").read_text().splitlines()
         row = [l for l in procs if l.startswith("1234\t")]

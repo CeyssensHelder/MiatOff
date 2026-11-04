@@ -14,7 +14,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # The USB launch mechanism follows TouchTune (GPL-3.0-or-later).
 
-MO_VERSION=1.3.0
+MO_VERSION=1.4.0
 R="${MO_ROOT:-}"                        # test hook: fixture root; empty on the CMU
 MO_TEST="${MO_TEST:-0}"                 # test hook: 1 = no dialogs
 MO_ACTION="${MO_ACTION:-full}"          # test hook: full | snapshot | cancel
@@ -193,6 +193,21 @@ copy_tree() {
     done < "$list"
     rm -f "$list"
     log "copied $copied files from $dir ($mode, max $max bytes)"
+}
+
+# copy_images: the PNGs that HMI tweaks replace (reversing-camera safety text,
+# parking-sensor graphics), so their stock hashes and sizes can be pinned.
+TWEAK_IMAGES=/jci/nativegui/images
+copy_images() {
+    local p rel copied=0
+    for p in "$R$TWEAK_IMAGES"/SafetyText_*.png "$R$TWEAK_IMAGES"/HorizontalSensors/*.png \
+             "$R$TWEAK_IMAGES"/VerticalSensors/*.png "$R$TWEAK_IMAGES"/MiniView/*.png; do
+        [ -f "$p" ] || continue
+        rel=${p#"$R"}
+        mkdir -p "$OUT/static/files${rel%/*}" 2>>"$OUT/errors.txt" || continue
+        cp "$p" "$OUT/static/files$rel" 2>>"$OUT/errors.txt" && copied=$((copied + 1))
+    done
+    log "copied $copied tweak images from $TWEAK_IMAGES"
 }
 
 firmware() {
@@ -556,6 +571,7 @@ static_dump() {
     copy_tree /jci/scripts 1048576 all
     copy_tree /jci "$MAX_TEXT_BYTES" text
     copy_tree /etc "$MAX_ETC_BYTES" all
+    copy_images
 
     # Inventory: every file with mode/owner/size, plus hashes of executables.
     all="$OUT/inventory/all-files.txt"
@@ -579,7 +595,7 @@ static_dump() {
     rm -f "$OUT/.hash-list"
 
     # Key files for the plan (AA touch, boot, HMI tweaks, TouchTune).
-    grep -E '/(blmjciaapa\.so.*|blmjcicarplay\.so.*|libdevmgr_interface\.so.*|aap_service|aap_system_attributes.*\.xml|sm[^/]*\.conf|Common\.js|systemApp\.js|version\.ini|start_network\.sh|set_.*speed_restriction_config\.sh|jci-dialog|smctl)$' \
+    grep -E '/(blmjciaapa\.so.*|blmjcicarplay\.so.*|libdevmgr_interface\.so.*|aap_service|aap_system_attributes.*\.xml|sm[^/]*\.conf|Common\.js|systemApp\.js|List2Ctrl\.js|nativegui/images/(SafetyText_[^/]*|HorizontalSensors/[^/]*|VerticalSensors/[^/]*|MiniView/[^/]*)\.png|version\.ini|start_network\.sh|set_.*speed_restriction_config\.sh|jci-dialog|smctl)$' \
         "$all" > "$OUT/.key-list" 2>/dev/null
     {
         printf 'path\tsize\tmode uid gid\tcksum\tmd5\tsha256\n'
@@ -640,6 +656,7 @@ summary() {
         echo "LD_PRELOAD procs: $preload (see runtime/ld_preload.tsv)"
         echo "vehicle data:     $(vehicle_summary) (see vehicle-data/)"
         echo "network ifaces:   $(ls "$R/sys/class/net" 2>/dev/null | tr '\n' ' ')"
+        echo "tweak images:     $(grep -c '/nativegui/images/' "$OUT/inventory/key-files.tsv" 2>/dev/null || echo 0) hashed (safety text, parking sensors)"
         echo
         echo "SM configs:"
         for f in "$R"/jci/sm/*.conf; do
