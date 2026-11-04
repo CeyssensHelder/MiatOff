@@ -783,10 +783,9 @@ def main():
         car = fresh(base, "safety-stale-backup-aa-stock")
         stock_digest = car.digest()
         write(car.root, f"data_persist/miatoff/aa-touch/safety/{SAFETY_NAMES[0]}", SAFETY_STOCK[SAFETY_NAMES[0]])
-        car.run("cancel")
-        r = car.run("remove")
-        check(car.state() != "unknown" and r.returncode == 0 and car.digest() == stock_digest,
-              "with AA stock, a leftover backup folder is cleaned by REMOVE")
+        r = car.run("cancel")
+        check(r.returncode == 0 and car.state() == "stock" and car.digest() == stock_digest,
+              "with AA stock, a leftover camera-text backup folder is tidied at the next run")
 
         # power loss inside backup creation and removal: never a fake half-done AA install
         for action, point, then in (("delay_on", "backup-list", "delay_on"), ("safety_on", "image-backup-safety", "safety_on"),

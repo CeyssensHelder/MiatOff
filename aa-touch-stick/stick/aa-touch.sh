@@ -2262,7 +2262,7 @@ if ! mkdir "$MO_GUARD" 2>/dev/null; then
         exit 0
     fi
     log "stale guard (pid ${old_pid:-?} gone); taking over"
-    rm -f "$MO_GUARD/pid" "$MO_GUARD/sm.a" "$MO_GUARD/sm.b"
+    rm -f "$MO_GUARD/pid" "$MO_GUARD/sm.a" "$MO_GUARD/sm.b" "$MO_GUARD/images"
     rmdir "$MO_GUARD" 2>/dev/null
     mkdir "$MO_GUARD" 2>/dev/null || { log "ERROR: cannot take guard $MO_GUARD"; exit 1; }
 fi
