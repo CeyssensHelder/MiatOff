@@ -124,7 +124,10 @@ class Scrolled(tk.Frame):
         self.canvas.bind("<Leave>", lambda _e: self.canvas.unbind_all("<MouseWheel>"))
 
     def _wheel(self, event):
-        self.canvas.yview_scroll(int(-event.delta / 120), "units")
+        # Windows reports 120 per notch; macOS reports small steps (1, 2, ...).
+        step = -event.delta if sys.platform == "darwin" else int(-event.delta / 120)
+        if step:
+            self.canvas.yview_scroll(step, "units")
 
 
 class App(tk.Tk):
@@ -296,13 +299,27 @@ class App(tk.Tk):
         seg.pack(side="right")
         seg.pack_propagate(False)
         self.options[key] = {}
+        # Labels drawn by hand: Tk on macOS ignores the colours of button-style
+        # radio buttons, so a choice would not show there.
         for value, label in (("keep", "Leave as-is"), ("install", install_label), ("remove", remove_label)):
-            button = tk.Radiobutton(seg, text=label, value=value, variable=var, indicatoron=False, bd=0,
-                                    bg=CARD, fg=INK, selectcolor=OPTION_FILL[value], activebackground=OPTION_FILL[value],
-                                    font=("Segoe UI", 9), relief="flat",
-                                    disabledforeground="#d1d5db", cursor="hand2")
-            button.pack(side="left", fill="both", expand=True, padx=(0, 1), pady=1)
-            self.options[key][value] = button
+            option = tk.Label(seg, text=label, bg=CARD, fg=INK, font=("Segoe UI", 9),
+                              disabledforeground="#d1d5db", cursor="hand2")
+            option.pack(side="left", fill="both", expand=True, padx=(0, 1), pady=1)
+            option.bind("<Button-1>", lambda _e, k=key, v=value: self._choose(k, v))
+            self.options[key][value] = option
+        var.trace_add("write", lambda *_a, k=key: self._paint(k))
+        self._paint(key)
+
+    def _choose(self, key, value):
+        if str(self.options[key][value].cget("state")) != "disabled":
+            self.vars[key].set(value)
+
+    def _paint(self, key):
+        chosen = self.vars[key].get()
+        for value, option in self.options[key].items():
+            on = value == chosen
+            option.configure(bg=OPTION_FILL[value] if on else CARD,
+                             font=("Segoe UI", 9, "bold") if on else ("Segoe UI", 9))
 
     def apply_verdict(self, verdict):
         """Badges from a check, and options the car cannot take greyed out."""
@@ -313,7 +330,8 @@ class App(tk.Tk):
             self.badges[key].configure(text=state.upper(), bg=bg, fg=fg)
             ok = allowed_options(state)
             for value in ("install", "remove"):
-                self.options[key][value].configure(state="normal" if value in ok else "disabled")
+                self.options[key][value].configure(state="normal" if value in ok else "disabled",
+                                                   cursor="hand2" if value in ok else "arrow")
             if self.vars[key].get() not in ("keep", *ok):
                 self.vars[key].set("keep")
 
