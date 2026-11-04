@@ -44,8 +44,10 @@ Another car or firmware? Run the check (below) and open an issue with only `SUMM
 
 ## What you need
 
-- A Windows PC with **Python 3** (including Tk, which the python.org installer has) and this repository
-  (`git clone https://github.com/CeyssensHelder/MiatOff` or *Code → Download ZIP*).
+- A PC with **Python 3** (including Tk, which the python.org installer has) and this repository
+  (`git clone https://github.com/CeyssensHelder/MiatOff` or *Code → Download ZIP*). **Windows** is what we use. **macOS**
+  also works (reported and tested by a contributor; the stick picker lists external FAT32/MBR volumes under `/Volumes`).
+  **Linux** is supported in the code (vfat mounts under `/media`, `/run/media`, `/mnt`) but not yet tested by anyone.
 - An **empty USB stick**, 32 GB or smaller, formatted **FAT32** with an **MBR** partition table.
 - An **MX-5 ND1 or ND2** with Mazda Connect on firmware 74.00.324A (see the support status above). We analysed a 2017 EU
   ND1; a US-spec ND1 has been reported working. **Not** the ND3, and no other firmware.

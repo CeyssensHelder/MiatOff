@@ -44,13 +44,14 @@ copied.
   script does not silently keep refusing. At the end the script checks that `sm.conf`, `sm_WCP.conf`, `Common.js`, `version.ini`, the
   AAP XMLs, the root mount and the NVRAM keys are unchanged, and puts the result in `SUMMARY.txt`.
 
-## Making the stick (Windows)
+## Making the stick (Windows, macOS, Linux)
 1. Take an **empty** stick of **≤ 32 GB**, formatted as **FAT32** with **MBR**. Do not use a stick that has TouchTune
    on it: the builder refuses that. Check MBR in PowerShell (`PartitionStyle` must be `MBR`):
    ```powershell
    Get-Disk | Select-Object Number, FriendlyName, Size, PartitionStyle
    ```
-2. Build the stick (replace `E:\` with the stick's drive letter). The builder refuses anything except the root of a
+2. Build the stick (replace `E:\` with the stick's drive letter, or use the mount root such as `/Volumes/MAZDA` on macOS
+   or `/media/you/MAZDA` on Linux; the MBR check above is for Windows, use `diskutil info` on macOS or `lsblk -o NAME,PTTYPE` on Linux). The builder refuses anything except the root of a
    FAT32 volume, and also refuses the system drive:
    ```bash
    python dump-stick/build_stick.py E:\

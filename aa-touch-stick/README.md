@@ -164,10 +164,11 @@ plan has no menu: it offers the plan's next step, and says "Your plan is complet
 install still gets its recovery dialog (FINISH / REMOVE, REPAIR / REMOVE). To get the menu below, build a stick without a
 plan or delete `miatoff-plan.txt`. An invalid plan is ignored, and with no plan the stick behaves exactly as described here.
 
-## Making the stick (Windows)
+## Making the stick (Windows, macOS, Linux)
 1. Take a stick (≤ 32 GB, **FAT32**, **MBR**) without any other kit on it: the builder refuses a stick with a
    different launcher or `.ID` in the root.
-2. Build the stick (replace `E:\`):
+2. Build the stick (replace `E:\` with the stick's drive letter on Windows, or use its mount root such as
+   `/Volumes/MAZDA` on macOS or `/media/you/MAZDA` on Linux; the builder refuses anything that is not an external FAT32 volume):
    ```bash
    python aa-touch-stick/build_stick.py E:\
    ```
