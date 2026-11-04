@@ -17,6 +17,11 @@ vendor/oem-aa-mod/oem-aa-mod-0.10.0.zip
   https://github.com/VitaliyKurokhtin/oem-aa-mod
   Only libpatch-blmjciaapa.so is used, unmodified.
 
+vendor/mzd-aio/
+  Images from MZD-AIO by Trevelopment, GPL-3.0, https://github.com/Trevelopment/MZD-AIO
+  Shipped unmodified (see vendor/mzd-aio/README.md); the shorter list delay
+  follows its "Shorter Delay Mod".
+
 meters/fonts/
   Chakra Petch and Share Tech Mono (google/fonts), SIL Open Font License 1.1,
   with their license texts alongside.

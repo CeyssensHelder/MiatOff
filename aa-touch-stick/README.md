@@ -15,7 +15,9 @@ only the touch shim of [oem-aa-mod](https://github.com/VitaliyKurokhtin/oem-aa-m
 
 Separately, only if you choose them (menu **EXTRA**): the boot trim (`sm.conf`, EXTRA → TRIM), removing
 the startup warning (`/jci/gui/apps/system/js/systemApp.js` + stock copy `systemApp.js.stock`, EXTRA →
-WARNING) and **Meters** (gauges under Applications, EXTRA → METERS). See the sections below.
+WARNING), **Meters** (gauges under Applications, EXTRA → MORE → METERS), the **shorter list delay**
+(`List2Ctrl.js` + stock copy `List2Ctrl.js.stock`, EXTRA → MORE → DELAY) and the **camera safety text**
+(`/jci/nativegui/images/SafetyText_*.png` + stock copies in `safety/`, EXTRA → MORE → CAMERA). See the sections below.
 
 File permissions stay as stock (`775`, uid/gid `1000`). `Common.js`, NVRAM, the audio, the navigation and the HUD
 are not touched. In `libpatch.conf` **every** key is written out: a missing key falls back to the built-in
@@ -96,7 +98,27 @@ original works are in [docs/05](../docs/05-ui-tweaks.md).
   `/data_persist/miatoff/aa-touch/systemApp.js.stock`. RESTORE gives back the byte-exact original.
 - **Tested:** the modified file is valid JavaScript (`node --check`).
 
-## Meters (menu EXTRA → METERS)
+## Shorter list delay (menu EXTRA → MORE → DELAY)
+MZD-AIO's "Shorter Delay Mod": when you hold the Commander tilted in a list, scrolling starts after 0.15 s instead of
+1.5 s and runs faster.
+- **One file:** `/jci/gui/common/controls/List2/js/List2Ctrl.js`, four lines and nothing else:
+  `autoscrollTier1Timeout` 1500 → 150, `autoscrollTier2Timeout` 5000 → 300, `autoscrollTier1Interval` 500 → 200,
+  `autoscrollTier2Interval` 1000 → 300 (ms).
+- **Same safety as the warning patch:** exact stock and patched sha256, one atomic `mv`, a stock copy in
+  `/data_persist/miatoff/aa-touch/List2Ctrl.js.stock`; RESTORE gives back the byte-exact original. It is part of the
+  emergency route below. The patched file is valid JavaScript (`node --check`).
+
+## Camera safety text (menu EXTRA → MORE → CAMERA)
+Blanks the safety text shown over the reversing camera picture, like MZD-AIO's "Reverse Camera Safety Warning".
+- **Files:** all 46 `/jci/nativegui/images/SafetyText_*.png` of the unit (MZD-AIO only covered 29). Each becomes
+  MZD-AIO's blank 800×50 image (`vendor/mzd-aio/`, on the stick in `images/safety/`).
+- **Safety:** every image must be its stock or blank version (sha256 per file in `SAFETY_TABLE`). All 46 originals
+  are copied to `/data_persist/miatoff/aa-touch/safety/` and verified before the first one is replaced; then each
+  image is staged, verified and renamed on its own. A power loss leaves each image stock or blank: the menu then
+  offers **FINISH** or **RESTORE**. RESTORE puts the byte-exact originals back and removes the copies.
+- Only useful with a reversing camera. The images are not part of the Opera HMI, so not of the emergency route.
+
+## Meters (menu EXTRA → MORE → METERS)
 Puts **Meters** under **Applications**: the gauges from `meters/`, fed by the collector. How the app gets into the menu
 is in [meters-app/README.md](../meters-app/README.md), the research in [docs/13](../docs/13-gauges.md).
 
@@ -133,10 +155,10 @@ is in [meters-app/README.md](../meters-app/README.md), the research in [docs/13]
 | unknown | a message only; nothing happens |
 
 ### Emergency route: `MIATOFF-RESTORE`
-Meters and the warning patch change the Mazda menu itself (Opera). If something goes wrong there, the stick's
-dialog may no longer appear. Therefore:
-- Put an **empty file `MIATOFF-RESTORE`** in the root of the stick. The script then puts Meters and the
-  warning patch back to stock **without a dialog** and restarts the unit. AA touch, TouchTune and the trim stay in place.
+Meters, the warning patch and the list delay change the Mazda menu itself (Opera). If something goes wrong there,
+the stick's dialog may no longer appear. Therefore:
+- Put an **empty file `MIATOFF-RESTORE`** in the root of the stick. The script then puts Meters, the
+  warning patch and the list delay back to stock **without a dialog** and restarts the unit. AA touch, TouchTune and the trim stay in place.
   If there is nothing to restore, it does nothing (no restart). Remove the file afterwards.
 - If the dialog fails while Meters or the warning patch is installed, the script tries again after 10 s.
   If that fails too, the same emergency route follows.
@@ -181,8 +203,11 @@ plan or delete `miatoff-plan.txt`. An invalid plan is ignored, and with no plan 
 1. **Engine on**, wait for the home screen. Do **not** connect the phone yet.
 2. Insert the stick into the hub. First a choice menu appears with the current state: **ANDROID AUTO** / **EXTRA** /
    CANCEL (except after an interrupted AA run: then the FINISH dialog comes straight away).
-   - **EXTRA:** first **TRIM** / **WARNING** / **METERS**.
-     - **METERS:** see [Meters](#meters-menu-extra--meters). The unit restarts afterwards.
+   - **EXTRA:** first **TRIM** / **WARNING** / **MORE**; MORE gives **METERS** / **DELAY** / **CAMERA**.
+     - **METERS:** see [Meters](#meters-menu-extra--more--meters). The unit restarts afterwards.
+     - **DELAY:** **SHORTER** or **RESTORE**. See [Shorter list delay](#shorter-list-delay-menu-extra--more--delay).
+     - **CAMERA:** **BLANK**, **RESTORE**, or after an interrupted run **FINISH** / **RESTORE**. See
+       [Camera safety text](#camera-safety-text-menu-extra--more--camera).
      - **WARNING:** **REMOVE** (the startup warning is skipped) or **RESTORE**. The unit restarts
        afterwards. See [Startup warning](#startup-warning-menu-extra--warning).
      - **TRIM:** the buttons depend on the trim. The unit restarts afterwards.

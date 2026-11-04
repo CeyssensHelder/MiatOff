@@ -235,6 +235,41 @@ else:
     GAP2_STOCK_BYTES = b"#!/bin/sh\n\n"
 OPERA_PATCHED_BYTES = meters_edit.patch_opera(OPERA_STOCK_BYTES)
 GAP2_PATCHED_BYTES = meters_edit.patch_gap2(GAP2_STOCK_BYTES)
+# Shorter list delay: List2Ctrl.js. Real file from the dump when present, else synthetic.
+LIST2 = "jci/gui/common/controls/List2/js/List2Ctrl.js"
+DELAY = [("autoscrollTier1Timeout :                1500,", "autoscrollTier1Timeout :                150,"),
+         ("autoscrollTier2Timeout :                5000,", "autoscrollTier2Timeout :                300,"),
+         ("autoscrollTier1Interval :               500,", "autoscrollTier1Interval :               200,"),
+         ("autoscrollTier2Interval :               1000,", "autoscrollTier2Interval :               300,")]
+
+
+def patch_list2(data: bytes) -> bytes:
+    """Independent Python version of delay_transform: exactly the four lines."""
+    for old, new in DELAY:
+        line = ("        " + old + "\n").encode()
+        assert data.count(line) == 1
+        data = data.replace(line, ("        " + new + "\n").encode())
+    return data
+
+
+DUMP4 = HERE.parent.parent / "dumps/eu-74.00.324/002-full-up1596s/static/files"
+if REAL and (DUMP4 / LIST2).is_file():
+    LIST2_STOCK_BYTES = (DUMP4 / LIST2).read_bytes()
+else:
+    LIST2_STOCK_BYTES = ("var List2Ctrl = function () {};\nList2Ctrl.prototype.properties = {\n"
+                         + "".join(f"        {old}\n" for old, _ in DELAY)
+                         + "        // autoscrollTier1Timeout :                1500, (a comment, not the setting)\n};\n").encode()
+LIST2_PATCHED_BYTES = patch_list2(LIST2_STOCK_BYTES)
+
+# Camera text: the SafetyText images. The names come from SAFETY_TABLE; the stock
+# content is synthetic (the real images are Mazda's), the blank is MZD-AIO's.
+NATIVE = "jci/nativegui/images"
+SAFETY_ROWS = [line.split() for line in re.search(
+    r"^SAFETY_TABLE='(.*?)'$", (HERE.parent / "stick/aa-touch.sh").read_text(), re.M | re.S).group(1).splitlines()]
+SAFETY_NAMES = [row[0] for row in SAFETY_ROWS]
+SAFETY_STOCK = {name: b"\x89PNG stock " + name.encode() for name in SAFETY_NAMES}
+SAFETY_BLANK = (HERE.parent.parent / "vendor/mzd-aio/safety-warning-reverse-camera/SafetyText_UK_English.png").read_bytes()
+
 TT_LINE = '        "Global.AtSpeed" : this._AtSpeedMsgHandler.bind(this),'
 COMMON_STOCK = ("var Common = {\n    _handlers : {\n" + TT_LINE + "\n    },\n};\n").encode()
 COMMON_PATCHED = COMMON_STOCK.replace(
@@ -246,11 +281,17 @@ SETTER = '#!/bin/sh\nprintf "%s\\n" "$1" > "$MZD_ROOT/sys/class/nvram/nv-config/
 OPENSSL_SHIM = """#!/bin/sh
 [ "$1" = dgst ] || exit 1
 case "$2" in
-    -sha256) out=$(sha256sum "$3") || exit 1; name=SHA256 ;;
-    -md5) out=$(md5sum "$3") || exit 1; name=MD5 ;;
+    -sha256) tool=sha256sum; name=SHA256 ;;
+    -md5) tool=md5sum; name=MD5 ;;
     *) exit 1 ;;
 esac
-echo "$name($3)= ${out%% *}"
+shift 2
+rc=0
+for f; do
+    out=$($tool "$f") || { rc=1; continue; }
+    echo "$name($f)= ${out%% *}"
+done
+exit $rc
 """
 BLM = b"\x7fELF fake blmjciaapa"
 AAP = b"\x7fELF fake aap_service"
@@ -284,6 +325,10 @@ def make_fixture(root: Path):
     write(root, "sys/class/nvram/nv-config/keys/lvds_speed_restriction", "disable\n")
     write(root, "jci/gui/common/js/Common.js", COMMON_STOCK)
     write(root, SYSAPP, SYS_STOCK_BYTES)
+    write(root, LIST2, LIST2_STOCK_BYTES)
+    for name, data in SAFETY_STOCK.items():
+        write(root, f"{NATIVE}/{name}", data)
+    write(root, f"{NATIVE}/Other.png", b"\x89PNG not ours")
     write(root, OPERA, OPERA_STOCK_BYTES)
     write(root, GAP2, GAP2_STOCK_BYTES)
     write(root, "jci/opera/opera_dir/userjs/fps.js", "// stock fps counter\n")
@@ -310,6 +355,8 @@ def overrides(work: Path, root_in_sh: str, **extra) -> Path:
             SM_TABLE="'" + "\n".join(f"{code} {sha(data)}" for code, data in sorted(sm_table().items())) + "'",
             SM_WCP_TABLE="'" + "\n".join(f"{code} {sha(data)}" for code, data in sorted(WCP_VARIANTS.items())) + "'",
             SYS_STOCK=sha(SYS_STOCK_BYTES), SYS_PATCHED=sha(SYS_PATCHED_BYTES),
+            LIST_STOCK=sha(LIST2_STOCK_BYTES), LIST_PATCHED=sha(LIST2_PATCHED_BYTES),
+            SAFETY_TABLE="'" + "\n".join(f"{n} {sha(SAFETY_STOCK[n])} {sha(SAFETY_BLANK)}" for n in SAFETY_NAMES) + "'",
             OPERA_STOCK=sha(OPERA_STOCK_BYTES), OPERA_PATCHED=sha(OPERA_PATCHED_BYTES),
             GAP2_STOCK=sha(GAP2_STOCK_BYTES), GAP2_PATCHED=sha(GAP2_PATCHED_BYTES))
     values.update(extra)
@@ -413,6 +460,14 @@ def main():
     check(not wcp_rows or (len(wcp_rows) == 128 and len(set(wcp_rows[1::2])) == 64
                            and wcp_rows[0::2] == sorted(sm_table())),
           "SM_WCP_TABLE is empty or 64 distinct variants in order")
+    check(len(SAFETY_ROWS) == 46 and len(set(SAFETY_NAMES)) == 46
+          and all(len(r) == 3 and r[2] == sha(SAFETY_BLANK) and r[1] != r[2] for r in SAFETY_ROWS),
+          "SAFETY_TABLE: 46 SafetyText names, all to the MZD-AIO blank (some languages share one stock image)")
+    check(all(bs.payload()["images/safety/" + n] == SAFETY_BLANK for n in SAFETY_NAMES),
+          "stick carries the blank image once per SafetyText name")
+    if REAL and (DUMP4 / LIST2).is_file():
+        check(sha(LIST2_STOCK_BYTES) == bs.pinned("LIST_STOCK"), "LIST_STOCK matches the dump's List2Ctrl.js")
+        check(sha(LIST2_PATCHED_BYTES) == bs.pinned("LIST_PATCHED"), "LIST_PATCHED matches the Python delay edit")
     if REAL:
         sm_rows = dict(line.split() for line in re.search(
             r"^SM_TABLE='(.*?)'$", (bs.STICK / "aa-touch.sh").read_text(), re.M | re.S).group(1).split("\n"))
@@ -639,6 +694,106 @@ def main():
         before = car.digest()
         r = car.run("install")
         check(r.returncode != 0 and car.digest() == before, "WCP: sm_WCP.conf with the sm.conf jciAAPA line is refused")
+
+        # --- shorter list delay (List2Ctrl.js), alone and with AA touch
+        car = fresh(base, "delay")
+        stock_digest = car.digest()
+        r = car.run("delay_off")
+        check(r.returncode != 0 and car.digest() == stock_digest, "RESTORE refused while the list delay is stock")
+        r = car.run("delay_on")
+        check(r.returncode == 0 and car.read(LIST2) == LIST2_PATCHED_BYTES,
+              f"delay on: List2Ctrl.js is exactly the patched file ({r.returncode})")
+        check(car.read(LIST2).count(b"Timeout :                150,") == 1 and b"// autoscrollTier1Timeout :                1500," in car.read(LIST2),
+              "delay on: only the four settings change (a comment stays)")
+        check((car.root / "data_persist/miatoff/aa-touch/List2Ctrl.js.stock").read_bytes() == LIST2_STOCK_BYTES,
+              "delay on: the stock List2Ctrl.js is backed up")
+        check(car.state() == "stock" and car.state("list delay:") == "patched", "delay on: AA stock, delay patched")
+        r = car.run("install")
+        r2 = car.run("remove")
+        check(r.returncode == 0 and r2.returncode == 0 and car.read(LIST2) == LIST2_PATCHED_BYTES
+              and (car.root / "data_persist/miatoff/aa-touch/List2Ctrl.js.stock").exists(),
+              "AA install and remove keep the list delay and its backup")
+        r = car.run("delay_off")
+        check(r.returncode == 0 and car.digest() == stock_digest, "delay off: byte-exact stock")
+        car = fresh(base, "delay-kill")
+        stock_digest = car.digest()
+        car.run("delay_on", fault="kill:rename-list")
+        check(car.read(LIST2) == LIST2_STOCK_BYTES, "delay power loss at rename-list: List2Ctrl.js still stock")
+        r = car.run("delay_on")
+        check(r.returncode == 0 and car.read(LIST2) == LIST2_PATCHED_BYTES, "after the power loss, DELAY completes")
+        r = car.run("delay_off")
+        check(r.returncode == 0 and car.digest() == stock_digest, "and RESTORE gives byte-exact stock")
+        refused("list2-unknown", lambda c: write(c.root, LIST2, LIST2_STOCK_BYTES + b"\n"), action="delay_on")
+
+        # --- camera text (SafetyText images), alone, interrupted and with AA touch
+        car = fresh(base, "safety")
+        stock_digest = car.digest()
+        imgs = lambda: {n: car.read(f"{NATIVE}/{n}") for n in SAFETY_NAMES}
+        r = car.run("safety_off")
+        check(r.returncode != 0 and car.digest() == stock_digest, "RESTORE refused while the camera text is stock")
+        r = car.run("safety_on")
+        check(r.returncode == 0 and all(v == SAFETY_BLANK for v in imgs().values()),
+              f"safety on: all {len(SAFETY_NAMES)} images are the blank ({r.returncode} {r.stderr[-200:]})")
+        check(car.read(f"{NATIVE}/Other.png") == b"\x89PNG not ours", "safety on: other images untouched")
+        sbak = car.root / "data_persist/miatoff/aa-touch/safety"
+        check(all((sbak / n).read_bytes() == SAFETY_STOCK[n] for n in SAFETY_NAMES), "safety on: the originals are backed up")
+        check(car.state() == "stock" and car.state("camera text:") == "patched", "safety on: AA stock, camera text patched")
+        r = car.run("safety_on")
+        check(r.returncode != 0, "BLANK is refused when the text is already blank")
+        car.run("install"); car.run("remove")
+        check(all(v == SAFETY_BLANK for v in imgs().values()) and sbak.is_dir(), "AA install/remove keep the camera text")
+        r = car.run("safety_off")
+        check(r.returncode == 0 and car.digest() == stock_digest, "safety off: byte-exact stock, backup gone")
+
+        third = SAFETY_NAMES[2]
+        for then in ("safety_on", "safety_off"):
+            car = fresh(base, f"safety-kill-{then}")
+            stock_digest = car.digest()
+            car.run("safety_on", fault=f"kill:put-safety-{third}")
+            got = imgs()
+            check(all(v in (SAFETY_STOCK[n], SAFETY_BLANK) for n, v in got.items())
+                  and sum(v == SAFETY_BLANK for v in got.values()) == 2,
+                  f"safety power loss at the 3rd image: every image stock or blank ({then})")
+            car.run("cancel")
+            check(car.state("camera text:") == "partial", f"safety power loss: state partial ({car.state('camera text:')})")
+            r = car.run(then)
+            if then == "safety_on":
+                check(r.returncode == 0 and all(v == SAFETY_BLANK for v in imgs().values()), "partial: FINISH blanks the rest")
+            else:
+                check(r.returncode == 0 and car.digest() == stock_digest, "partial: RESTORE gives byte-exact stock")
+        car = fresh(base, "safety-kill-back")
+        stock_digest = car.digest()
+        car.run("safety_on")
+        car.run("safety_off", fault=f"kill:put-safety-{third}")
+        r = car.run("safety_off")
+        check(r.returncode == 0 and car.digest() == stock_digest, "power loss while restoring: a second RESTORE gives stock")
+
+        car = fresh(base, "safety-stale-backup")
+        stock_digest = car.digest()
+        car.run("install")
+        car.run("safety_on")
+        car.run("safety_off")
+        # as if RESTORE was cut while it deleted the copies: one original left
+        write(car.root, f"data_persist/miatoff/aa-touch/safety/{SAFETY_NAMES[0]}", SAFETY_STOCK[SAFETY_NAMES[0]])
+        r = car.run("safety_on")
+        r2 = car.run("safety_off")
+        r3 = car.run("remove")
+        check(r.returncode == 0 and r2.returncode == 0 and r3.returncode == 0 and car.digest() == stock_digest,
+              "a half-removed backup with all images stock is rebuilt, not a dead end")
+        car = fresh(base, "safety-stale-backup-aa-stock")
+        stock_digest = car.digest()
+        write(car.root, f"data_persist/miatoff/aa-touch/safety/{SAFETY_NAMES[0]}", SAFETY_STOCK[SAFETY_NAMES[0]])
+        car.run("cancel")
+        r = car.run("remove")
+        check(car.state() != "unknown" and r.returncode == 0 and car.digest() == stock_digest,
+              "with AA stock, a leftover backup folder is cleaned by REMOVE")
+
+        refused("safety-unknown-image", lambda c: write(c.root, f"{NATIVE}/{SAFETY_NAMES[5]}", b"\x89PNG other"), action="safety_on")
+        refused("safety-image-missing", lambda c: (c.root / NATIVE / SAFETY_NAMES[7]).unlink(), action="safety_on")
+        refused("safety-damaged-blank-on-stick", lambda c: write(c.stick, f"images/safety/{SAFETY_NAMES[9]}", SAFETY_BLANK[:-1]),
+                action="safety_on")
+        car = refused("safety-bad-backup", lambda c: (c.run("safety_on"),
+                      write(c.root, f"data_persist/miatoff/aa-touch/safety/{SAFETY_NAMES[0]}", b"x")), action="safety_off")
 
         # --- boot trim: on its own, combined with AA touch, and back
         car = fresh(base, "trim")
@@ -963,11 +1118,12 @@ def main():
             stock_digest = car.digest()
             car.run("meters_on")
             car.run("disc_off")
+            car.run("delay_on")
             car.run("install")
             (car.stick / "MIATOFF-RESTORE").write_text("")
             r = car.run("cancel")
             check(r.returncode == 0 and car.state("meters:") == "off" and car.state("disclaimer:") == "stock"
-                  and car.state() == "installed",
+                  and car.state("list delay:") == "stock" and car.state() == "installed",
                   f"MIATOFF-RESTORE reverts Meters and the warning, keeps AA touch ({car.state('meters:')})")
             before = car.digest()
             r = car.run("cancel")
@@ -1063,18 +1219,23 @@ def main():
         stock_digest = car.digest()
         plan = car.stick / "miatoff-plan.txt"
         plan.write_text("# test\naa_touch=install\ntrim_dvdtv=install\ntrim_pandora=install\ntrim_aha=install\n"
-                        "warning=install\ntouchtune=keep\nmeters=keep\n")
+                        "warning=install\ndelay=install\nsafety=install\ntouchtune=keep\nmeters=keep\n")
         r = car.run("")
         check(r.returncode == 0 and want(0, 21), f"plan step 1: all trims of the plan in one step ({r.returncode})")
         r = car.run("")
         check(r.returncode == 0 and car.read(SYSAPP) == SYS_PATCHED_BYTES, f"plan step 2: startup warning skipped ({r.returncode})")
         r = car.run("")
-        check(r.returncode == 0 and car.state() == "installed" and want(1, 21), f"plan step 3: AA touch ({r.returncode})")
+        check(r.returncode == 0 and car.read(LIST2) == LIST2_PATCHED_BYTES, f"plan step 3: shorter list delay ({r.returncode})")
+        r = car.run("")
+        check(r.returncode == 0 and car.state("camera text:") == "patched", f"plan step 4: camera text blank ({r.returncode})")
+        r = car.run("")
+        check(r.returncode == 0 and car.state() == "installed" and want(1, 21), f"plan step 5: AA touch ({r.returncode})")
         done = car.digest()
         r = car.run("")
         check(r.returncode == 0 and car.digest() == done, "plan complete: nothing left to do, nothing changes")
-        plan.write_text("aa_touch=remove\ntrim_dvdtv=remove\ntrim_pandora=remove\ntrim_aha=remove\nwarning=remove\n")
-        for step in ("AA touch", "startup warning", "all trims"):
+        plan.write_text("aa_touch=remove\ntrim_dvdtv=remove\ntrim_pandora=remove\ntrim_aha=remove\nwarning=remove\n"
+                        "delay=remove\nsafety=remove\n")
+        for step in ("AA touch", "list delay", "camera text", "startup warning", "all trims"):
             r = car.run("")
             check(r.returncode == 0, f"plan removal: {step} ({r.returncode})")
         check(car.digest() == stock_digest, "plan removals end in a byte-exact stock tree")

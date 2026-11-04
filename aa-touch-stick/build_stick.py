@@ -12,7 +12,9 @@ The unmodified TouchTune 1.2.1 release (vendor/touchtune/, checked against its
 .sha256) goes into touchtune/, so one stick does step 1 (TouchTune) and step 2
 (AA touch). Meters goes into miatoff-app/ (the HMI app from meters-app/app, the
 page from meters/, the collector, the userscript) with a MANIFEST of sha256s
-that aa-touch.sh checks before and after copying.
+that aa-touch.sh checks before and after copying. Camera text: the blank safety
+text image from vendor/mzd-aio/ (checked against its SHA256SUMS) goes into
+images/safety/ once per SafetyText image in SAFETY_TABLE of aa-touch.sh.
 
 SPDX-License-Identifier: GPL-3.0-or-later
 """
@@ -32,6 +34,8 @@ VENDOR = ROOT / "vendor" / "oem-aa-mod"
 RELEASE_ZIP = VENDOR / "oem-aa-mod-0.10.0.zip"
 SHIM_MEMBER = "oem-aa-mod-0.10.0/libpatch-blmjciaapa.so"
 TOUCHTUNE_ZIP = ROOT / "vendor" / "touchtune" / "TouchTune-1.2.1.zip"
+AIO = ROOT / "vendor" / "mzd-aio"
+SAFETY_BLANK = "safety-warning-reverse-camera/SafetyText_UK_English.png"
 
 # Meters on the unit: <area>/<path> -> source in this repository.
 # meters/: only the files the car needs (overview.html is for the PC).
@@ -113,6 +117,34 @@ def touchtune_files() -> dict:
     return files
 
 
+def aio_file(rel: str) -> bytes:
+    """A vendored MZD-AIO file, checked against vendor/mzd-aio/SHA256SUMS."""
+    data = (AIO / rel).read_bytes()
+    sums = dict(reversed(line.split()) for line in (AIO / "SHA256SUMS").read_text().splitlines() if line.strip())
+    if sums.get(rel) != sha256(data):
+        raise SystemExit(f"ERROR: vendor/mzd-aio/{rel} does not match its SHA256SUMS")
+    return data
+
+
+def table(name: str) -> list:
+    """Rows (name, stock sha256, new sha256) of a three-column table in aa-touch.sh."""
+    match = re.search(rf"^{name}='(.*?)'$", (STICK / "aa-touch.sh").read_text(), re.M | re.S)
+    if not match:
+        raise SystemExit(f"ERROR: {name} not found in aa-touch.sh")
+    return [tuple(line.split()) for line in match.group(1).splitlines()]
+
+
+def safety_files() -> dict:
+    """images/safety/<name>: the blank image, once per SafetyText image of the unit."""
+    blank = aio_file(SAFETY_BLANK)
+    files = {}
+    for name, _stock, new in table("SAFETY_TABLE"):
+        if new != sha256(blank):
+            raise SystemExit(f"ERROR: SAFETY_TABLE wants {new[:12]} for {name}, the blank image is {sha256(blank)[:12]}")
+        files["images/safety/" + name] = blank
+    return files
+
+
 def make_kit() -> stickkit.Kit:
     conf = stickkit.lf_bytes(STICK / "libpatch.conf")
     if sha256(conf) != pinned("CONF_SHA256"):
@@ -129,6 +161,7 @@ def make_kit() -> stickkit.Kit:
             "NOTICE": stickkit.lf_bytes(STICK / "NOTICE"),
             **touchtune_files(),
             **meters_files(),
+            **safety_files(),
         },
     )
 

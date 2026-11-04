@@ -33,13 +33,21 @@ They work on 74.00.324 according to forum reports; note that AIO itself sometime
 ## Reversing-camera safety text
 - 29 images `/jci/nativegui/images/SafetyText_<country>_<language>.png` (including `SafetyText_NL_Dutch.png`, 6,967 bytes);
   all 29 exist on this unit. MZD-AIO (`03_warning-i.txt`) replaces them with empty PNGs of 3,031 bytes.
-- Only useful with a reversing camera. The hashes of the original PNGs are not yet in a dump (FULL
-  does not copy images).
+- Only useful with a reversing camera.
+- **Built (04-11-2026):** dump 1.4.0 copies and hashes them. A second EU ND1 has **46** SafetyText images (45 are
+  800×50, `SafetyText_UK_Ukrainian.png` is 801×50; the blank is 800×50 and fully transparent, so that one pixel does not show); MZD-AIO only covers 29. All 46 are pinned in
+  `SAFETY_TABLE` and replaced with MZD-AIO's blank (see the AA-touch stick README). Not yet tested in the car.
 
 ## Shorter Delay Mod (page delay)
 - Shortens the wait on **page changes with the Commander knob** from **1.5 s → 0.3 s**.
 - Split off from the "Improved List Loop" tweak (list wrapping).
 - Also a UI timing value in the HMI (exact file/line still to be verified).
+
+### Shorter delay: what MZD-AIO actually changes
+`07_shorterdelay-i.txt` edits `/jci/gui/common/controls/List2/js/List2Ctrl.js`, not a page transition: the four
+`autoscrollTier*` properties (1500/5000/500/1000 ms → 150/300/200/300). They time the auto-scroll while the
+Commander is held tilted in a list. On 74.00.324A the four lines are byte-identical to AIO's patterns (one each);
+**built (04-11-2026)** as a fixed edit with pinned stock/patched hashes. Not yet tested in the car.
 
 ## Related small tweaks (from AIO and similar tools)
 - Camera warning text removed

@@ -22,6 +22,12 @@ miatoff-app/
     ChakraPetch-Bold.ttf       (OFL-ChakraPetch.txt)
     ShareTechMono-Regular.ttf  (OFL-ShareTechMono.txt)
 
+images/safety/
+  The blank reversing-camera safety text image from MZD-AIO by Trevelopment
+  (GPL-3.0), https://github.com/Trevelopment/MZD-AIO, unmodified
+  (app/files/tweaks/config/safety-warning-reverse-camera/), once per SafetyText
+  image name of the unit.
+
 oem-aa-mod/libpatch-blmjciaapa.so
   Unmodified binary from oem-aa-mod 0.10.0 by Vitaliy Kurokhtin.
   License: GNU Affero General Public License v3.0 (AGPL-3.0).

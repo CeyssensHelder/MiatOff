@@ -58,9 +58,13 @@ COMPONENTS = [
         ("trim_aha", "Aha", "Stop Aha from starting at boot. Three boot stages are re-pointed so voice and calls still start.",
          "Stop at boot", "Start again"),
         ("warning", "Startup warning", "Skip the warning screen at startup.", "Skip it", "Show it again"),
+        ("delay", "Shorter list delay", "Holding the Commander tilted scrolls lists after 0.15 s instead of 1.5 s.",
+         "Shorter", "Stock"),
     ]),
     ("Interface", [
         ("meters", "Meters", "Gauges under Applications: speed, rpm, G-meter, lap timer.", "Install", "Remove"),
+        ("safety", "Camera safety text", "Blank the safety text over the reversing camera picture.",
+         "Blank it", "Show it again"),
     ]),
 ]
 KEYS = [item[0] for _, items in COMPONENTS for item in items]
