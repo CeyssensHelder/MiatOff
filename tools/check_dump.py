@@ -42,6 +42,7 @@ COMPONENTS = [
     ("warning", "Startup warning"),
     ("delay", "Shorter list delay"),
     ("safety", "Camera safety text"),
+    ("sensors", "Parking sensor graphics"),
     ("meters", "Meters"),
 ]
 
@@ -56,7 +57,7 @@ def pinned_constants(script: Path = SCRIPT) -> dict:
     """NAME -> 64-hex sha256 for every pinned constant, plus FW_WANTED."""
     text = script.read_text(encoding="utf-8")
     found = {m.group(1): m.group(2) for m in re.finditer(r"^([A-Z][A-Z0-9_]*)=([0-9a-f]{64})\b", text, re.M)}
-    for name in ("SM_TABLE", "SM_WCP_TABLE", "SAFETY_TABLE"):
+    for name in ("SM_TABLE", "SM_WCP_TABLE", "SAFETY_TABLE", "SENSOR_TABLE"):
         table = re.search(rf"^{name}='(.*?)'$", text, re.M | re.S)
         if table:
             found[name] = table.group(1)
@@ -258,21 +259,23 @@ def check(dump_path: Path, pinned: dict = None) -> dict:
     if comps["delay"]["state"] in (AVAILABLE, INSTALLED) and list_attrs not in (None, CFG_ATTRS):
         comps["delay"] = {"state": BLOCKED, "detail": f"List2Ctrl.js has unexpected permissions ({list_attrs})"}
 
-    # Camera text: every SafetyText image, stock or the blank (dumps from 1.4.0 on hash them).
-    rows = [line.split() for line in pin.get("SAFETY_TABLE", "").splitlines() if len(line.split()) == 3]
-    images = [(row, dump.sha("/jci/nativegui/images/" + row[0])) for row in rows]
-    if not rows or any(digest is None for _, digest in images):
-        comps["safety"] = {"state": UNCHECKED, "detail": "needs a FULL dump from MiatOff dump 1.4.0 or later"}
-    elif any(digest not in (row[1], row[2]) for row, digest in images):
-        comps["safety"] = {"state": BLOCKED, "detail": "a SafetyText image is an unknown version"}
-    elif any(dump.attrs("/jci/nativegui/images/" + row[0]) not in (None, CFG_ATTRS) for row in rows):
-        comps["safety"] = {"state": BLOCKED, "detail": "a SafetyText image has unexpected permissions"}
-    elif all(digest == row[1] for row, digest in images):
-        comps["safety"] = result(AVAILABLE, f"all {len(rows)} SafetyText images are stock")
-    elif all(digest == row[2] for row, digest in images):
-        comps["safety"] = result(INSTALLED, "the safety text is blank")
-    else:
-        comps["safety"] = {"state": PARTIAL, "detail": "some images blank, some stock: run the stick's CAMERA again"}
+    # Image sets (dumps from 1.4.0 on hash the images): every image stock or new.
+    for key, table, what, done in (("safety", "SAFETY_TABLE", "SafetyText image", "the safety text is blank"),
+                                   ("sensors", "SENSOR_TABLE", "parking sensor image", "semi-transparent")):
+        rows = [line.split() for line in pin.get(table, "").splitlines() if len(line.split()) == 3]
+        images = [(row, dump.sha("/jci/nativegui/images/" + row[0])) for row in rows]
+        if not rows or any(digest is None for _, digest in images):
+            comps[key] = {"state": UNCHECKED, "detail": "needs a FULL dump from MiatOff dump 1.4.0 or later"}
+        elif any(digest not in (row[1], row[2]) for row, digest in images):
+            comps[key] = {"state": BLOCKED, "detail": f"a {what} is an unknown version"}
+        elif any(dump.attrs("/jci/nativegui/images/" + row[0]) not in (None, CFG_ATTRS) for row in rows):
+            comps[key] = {"state": BLOCKED, "detail": f"a {what} has unexpected permissions"}
+        elif all(digest == row[1] for row, digest in images):
+            comps[key] = result(AVAILABLE, f"all {len(rows)} {what}s are stock")
+        elif all(digest == row[2] for row, digest in images):
+            comps[key] = result(INSTALLED, done)
+        else:
+            comps[key] = {"state": PARTIAL, "detail": "some images replaced, some stock: run the stick's CAMERA again"}
 
     opera = state_of(dump.sha("/jci/opera/opera_home/opera.ini"), pin.get("OPERA_STOCK"), pin.get("OPERA_PATCHED"))
     gap2 = state_of(dump.sha("/jci/scripts/stage_gap2.sh"), pin.get("GAP2_STOCK"), pin.get("GAP2_PATCHED"))

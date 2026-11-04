@@ -269,6 +269,13 @@ SAFETY_ROWS = [line.split() for line in re.search(
 SAFETY_NAMES = [row[0] for row in SAFETY_ROWS]
 SAFETY_STOCK = {name: b"\x89PNG stock " + name.encode() for name in SAFETY_NAMES}
 SAFETY_BLANK = (HERE.parent.parent / "vendor/mzd-aio/safety-warning-reverse-camera/SafetyText_UK_English.png").read_bytes()
+# Parking sensors: names from SENSOR_TABLE (with their folder), synthetic stock, MZD-AIO's images.
+SENSOR_ROWS = [line.split() for line in re.search(
+    r"^SENSOR_TABLE='(.*?)'$", (HERE.parent / "stick/aa-touch.sh").read_text(), re.M | re.S).group(1).splitlines()]
+SENSOR_NAMES = [row[0] for row in SENSOR_ROWS]
+SENSOR_STOCK = {name: b"\x89PNG stock sensor " + name.encode() for name in SENSOR_NAMES}
+SENSOR_NEW = {name: (HERE.parent.parent / "vendor/mzd-aio/transparent-parking-sensor" / name).read_bytes()
+              for name in SENSOR_NAMES}
 
 TT_LINE = '        "Global.AtSpeed" : this._AtSpeedMsgHandler.bind(this),'
 COMMON_STOCK = ("var Common = {\n    _handlers : {\n" + TT_LINE + "\n    },\n};\n").encode()
@@ -329,6 +336,9 @@ def make_fixture(root: Path):
     for name, data in SAFETY_STOCK.items():
         write(root, f"{NATIVE}/{name}", data)
     write(root, f"{NATIVE}/Other.png", b"\x89PNG not ours")
+    for name, data in SENSOR_STOCK.items():
+        write(root, f"{NATIVE}/{name}", data)
+    write(root, f"{NATIVE}/HorizontalSensors/BackCtr_1_lg.png", b"\x89PNG v74 arc, not replaced")
     write(root, OPERA, OPERA_STOCK_BYTES)
     write(root, GAP2, GAP2_STOCK_BYTES)
     write(root, "jci/opera/opera_dir/userjs/fps.js", "// stock fps counter\n")
@@ -357,6 +367,7 @@ def overrides(work: Path, root_in_sh: str, **extra) -> Path:
             SYS_STOCK=sha(SYS_STOCK_BYTES), SYS_PATCHED=sha(SYS_PATCHED_BYTES),
             LIST_STOCK=sha(LIST2_STOCK_BYTES), LIST_PATCHED=sha(LIST2_PATCHED_BYTES),
             SAFETY_TABLE="'" + "\n".join(f"{n} {sha(SAFETY_STOCK[n])} {sha(SAFETY_BLANK)}" for n in SAFETY_NAMES) + "'",
+            SENSOR_TABLE="'" + "\n".join(f"{n} {sha(SENSOR_STOCK[n])} {sha(SENSOR_NEW[n])}" for n in SENSOR_NAMES) + "'",
             OPERA_STOCK=sha(OPERA_STOCK_BYTES), OPERA_PATCHED=sha(OPERA_PATCHED_BYTES),
             GAP2_STOCK=sha(GAP2_STOCK_BYTES), GAP2_PATCHED=sha(GAP2_PATCHED_BYTES))
     values.update(extra)
@@ -465,6 +476,10 @@ def main():
           "SAFETY_TABLE: 46 SafetyText names, all to the MZD-AIO blank (some languages share one stock image)")
     check(all(bs.payload()["images/safety/" + n] == SAFETY_BLANK for n in SAFETY_NAMES),
           "stick carries the blank image once per SafetyText name")
+    check(len(SENSOR_ROWS) == 44 and all(r[2] == sha(SENSOR_NEW[r[0]]) and r[1] != r[2] for r in SENSOR_ROWS)
+          and all(bs.payload()["images/sensors/" + n] == SENSOR_NEW[n] for n in SENSOR_NAMES)
+          and not any(n.startswith("HorizontalSensors/") for n in SENSOR_NAMES),
+          "SENSOR_TABLE: 44 MZD-AIO images that differ from stock, on the stick, no HorizontalSensors arcs")
     if REAL and (DUMP4 / LIST2).is_file():
         check(sha(LIST2_STOCK_BYTES) == bs.pinned("LIST_STOCK"), "LIST_STOCK matches the dump's List2Ctrl.js")
         check(sha(LIST2_PATCHED_BYTES) == bs.pinned("LIST_PATCHED"), "LIST_PATCHED matches the Python delay edit")
@@ -815,6 +830,43 @@ def main():
         car.run("remove")
         check((car.root / "data_persist/miatoff/aa-touch/List2Ctrl.js.stock").read_bytes() == LIST2_STOCK_BYTES,
               "AA REMOVE keeps the List2Ctrl.js backup while the file is unknown (the only good copy)")
+
+        # --- parking sensors (images in two folders), the same image-set machinery
+        car = fresh(base, "sensors")
+        stock_digest = car.digest()
+        simgs = lambda c: {n: c.read(f"{NATIVE}/{n}") for n in SENSOR_NAMES}
+        r = car.run("sensors_on")
+        check(r.returncode == 0 and simgs(car) == SENSOR_NEW, f"sensors on: all {len(SENSOR_NAMES)} images are MZD-AIO's ({r.returncode})")
+        check(car.read(f"{NATIVE}/HorizontalSensors/BackCtr_1_lg.png") == b"\x89PNG v74 arc, not replaced"
+              and all(car.read(f"{NATIVE}/{n}") == SAFETY_STOCK[n] for n in SAFETY_NAMES),
+              "sensors on: other images and the safety text untouched")
+        check(all((car.root / "data_persist/miatoff/aa-touch/sensors" / n).read_bytes() == SENSOR_STOCK[n] for n in SENSOR_NAMES),
+              "sensors on: originals backed up in their folders")
+        r = car.run("safety_on")
+        r2 = car.run("sensors_off")
+        check(r.returncode == 0 and r2.returncode == 0 and car.state("camera text:") == "patched"
+              and car.state("sensors:") == "stock", "sensors and camera text are independent")
+        r = car.run("safety_off")
+        check(r.returncode == 0 and car.digest() == stock_digest, "sensors off and safety off: byte-exact stock")
+        car = fresh(base, "sensors-kill")
+        stock_digest = car.digest()
+        mid = SENSOR_NAMES[len(SENSOR_NAMES) // 2]
+        car.run("sensors_on", fault=f"kill:put-sensors-{mid}")
+        car.run("cancel")
+        check(car.state("sensors:") == "partial", f"sensors power loss halfway: partial ({car.state('sensors:')})")
+        r = car.run("sensors_off")
+        check(r.returncode == 0 and car.digest() == stock_digest, "sensors partial: RESTORE gives byte-exact stock")
+        for point in ("image-unbackup-sensors", "image-rmdir-sensors"):
+            car = fresh(base, f"kill-{point}")
+            stock_digest = car.digest()
+            car.run("sensors_on")
+            car.run("sensors_off", fault=f"kill:{point}")
+            car.run("cancel")
+            r = car.run("sensors_on")
+            r2 = car.run("sensors_off")
+            check(car.state() == "stock" and r.returncode == 0 and r2.returncode == 0 and car.digest() == stock_digest,
+                  f"power loss at {point}: SENSORS works afterwards and RESTORE gives byte-exact stock")
+        refused("sensors-unknown-image", lambda c: write(c.root, f"{NATIVE}/{SENSOR_NAMES[3]}", b"other"), action="sensors_on")
 
         refused("safety-unknown-image", lambda c: write(c.root, f"{NATIVE}/{SAFETY_NAMES[5]}", b"\x89PNG other"), action="safety_on")
         refused("safety-image-missing", lambda c: (c.root / NATIVE / SAFETY_NAMES[7]).unlink(), action="safety_on")
@@ -1247,7 +1299,7 @@ def main():
         stock_digest = car.digest()
         plan = car.stick / "miatoff-plan.txt"
         plan.write_text("# test\naa_touch=install\ntrim_dvdtv=install\ntrim_pandora=install\ntrim_aha=install\n"
-                        "warning=install\ndelay=install\nsafety=install\ntouchtune=keep\nmeters=keep\n")
+                        "warning=install\ndelay=install\nsafety=install\nsensors=install\ntouchtune=keep\nmeters=keep\n")
         r = car.run("")
         check(r.returncode == 0 and want(0, 21), f"plan step 1: all trims of the plan in one step ({r.returncode})")
         r = car.run("")
@@ -1257,13 +1309,15 @@ def main():
         r = car.run("")
         check(r.returncode == 0 and car.state("camera text:") == "patched", f"plan step 4: camera text blank ({r.returncode})")
         r = car.run("")
+        check(r.returncode == 0 and car.state("sensors:") == "patched", f"plan step 4b: parking sensors ({r.returncode})")
+        r = car.run("")
         check(r.returncode == 0 and car.state() == "installed" and want(1, 21), f"plan step 5: AA touch ({r.returncode})")
         done = car.digest()
         r = car.run("")
         check(r.returncode == 0 and car.digest() == done, "plan complete: nothing left to do, nothing changes")
         plan.write_text("aa_touch=remove\ntrim_dvdtv=remove\ntrim_pandora=remove\ntrim_aha=remove\nwarning=remove\n"
-                        "delay=remove\nsafety=remove\n")
-        for step in ("AA touch", "list delay", "camera text", "startup warning", "all trims"):
+                        "delay=remove\nsafety=remove\nsensors=remove\n")
+        for step in ("AA touch", "list delay", "camera text", "parking sensors", "startup warning", "all trims"):
             r = car.run("")
             check(r.returncode == 0, f"plan removal: {step} ({r.returncode})")
         check(car.digest() == stock_digest, "plan removals end in a byte-exact stock tree")

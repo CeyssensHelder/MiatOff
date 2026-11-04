@@ -49,6 +49,13 @@ They work on 74.00.324 according to forum reports; note that AIO itself sometime
 Commander is held tilted in a list. On 74.00.324A the four lines are byte-identical to AIO's patterns (one each);
 **built (04-11-2026)** as a fixed edit with pinned stock/patched hashes. Not yet tested in the car.
 
+## Parking sensor graphics
+MZD-AIO's `04_sensor-i.txt` copies its own `HorizontalSensors/`, `VerticalSensors/` and `MiniView/` images over the
+stock ones. Compared with a 1.4.0 dump of 74.00.324A: the unit has 36/37/37 images there, MZD-AIO 23/24/24.
+MZD-AIO's 20 `HorizontalSensors` arc images are much smaller than the v74 ones (e.g. 147×173 vs 214×291), so they
+were made for an older layout; 7 of its images are identical to stock. **Built (04-11-2026)** with the 44 that fit
+(20 `VerticalSensors`, 24 `MiniView`; `SENSOR_TABLE`). Which view the MX-5 uses is not known yet; not tested in the car.
+
 ## Related small tweaks (from AIO and similar tools)
 - Camera warning text removed
 - List wrapping / menu loops ("Improved List Loop")

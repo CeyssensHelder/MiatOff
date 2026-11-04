@@ -28,6 +28,11 @@ images/safety/
   (app/files/tweaks/config/safety-warning-reverse-camera/), once per SafetyText
   image name of the unit.
 
+images/sensors/
+  Semi-transparent parking sensor images from MZD-AIO by Trevelopment (GPL-3.0),
+  https://github.com/Trevelopment/MZD-AIO, unmodified
+  (app/files/tweaks/config/transparent-parking-sensor/).
+
 oem-aa-mod/libpatch-blmjciaapa.so
   Unmodified binary from oem-aa-mod 0.10.0 by Vitaliy Kurokhtin.
   License: GNU Affero General Public License v3.0 (AGPL-3.0).
