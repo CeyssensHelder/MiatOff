@@ -11,6 +11,7 @@ import io
 import os
 from pathlib import Path
 import plistlib
+import re
 import subprocess
 import sys
 import zipfile
@@ -168,9 +169,9 @@ def require_stick_root(target: Path) -> None:
         if sys.platform == "darwin":
             _require_mac_stick(target)
         elif sys.platform.startswith("linux"):
-            fs = _linux_mounts().get(str(target.resolve()))
-            if fs is not None and fs != "vfat":
-                raise SystemExit(f"ERROR: {target} is {fs}; the car needs FAT32 (MBR)")
+            problem = _linux_stick_problem(target)
+            if problem:
+                raise SystemExit(f"ERROR: {problem}")
         return
     import ctypes
 
@@ -224,18 +225,53 @@ def _require_mac_stick(target: Path) -> None:
         raise SystemExit(f"ERROR: {problem}")
 
 
+def _unescape_mount(field: str) -> str:
+    """/proc/mounts writes space, tab, newline and backslash as octal escapes (\\040 ...)."""
+    return re.sub(r"\\([0-7]{3})", lambda m: chr(int(m.group(1), 8)), field)
+
+
 def _linux_mounts() -> dict:
-    """mount point -> filesystem type, from /proc/mounts."""
+    """mount point -> (device, filesystem type), from /proc/mounts."""
     mounts = {}
     try:
         with open("/proc/mounts", encoding="utf-8") as handle:
             for line in handle:
                 parts = line.split()
                 if len(parts) >= 3:
-                    mounts[parts[1].replace("\\040", " ")] = parts[2]
+                    mounts[_unescape_mount(parts[1])] = (_unescape_mount(parts[0]), parts[2])
     except OSError:
         pass
     return mounts
+
+
+def _linux_removable(device: str) -> bool:
+    """True if the block device (e.g. /dev/sdb1) belongs to a disk the kernel reports as removable or USB."""
+    name = Path(device).name
+    block = Path("/sys/class/block") / name
+    if not block.exists():
+        return False
+    disk = block.resolve()
+    if (disk / "partition").exists():
+        disk = disk.parent
+    try:
+        if (disk / "removable").read_text().strip() == "1":
+            return True
+    except OSError:
+        pass
+    return "/usb" in str(disk.resolve())
+
+
+def _linux_stick_problem(target: Path):
+    """None if target is the mount root of a vfat volume on a removable/USB disk, else why not."""
+    entry = _linux_mounts().get(str(Path(target).resolve()))
+    if entry is None:
+        return f"{target} is not in /proc/mounts; give the stick's mount root"
+    device, fs = entry
+    if fs != "vfat":
+        return f"{target} is {fs}; the car needs FAT32 (MBR)"
+    if not _linux_removable(device):
+        return f"{target} ({device}) is not on a removable USB drive"
+    return None
 
 
 def removable_sticks() -> list:
@@ -253,9 +289,7 @@ def removable_sticks() -> list:
             if volumes.is_dir() else []
         return [root for root in roots if _mac_stick_problem(Path(root)) is None]
     if sys.platform.startswith("linux"):
-        prefixes = ("/media/", "/run/media/", "/mnt/")
-        return sorted(point for point, fs in _linux_mounts().items()
-                      if fs == "vfat" and point.startswith(prefixes))
+        return sorted(point for point in _linux_mounts() if _linux_stick_problem(Path(point)) is None)
     return []
 
 

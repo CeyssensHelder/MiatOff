@@ -12,6 +12,7 @@ MO_SYNTHETIC=1 python dump-stick/tests/test_dump_stick.py
 MO_SYNTHETIC=1 python collector/tests/test_collector.py
 MO_SYNTHETIC=1 python collector/tests/test_calibrate.py
 python tools/tests/test_check_dump.py
+python tools/tests/test_stickkit.py
 node meters-app/tests/test_meters_app.js
 MO_DOCKER_IMAGE=busybox:1.25 python aa-touch-stick/tests/test_aa_touch_stick.py
 ```

@@ -19,6 +19,7 @@ jobs:
       - run: python collector/tests/test_collector.py
       - run: python collector/tests/test_calibrate.py
       - run: python tools/tests/test_check_dump.py
+      - run: python tools/tests/test_stickkit.py
       - run: node meters-app/tests/test_meters_app.js
       - name: Pull the BusyBox image the AA-touch suite runs in
         run: docker pull busybox:1.25

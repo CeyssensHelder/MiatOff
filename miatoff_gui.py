@@ -321,7 +321,8 @@ class App(tk.Tk):
     def refresh(self):
         drives = removable_drives()
         self.drive["values"] = drives
-        if drives and self.drive.get().strip() not in drives:
+        # Pick the first stick only when nothing is chosen; a path typed by hand stays.
+        if drives and not self.drive.get().strip():
             self.drive.current(0)
 
     def checking(self) -> bool:
