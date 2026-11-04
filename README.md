@@ -4,6 +4,10 @@ Open-source tweaks for the Mazda Connect infotainment in the **Mazda MX-5 (ND)**
 plug it into the car, and choose what to install. Every change can be undone, and the tool checks your car first and
 refuses to touch anything it does not recognise.
 
+> **Who this is for:** the **MX-5 ND1 and ND2** with the original Mazda Connect head unit on firmware **74.00.324A**
+> (check *Settings → System → About → Version Information*). It is **not** for the **ND3** (2024 and later, a different
+> head unit) or for any other firmware version. The tools check the car first and refuse to change anything else.
+
 > ⚠️ **Early release.** Modifying a head unit can leave it unusable and is not covered by Mazda's warranty. You use this at
 > your own risk. Read [Is it safe?](#is-it-safe) and the [support status](#support-status) first.
 
@@ -28,6 +32,8 @@ Only one combination has been analysed so far, and **nothing has been fully acce
 | 74.00.324A | EU MX-5 ND1 | Check my car (read-only dump) | Tested in the car |
 | 74.00.324A | EU MX-5 ND1 | Touch in Android Auto, boot trim, startup warning | Experimental: tested on a simulator, in-car acceptance still open |
 | 74.00.324A | EU MX-5 ND1 | Meters | Experimental: one in-car failure (busy root remount) was fixed but not re-tested |
+| 74.00.324A | US-spec MX-5 ND1 | Not specified | Reported working by a user; not verified by us |
+| 74.00.324A | MX-5 ND2 | everything | Same software as far as we know, but not analysed by us: run the check first |
 | anything else | any | everything | Unsupported: the tools refuse to change anything |
 
 Stay on firmware **74.00.324A** and do **not** upgrade to 74.00.331: it breaks wireless CarPlay more often and cannot be
@@ -41,7 +47,8 @@ Another car or firmware? Run the check (below) and open an issue with only `SUMM
 - A Windows PC with **Python 3** (including Tk, which the python.org installer has) and this repository
   (`git clone https://github.com/CeyssensHelder/MiatOff` or *Code → Download ZIP*).
 - An **empty USB stick**, 32 GB or smaller, formatted **FAT32** with an **MBR** partition table.
-- A 2017 **EU MX-5 ND1** with Mazda Connect on firmware 74.00.324A (see the support status above).
+- An **MX-5 ND1 or ND2** with Mazda Connect on firmware 74.00.324A (see the support status above). We analysed a 2017 EU
+  ND1; a US-spec ND1 has been reported working. **Not** the ND3, and no other firmware.
 
 ## How to use it
 
@@ -102,6 +109,7 @@ Touch while driving removes a deliberate distraction limit. Follow your local la
 | Exactly what each stick does on the car | [aa-touch-stick/README.md](aa-touch-stick/README.md), [dump-stick/README.md](dump-stick/README.md) |
 | The Meters gauges and their data | [meters/README.md](meters/README.md), [meters-app/README.md](meters-app/README.md), [collector/README.md](collector/README.md) |
 | How the head unit works, research and design notes | [docs/README.md](docs/README.md) |
+| What we plan to do next | [TODO.md](TODO.md) |
 
 ## Contributing
 
