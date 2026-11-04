@@ -9,6 +9,8 @@
 #   /etc/aap_system_attributes.xml       + <touch_screen> block (use_internally true)
 #   /etc/aap_system_attributes_UCP.xml   + <touch_screen> block (use_internally false)
 #   /jci/sm/sm.conf                      jciAAPA: reset_board="no" + LD_PRELOAD environ_var
+#                                        (sm_WCP.conf instead on a unit whose Service
+#                                        Manager runs that one: wireless CarPlay on)
 #   /data_persist/oem-aa-mod/            libpatch-blmjciaapa.so + libpatch.conf
 #   /data_persist/miatoff/aa-touch/      backup of the three stock files
 #
@@ -43,7 +45,7 @@
 # 1.2.1 (GPL-3.0-or-later). libpatch-blmjciaapa.so is oem-aa-mod 0.10.0 by
 # Vitaliy Kurokhtin (AGPL-3.0); see NOTICE on this stick.
 
-MO_VERSION=1.4.1
+MO_VERSION=1.5.0
 R="${MO_ROOT:-}"                        # test hook: fixture root; empty on the CMU
 MO_TEST="${MO_TEST:-0}"                 # test hook: 1 = no dialogs, remount, watchdog or reboot
 MO_ACTION="${MO_ACTION:-}"              # test hook: install | disable | enable | remove | cancel
@@ -57,8 +59,6 @@ USB=$(CDPATH='' cd "$(dirname "$0")" && pwd) || exit 1
 FW_WANTED=74.00.324A
 BLM_SHA256=10e7235bfce075b44c1a8ffc99bbc9b63af85d9262df868ca1874ec36d8d3b71   # /jci/aapa/blmjciaapa.so (md5 486628ae...)
 AAP_SHA256=a0187afab34eaf0e0fb84db6974162465004ad1227ad7866eeb15ac7672546cd   # /usr/bin/aap_service (md5 964e9af0...)
-SM_STOCK=fa3484d7c644393ab6cb083990e483201129a207e7755459296dde8ec82a4d84
-SM_PATCHED=6050d325b4ea6a98afa4980674652a946b2afef10ec06fe336d3094e23c0d058     # + AA touch
 # Every sm.conf variant: AA touch (0 1) plus a boot trim char: bit 1 DVD/TV, 2 SiriusXM,
 # 4 Pandora, 8 Stitcher, 16 Aha, counted in 0-9 then a-v (0 = no trim, f = the four
 # groups, v = all five). The 64 files are the stock sm.conf with exactly those edits.
@@ -126,6 +126,73 @@ SM_TABLE='00 fa3484d7c644393ab6cb083990e483201129a207e7755459296dde8ec82a4d84
 1t 338c77b54492e32be20ff4f0ddfa03a1c4bd1102d58a1093663821082be71c45
 1u 5d0bdb0e0e4ad07d9484fa5983e271bf848abfd65fb22a444aae959a117614ef
 1v 63fdd65e26ceeffb18e7781156320fd6e6f54d2de76c07be90fcccc664f9ed3a'
+# The same 64 variants of sm_WCP.conf, the config the Service Manager runs on a
+# unit with wireless CarPlay (from a dump of an EU ND1 on 74.00.324A; jciAAPA there
+# has args="new_hw", see SM_WCP_LINE_STOCK). Only the running config is changed.
+SM_WCP_TABLE='00 92034449e76689b995fcd369d584f441829a0ee6e8d74c858cd92f4049f7b27d
+01 e5ce622545dba267859d98b37de060b95932e293b7c43289b250a237b9d8df8c
+02 85fb888bb6b1cb24fb90616605dc73c97b7289d9a6b78e508fb58ec19ec7e4f8
+03 040e6cdd55436a13d7ba406938b192a4012135adb3877c81fdff7feee7ff7702
+04 ed4562f9389b4ec6bab5d0cf6abbe9404de9382ebd3631005ff4b018bd08b481
+05 beb8e5ac60cba8b77497e67a39df9680326b1afeac45734809b38b9ada90b763
+06 c941759505c67a408d53813e23b6b1ad1a488aa41c15f06f0d2113eb980d84df
+07 a757d706626fc74bf3c76427a98425a8c6e60a45d3fbe5c25acae4394cb17ecc
+08 aeed1574404cc57b6229a9140d2677ef5d02ca439608b0b6e7033f1795ae0bda
+09 968b9decd8f050a708ef2acc762890a6edc923b2432e778589a89d11d158263d
+0a 85dc435ac398fd0af552e0035b68c7656d881f4ce155f40fae9f9e847650b88c
+0b 5150d3cd2191f35ed1b86b26d5a5be88677ea16e87d1c6966dd70db4597d4718
+0c dc36ce411067da4427fb5d865ad6b819075ecfed585e5e003df4292c80ede2a7
+0d 7fe0cbb995673622dcce0c5a3ca26f55c158894066cc29ff1dbe9fba51ab7d2b
+0e d1d0f60f918dc4e284f5931880eadc8edc1bdbd231d2ad5b3a9f92f49c530536
+0f 57ad723df04c8bdf989f2cb8374d781da7d994ba7bcc66e7a7bbfc008b581cc9
+0g 002a0eaf8ff8a41df394c2b4135b2e1cd7c8c610bddc58e0dffe2c3f71f740e6
+0h 5854641b79949f5c46d9c5d4596774594434dbb1b20beb75364b6f0678a6f31c
+0i 39908e721d439936cc7b78ad90ba5254a4367af5e0a161763b6a8b66637904cd
+0j 850416a79faa8b4205b3631d86805c22042ce0c55660354672d9703be0b0f330
+0k c0d1ab6be6334ed43ac19d4438ee045634844c8e3fa370029121af6a478628e9
+0l 704cca02ea18988835230b12a60c16a3ba0bdf78d9d8b1eb7bd7f8310a623b0c
+0m ed4451e14df537b1a67ccbd41c31f516e2f0f6125ced55e9d27103cb3e49e976
+0n 4736c9474f27841be518ad7f53221b62dc0ef49f54c72779d01f4a75b7faad3d
+0o 61b1cb0602d3ae29ec4a0b265653ca4a7ba2955c550a9c5aad649f8c255c038f
+0p d0e88d0f6158ee5ea2feefc0d3b1702b4331c97e2fb0f92581fabdc1722edb39
+0q 44081fac72236ce765ff037bff0eaef62f300d061f6de106a83bae45e2dda1ca
+0r f681d1482fc209f6920d428469ce5d125c14e53a84fb26f334350727049ba89c
+0s 0779462c19c0bafdc7ce73a09c8062c03b1eb9d1467bef8904cfd6f6139767c1
+0t e08a7ef40f42b4bdd2451df7ef665f904b2a50421e8680a3b1a9de49debf9042
+0u 27db2f6c384a933dd4a64eb66edd6ea1555e67297ca079d5f0d19d8084caec9f
+0v 75b517c7bf5f5dc9991d802741ae2e513b86c0a2c11f573d92e64eff6a6a008d
+10 d6d2a0ee0970befa239990d802a614792ac537eaac9b9f315a42dbaa3b07f2ed
+11 6abcf9d3be47cad829d663533210daab4f433dabddc122defa5abfaf20d01482
+12 35c2b0f26c70ced9bfee3b00200cb02baf5168d3c2b31b91d0babe5821c79091
+13 78f333e4fdf9452fb424f2d64fcd84aca2b9799c8aa4dd0471c662b1d0e32b04
+14 79194fba0613aa1d5e067101b34b58eca7560eaeeb09d359c6f8d2f23da79bf9
+15 1f0b6c13bcbb1028ae1238743e21c0bdb4541b7a01db352b67bcdb0278c361ec
+16 9942f818b7cdec23e88435cc637ad80174bf6fda5a3acfca7b2f550ab609514a
+17 b7411bd6511c3b797c7120bd90a59656cabbf3a860a130d80b5d4fb7fca6b145
+18 0e2658937784ae3a26a1ffd08261218f84501cee52f1873ad6ca51c69e89848b
+19 db5af2db1299c77df3ac6df3b9286795d4f547a5c23c16ed374045f7b7f65cc6
+1a 68c4536eb3c6fc7f76b5fb3aa927f599034ffb11fb54d47ce5e763e24b87ff54
+1b 0cbd574b693edc3db97c71e4923c8a905e3d04115bb8728899a84462e5663268
+1c 1d972ab2357c7bbd19a5faa65feb5bc4378df67c70e15efaf782e9453e551643
+1d 73d5cb2f0bacc4d7fc09aa0272d86cbaa1d7dbf1a6989b9783373d1b5670cf57
+1e d79bf2faba7f8142db8a52b4f51b73b360eb1c856721b28fe437f91948dc63f7
+1f 5a30263fc4e416e4584c3a11f63559f5d714bc1419a96b9187fa62aa222e03f4
+1g 573f273289722f266e87e18f42eda357d7757e5f289c57870e68652cff477953
+1h 3b31979ccb30ab77bebecff93a55f6146dd60eb17eb20d4e313fe68b53b803c6
+1i 36bc701e174da3bdd93058545e417ffe76f42b1fde9aceb2c8883666e1cd8044
+1j 478faf49c48e107a8e9d5abd857e15ff19600cf5633f88c5be95e0b432a7651c
+1k ee6da32e495322111c4de938144ba4b4cbad36cbea2567e83888aef55024706f
+1l 2f74db8e019f6408d8a4c8995cb118c6f90a04d61070195a01fe4346d7a7b3de
+1m b6019ba863d65cc55d77079ad3707f1c960d9762ead1f1c318f9143f1cb8d2c9
+1n ebe625cb33253d75bb30262a3bf6af40637760dddc97c0ab53b4f7ce8882227d
+1o ef190c967894a66f7a450ef9e05547ced417bb2e5e551b70dd11984fb7f2f665
+1p 7623db9bad9d6c75398d3af417989a8a032f8a42de2e5c2af7640d832ff2bf95
+1q 47ef555c4a844e908663a0caa97aceb401d77b52c4ffa40f853bf18b4d82d987
+1r 80a63f37a3b5a303c520b76e2dc9d2e05cb6b421f471dfa3be042f919ba3d3d6
+1s 567aaa55cf864f7fb9335baf221134ac927623fd8e71213889dda4ea5fb09ca4
+1t 98e03e6cc28f87cdb2eae16f460a913acb0de87ba99b9b66a9f34e91ff8ba471
+1u bd1003b199c4f6c64c5b193ca7a6f9cc2309e936a306ecee08c2d97b431e4217
+1v 7275555523766dc6921d2d20ef3b025f6e7e0a6175ff77c1221e57558ad0cff4'
 XML_STOCK=bc852037615dcb4e4eb24ab6f30a2e6f817fe00a22a2f767478b25f75b036812
 XML_PATCHED=8cfd05c4466e7ce71930d9437acf8a3c7bae1cb883a5dcdd11d50c4ca757e57f
 UCP_STOCK=6a59ae58b903af4a943dfc2cd94560128b2d42f3d097c8c82d43b5d899c17063
@@ -147,6 +214,9 @@ CHECK_ATTRS=1
 
 SM_LINE_STOCK='        <service type="jci_service" name="jciAAPA" path="/jci/aapa/blmjciaapa.so" autorun="yes" reset_board="yes" retry_count="0" ping_timeout="30000">'
 SM_LINE_PATCHED='        <service type="jci_service" name="jciAAPA" path="/jci/aapa/blmjciaapa.so" autorun="yes" reset_board="no" retry_count="0" ping_timeout="30000">'
+# sm_WCP.conf starts jciAAPA with args="new_hw"; the edit is the same, args stay.
+SM_WCP_LINE_STOCK='        <service type="jci_service" name="jciAAPA" path="/jci/aapa/blmjciaapa.so" autorun="yes" reset_board="yes" retry_count="0" ping_timeout="30000" args="new_hw">'
+SM_WCP_LINE_PATCHED='        <service type="jci_service" name="jciAAPA" path="/jci/aapa/blmjciaapa.so" autorun="yes" reset_board="no" retry_count="0" ping_timeout="30000" args="new_hw">'
 SM_ENV_LINE='            <environ_var env_name="LD_PRELOAD" env_value="/data_persist/oem-aa-mod/libpatch-blmjciaapa.so"/>'
 XML_ANCHOR='        <input_devices>'
 # Boot trim: services for hardware/services this EU MX-5 does not have. Nothing
@@ -243,7 +313,29 @@ if [ "$MO_TEST" = 1 ] && [ -n "${MO_TEST_OVERRIDES:-}" ]; then
     . "$MO_TEST_OVERRIDES" || exit 1
 fi
 
-SM="$R/jci/sm/sm.conf"
+# The config the Service Manager runs on: sm.conf, or sm_WCP.conf with wireless
+# CarPlay. That one is changed; the other stays as it is. Unknown: sm.conf, and
+# preflight refuses.
+sm_active_name() {
+    local c cmd
+    for c in "$R"/proc/[0-9]*/cmdline; do
+        [ -r "$c" ] || continue
+        cmd=$(tr '\000' ' ' < "$c" 2>/dev/null)
+        case "$cmd" in
+            "/jci/sm/sm -f /jci/sm/sm.conf "*|"/jci/sm/sm -f /jci/sm/sm.conf") echo sm.conf; return 0 ;;
+            "/jci/sm/sm -f /jci/sm/sm_WCP.conf "*|"/jci/sm/sm -f /jci/sm/sm_WCP.conf") echo sm_WCP.conf; return 0 ;;
+        esac
+    done
+}
+SM_NAME=$(sm_active_name)
+if [ "$SM_NAME" = sm_WCP.conf ]; then
+    SM_TABLE=$SM_WCP_TABLE
+    SM_LINE_STOCK=$SM_WCP_LINE_STOCK
+    SM_LINE_PATCHED=$SM_WCP_LINE_PATCHED
+fi
+SM="$R/jci/sm/${SM_NAME:-sm.conf}"
+SM_STOCK=$(printf '%s\n' "$SM_TABLE" | awk '$1 == "00" { print $2 }')
+SM_PATCHED=$(printf '%s\n' "$SM_TABLE" | awk '$1 == "10" { print $2 }')   # + AA touch
 XML="$R/etc/aap_system_attributes.xml"
 UCP="$R/etc/aap_system_attributes_UCP.xml"
 BLM="$R/jci/aapa/blmjciaapa.so"
@@ -372,16 +464,8 @@ mount_has() {   # mount_has <mountpoint> <ro|rw>
         END { exit mode == want ? 0 : 1 }' "$R/proc/mounts" 2>/dev/null
 }
 
-# The Service Manager must be running on sm.conf (not sm_WCP.conf).
-sm_conf_active() {
-    local c cmd
-    for c in "$R"/proc/[0-9]*/cmdline; do
-        [ -r "$c" ] || continue
-        cmd=$(tr '\000' ' ' < "$c" 2>/dev/null)
-        case "$cmd" in "/jci/sm/sm -f /jci/sm/sm.conf "*|"/jci/sm/sm -f /jci/sm/sm.conf") return 0 ;; esac
-    done
-    return 1
-}
+# The Service Manager must be running on sm.conf or sm_WCP.conf.
+sm_conf_active() { [ -n "$SM_NAME" ]; }
 
 # ---------------------------------------------------------------- config files
 
@@ -650,24 +734,24 @@ make_stock() {
 
 # publish_sm <aa 0|1> <trim char>: sm.conf as that variant. Staged beside the target, verified by hash, renamed atomically.
 publish_sm() {
-    local want="$1$2" new="${SM%/*}/.sm.conf.miatoff.new" tmp="${SM%/*}/.sm.conf.miatoff.tmp"
+    local want="$1$2" new="${SM%/*}/.${SM##*/}.miatoff.new" tmp="${SM%/*}/.${SM##*/}.miatoff.tmp"
     if [ "$(sm_variant "$SM")" = "$want" ] && attrs_ok "$SM"; then
-        log "/jci/sm/sm.conf already variant $want"
+        log "${SM#"$R"} already variant $want"
         return 0
     fi
     fault stage-sm || return 1
     make_stock sm "$tmp" || return 1
-    sm_build "$tmp" 00 "$new" "$want" || { log "ERROR: cannot build sm.conf variant $want"; return 1; }
+    sm_build "$tmp" 00 "$new" "$want" || { log "ERROR: cannot build ${SM##*/} variant $want"; return 1; }
     rm -f "$tmp"
     chmod "$CFG_MODE" "$new" || return 1
     chown "$CFG_OWNER" "$new" 2>/dev/null || [ "$CHECK_ATTRS" = 0 ] || return 1
-    [ "$(sm_variant "$new")" = "$want" ] && attrs_ok "$new" || { log "ERROR: staged sm.conf failed verification"; return 1; }
+    [ "$(sm_variant "$new")" = "$want" ] && attrs_ok "$new" || { log "ERROR: staged ${SM##*/} failed verification"; return 1; }
     fsync_path "$new" || return 1
     fault rename-sm || return 1
     mv -f "$new" "$SM" || return 1
     fsync_path "${SM%/*}" || return 1
-    [ "$(sm_variant "$SM")" = "$want" ] && attrs_ok "$SM" || { log "ERROR: sm.conf failed read-back"; return 1; }
-    log "published sm.conf variant $want (AA touch $1, boot trim $2:$(trim_list "$2")) ($(sha256_of "$SM"))"
+    [ "$(sm_variant "$SM")" = "$want" ] && attrs_ok "$SM" || { log "ERROR: ${SM##*/} failed read-back"; return 1; }
+    log "published ${SM##*/} variant $want (AA touch $1, boot trim $2:$(trim_list "$2")) ($(sha256_of "$SM"))"
 }
 
 # publish_cfg <key> <stock|patched>: stage beside the target, verify, rename.
@@ -676,7 +760,7 @@ publish_cfg() {
     local key="$1" want="$2" live new tmp v
     if [ "$key" = sm ]; then
         v=$(sm_variant "$SM")
-        [ -n "$v" ] || { log "ERROR: sm.conf is not a known variant"; return 1; }
+        [ -n "$v" ] || { log "ERROR: ${SM##*/} is not a known variant"; return 1; }
         if [ "$want" = patched ]; then publish_sm 1 "${v#?}"; else publish_sm 0 "${v#?}"; fi
         return
     fi
@@ -848,13 +932,13 @@ ensure_backup() {
     mv "$BACKUP_NEW" "$BACKUP" || return 1
     fsync_path "$STATE_DIR" || return 1
     [ "$(backup_state)" = valid ] || { log "ERROR: backup failed read-back"; return 1; }
-    log "backup of stock sm.conf and AAP XMLs written to ${BACKUP#"$R"}"
+    log "backup of stock ${SM##*/} and AAP XMLs written to ${BACKUP#"$R"}"
 }
 
 discard_backup_new() {
     exists "$BACKUP_NEW" || return 0
     [ -d "$BACKUP_NEW" ] && [ ! -L "$BACKUP_NEW" ] || return 1
-    rm -f "$BACKUP_NEW"/sm.conf "$BACKUP_NEW"/aap_system_attributes.xml "$BACKUP_NEW"/aap_system_attributes_UCP.xml
+    rm -f "$BACKUP_NEW"/sm.conf "$BACKUP_NEW"/sm_WCP.conf "$BACKUP_NEW"/aap_system_attributes.xml "$BACKUP_NEW"/aap_system_attributes_UCP.xml
     rmdir "$BACKUP_NEW"
 }
 
@@ -938,7 +1022,7 @@ describe_state() {
     printf 'MiatOff AA-touch %s, uptime %s s\n' "$MO_VERSION" "$(uptime_s)"
     printf 'overall:      %s\n' "$STATE"
     printf 'firmware:     %s (wanted %s)\n' "$(firmware || echo unreadable)" "$FW_WANTED"
-    printf 'sm.conf:      %s\n' "$S_SM"
+    printf 'sm config:    %s (%s)\n' "$S_SM" "${SM_NAME:-none active}"
     printf 'aap XML:      %s\n' "$S_XML"
     printf 'aap UCP XML:  %s\n' "$S_UCP"
     printf 'shim:         %s\n' "$S_SHIM"
@@ -966,14 +1050,14 @@ preflight() {
     [ "$fw" = "$FW_WANTED" ] || { log "ERROR: firmware $fw, this kit is for $FW_WANTED only"; return 1; }
     d=$(sha256_of "$BLM") && [ "$d" = "$BLM_SHA256" ] || { log "ERROR: /jci/aapa/blmjciaapa.so is not the analysed build (${d:-unreadable})"; return 1; }
     d=$(sha256_of "$AAP") && [ "$d" = "$AAP_SHA256" ] || { log "ERROR: /usr/bin/aap_service is not the analysed build (${d:-unreadable})"; return 1; }
-    sm_conf_active || { log "ERROR: the Service Manager is not running on /jci/sm/sm.conf"; return 1; }
+    sm_conf_active || { log "ERROR: the Service Manager is not running on /jci/sm/sm.conf or sm_WCP.conf"; return 1; }
     # /data_persist (a symlink on the CMU) must lead to the read-write mount.
     if ! [ -d "$R/data_persist/" ] || ! mount_has /tmp/mnt/data_persist rw || \
         [ "$(stat -c %d "$R/data_persist/." 2>/dev/null)" != "$(stat -c %d "$R/tmp/mnt/data_persist/." 2>/dev/null)" ]; then
         log "ERROR: /data_persist is not the read-write data_persist mount"
         return 1
     fi
-    log "preflight OK: firmware $fw, AA binaries match, sm.conf active, /data_persist rw"
+    log "preflight OK: firmware $fw, AA binaries match, $SM_NAME active, /data_persist rw"
 }
 
 preflight_payload() {
@@ -1071,7 +1155,7 @@ do_remove() {
 do_trim() {         # do_trim <boot trim char: see SM_TABLE>
     local v wanted="$1"
     v=$(sm_variant "$SM")
-    [ -n "$v" ] || { log "ERROR: sm.conf is not a known variant"; return 1; }
+    [ -n "$v" ] || { log "ERROR: ${SM##*/} is not a known variant"; return 1; }
     case "$1" in ?) ;; *) return 1 ;; esac
     [ "$(trim_mask "$1")" -ge 0 ] 2>/dev/null && [ "$(trim_mask "$1")" -le 31 ] || return 1
     if [ "$1" != 0 ]; then
@@ -1544,7 +1628,7 @@ plan_blockers() {   # plan_blockers <state>: why a wanted step cannot run now, o
     fi
     if [ "$S_TRIM" = unknown ]; then
         for g in dvdtv sirius pandora stitcher aha; do
-            case "$(plan_get "trim_$g")" in install|remove) echo "sm.conf is not a known version (boot trim)."; break ;; esac
+            case "$(plan_get "trim_$g")" in install|remove) echo "${SM##*/} is not a known version (boot trim)."; break ;; esac
         done
     fi
     return 0

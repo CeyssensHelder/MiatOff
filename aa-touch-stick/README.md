@@ -25,7 +25,8 @@ is `false`.
 ## How it stays safe
 - **Refuses on an unknown state.** Every file is recognised by its exact sha256: stock or patched. The
   firmware must be `74.00.324A`, `blmjciaapa.so` and `aap_service` must be the analysed builds, the Service
-  Manager must be running on `sm.conf` (not `sm_WCP.conf`), and `/data_persist` must be the writable mount. If
+  Manager must be running on `sm.conf` or, on a unit with wireless CarPlay, `sm_WCP.conf` (only the config it
+  runs on is changed; the other one stays as it is), and `/data_persist` must be the writable mount. If
   one thing differs, nothing changes and the state with all hashes goes into `aa-touch-state.txt`.
 - **No half-installed state.** Every file is staged next to its target, checked and replaced with a single
   `mv` (TouchTune style). The order ensures every intermediate state boots normally with working Android Auto:
@@ -261,9 +262,13 @@ Among other things, the test checks:
   always stock or patched afterwards, the shim is never active without the rest, and FINISH or REMOVE completes it;
 - an error halfway through installing: automatically back to stock;
 - refusing without changing anything on: one byte difference in `sm.conf`, a modified XML, firmware 74.00.331, a
-  different `blmjciaapa.so` or `aap_service`, `sm_WCP.conf` active, `/data_persist` read-only, foreign files in
+  different `blmjciaapa.so` or `aap_service`, an unknown SM config active (or none), an unknown `sm_WCP.conf`
+  on a wireless-CarPlay unit, `/data_persist` read-only, foreign files in
   `/data_persist/oem-aa-mod`, a different shim version, and a damaged shim on the stick;
 - that the awk edits in the script produce exactly the same files as a separate Python implementation;
+- a wireless-CarPlay unit (`sm_WCP.conf` active): install, boot trim, power loss and remove change only
+  `sm_WCP.conf` (never the unused `sm.conf`, and its `args="new_hw"` on jciAAPA stays) and end byte-exact stock;
+  an unknown `sm_WCP.conf` is an unknown state, so nothing changes;
 - the boot trim with and without Aha: alone, combined with AA touch, and every transition between the levels
   (`sm.conf` is then always exactly the expected variant; another service waiting on `stage_ir` is left
   alone), a power loss during the trim, an error (nothing is left behind), and refusing on a modified

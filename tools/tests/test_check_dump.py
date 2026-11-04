@@ -38,6 +38,7 @@ FILES = {
     "gap2_stock": b"gap2 stock", "gap2_patched": b"gap2 patched",
     "sm_stock": b"sm stock", "sm_patched": b"sm patched", "sm_trim": b"sm trim", "sm_aa_trim": b"sm aa trim",
     "sm_trim_aha": b"sm trim aha", "sm_aa_trim_aha": b"sm aa trim aha", "sm_custom": b"sm custom",
+    "wcp_stock": b"wcp stock", "wcp_aa_trim": b"wcp aa trim", "wcp_other": b"other wcp",
     "blm": b"blm", "aap": b"aap",
 }
 PIN = {"FW_WANTED": "74.00.324A", "BLM_SHA256": sha(FILES["blm"]), "AAP_SHA256": sha(FILES["aap"])}
@@ -53,13 +54,17 @@ for pin_name, key in (("COMMON_STOCK", "common_stock"), ("COMMON_PATCHED", "comm
 PIN["SM_TABLE"] = "\n".join(f"{code} {sha(FILES[key])}" for code, key in (
     ("00", "sm_stock"), ("10", "sm_patched"), ("0f", "sm_trim"), ("1f", "sm_aa_trim"),
     ("0v", "sm_trim_aha"), ("1v", "sm_aa_trim_aha"), ("05", "sm_custom")))
+# sm_WCP.conf (wireless CarPlay): its own table
+PIN["SM_WCP_TABLE"] = "\n".join(f"{code} {sha(FILES[key])}" for code, key in (
+    ("00", "wcp_stock"), ("1f", "wcp_aa_trim")))
 
 PATHS = {"/jci/gui/common/js/Common.js": "common", "/jci/gui/apps/system/js/systemApp.js": "sys",
          "/etc/aap_system_attributes.xml": "xml", "/etc/aap_system_attributes_UCP.xml": "ucp",
-         "/jci/opera/opera_home/opera.ini": "opera", "/jci/scripts/stage_gap2.sh": "gap2", "/jci/sm/sm.conf": "sm"}
+         "/jci/opera/opera_home/opera.ini": "opera", "/jci/scripts/stage_gap2.sh": "gap2", "/jci/sm/sm.conf": "sm",
+         "/jci/sm/sm_WCP.conf": "wcp"}
 
 
-def make_dump(base: Path, name="001-full-up10s", mode="full", state="stock", sm="sm_stock", fw="74.00.324A",
+def make_dump(base: Path, name="001-full-up10s", mode="full", state="stock", sm="sm_stock", wcp="wcp_stock", fw="74.00.324A",
               active="/jci/sm/sm.conf", persist="rw", tools="md5=md5sum sha256=openssl", preload="", **override) -> Path:
     d = base / name
     (d / "runtime").mkdir(parents=True)
@@ -73,7 +78,7 @@ def make_dump(base: Path, name="001-full-up10s", mode="full", state="stock", sm=
         return d
     rows = ["path\tsize\tmode uid gid\tcksum\tmd5\tsha256"]
     for unit_path, key in PATHS.items():
-        content = FILES[sm] if key == "sm" else FILES[f"{key}_{state}"]
+        content = FILES[sm] if key == "sm" else FILES[wcp] if key == "wcp" else FILES[f"{key}_{state}"]
         content = override.get(key, content)
         target = d / "static/files" / unit_path.lstrip("/")
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -126,12 +131,28 @@ def main():
               "an unknown Android Auto build blocks everything that could be installed")
 
         for label, kwargs in (("firmware 74.00.331", {"fw": "74.00.331"}),
-                              ("sm_WCP.conf active", {"active": "/jci/sm/sm_WCP.conf"}),
+                              ("an unknown SM config active", {"active": "/jci/sm/smtestmode.conf"}),
                               ("data_persist read-only", {"persist": "ro"}),
                               ("no sha256 tool", {"tools": "md5=md5sum sha256=none"}),
                               ("foreign LD_PRELOAD", {"preload": "9\tL_x\tLD_PRELOAD=/tmp/evil.so\n"})):
             v = verdict(make_dump(base / label.replace(" ", "_"), **kwargs))
             check(v["overall"] == "not supported", f"{label}: not supported")
+
+        # Wireless CarPlay: the Service Manager runs sm_WCP.conf, so that file decides.
+        wcp = "/jci/sm/sm_WCP.conf"
+        v = verdict(make_dump(base / "wcp", active=wcp))
+        check(v["overall"] == "supported" and set(states(v).values()) == {"available"},
+              "sm_WCP.conf active and stock: supported, everything available")
+        v = verdict(make_dump(base / "wcp2", active=wcp, state="patched", wcp="wcp_aa_trim"))
+        check(states(v)["aa_touch"] == "installed" and states(v)["trim_stitcher"] == "installed"
+              and states(v)["trim_aha"] == "available", "sm_WCP.conf variant 1f: AA touch and four trims installed")
+        v = verdict(make_dump(base / "wcp3", active=wcp, sm="sm_aa_trim_aha"))
+        check(states(v)["aa_touch"] == "available" and states(v)["trim_aha"] == "available",
+              "with sm_WCP.conf active, edits in the unused sm.conf are ignored")
+        v = verdict(make_dump(base / "wcp4", active=wcp, wcp="wcp_other"))
+        check(states(v)["aa_touch"] == "blocked" and states(v)["trim_dvdtv"] == "blocked"
+              and states(v)["warning"] == "available" and "sm_WCP.conf" in v["components"]["aa_touch"]["detail"],
+              "an unknown sm_WCP.conf blocks only AA touch and the boot trim")
 
         v = verdict(make_dump(base / "ours", preload="3492\tL_jciAAPA\tLD_PRELOAD=" + cd.OURS_PRELOAD + "\n",
                               state="patched", sm="sm_aa_trim"))

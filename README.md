@@ -27,6 +27,7 @@ Only one combination has been analysed so far, and **nothing has been fully acce
 |---|---|---|---|
 | 74.00.324A | EU MX-5 ND1 | Check my car (read-only dump) | Tested in the car |
 | 74.00.324A | EU MX-5 ND1 | Touch in Android Auto, boot trim, startup warning | Experimental: tested on a simulator, in-car acceptance still open |
+| 74.00.324A | EU MX-5 ND1 with wireless CarPlay (`sm_WCP.conf`) | Touch in Android Auto, boot trim | Experimental: same edits on `sm_WCP.conf`, tested on a simulator only |
 | 74.00.324A | EU MX-5 ND1 | Meters | Experimental: one in-car failure (busy root remount) was fixed but not re-tested |
 | anything else | any | everything | Unsupported: the tools refuse to change anything |
 

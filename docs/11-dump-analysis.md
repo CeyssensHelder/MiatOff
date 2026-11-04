@@ -16,7 +16,7 @@ DAB ✅ · navigation SD ✅ · Bose ✅ · Android Auto over cable works ✅ (r
 | NVRAM `bus_bcm_` / `lvds_speed_restriction` | **do not exist yet** | Factory state. TouchTune 1.2.1 treats that as `enable` (fix for GitHub #3) ✅ |
 | `/jci/aapa/blmjciaapa.so` | md5 **`486628ae…`** | Exactly the build oem-aa-mod's touch shim was made for (fixed offsets match) ✅ |
 | `/usr/bin/aap_service` | md5 **`964e9af0…`** | Also the tested build ✅ |
-| Active SM config | **`/jci/sm/sm.conf`** (`sm -f /jci/sm/sm.conf`) | Not a WCP unit. `sm_WCP.conf` exists, but is not used |
+| Active SM config | **`/jci/sm/sm.conf`** (`sm -f /jci/sm/sm.conf`) | Not a WCP unit. `sm_WCP.conf` exists, but is not used. A second EU ND1 on the same firmware (with wireless CarPlay) runs `sm -f /jci/sm/sm_WCP.conf`; everything else there matched this unit, so the installer now edits whichever config is active (`SM_WCP_TABLE`) |
 | Existing `LD_PRELOAD` | none | No other mods active |
 | Hash tools | `md5sum` + `openssl` (no `sha256sum`) | Good to know for every installer |
 
