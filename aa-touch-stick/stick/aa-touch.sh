@@ -1635,16 +1635,18 @@ image_backup_valid() {  # image_backup_valid <set>: every stock file, verified
 }
 
 IMAGE_SETS=safety
-image_leftovers() {
-    local set name dir f
-    for set in $IMAGE_SETS; do
-        dir=$(image_dir "$set")
-        for name in $(image_names "$set"); do
-            f=$(image_stage "$dir" "$name")
-            exists "$f" && echo "$f"
-        done
+image_set_leftovers() {  # image_set_leftovers <set>: staged copies left by a run that was cut off
+    local name dir f
+    dir=$(image_dir "$1")
+    for name in $(image_names "$1"); do
+        f=$(image_stage "$dir" "$name")
+        exists "$f" && echo "$f"
     done
     return 0
+}
+image_leftovers() {
+    local set
+    for set in $IMAGE_SETS; do image_set_leftovers "$set"; done
 }
 
 ensure_image_backup() {
@@ -1717,6 +1719,9 @@ do_images() {
         image_backup_valid "$set" || { log "ERROR: no verified backup of the $set images"; return 1; }
     fi
     root_rw || return 1
+    for name in $(image_set_leftovers "$set"); do
+        rm -f "$name" || return 1     # never a live file: the name is the hidden staging name
+    done
     image_check "$set" live > "$MO_GUARD/images" || return 1
     while read -r name state; do
         if [ "$want" = patched ] && [ "$state" = stock ]; then

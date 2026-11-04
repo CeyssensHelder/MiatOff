@@ -760,7 +760,8 @@ def main():
             if then == "safety_on":
                 check(r.returncode == 0 and all(v == SAFETY_BLANK for v in imgs().values()), "partial: FINISH blanks the rest")
             else:
-                check(r.returncode == 0 and car.digest() == stock_digest, "partial: RESTORE gives byte-exact stock")
+                check(r.returncode == 0 and car.digest() == stock_digest,
+                      "partial: RESTORE gives byte-exact stock (the staged copy of the cut-off image is gone too)")
         car = fresh(base, "safety-kill-back")
         stock_digest = car.digest()
         car.run("safety_on")
