@@ -49,3 +49,16 @@ farenheit for us Americans?"
 - [ ] Decide what stays fixed for safety and readability (minimum font sizes, rev-limit warnings, no more than about six
   things per page).
 - [ ] Decide how user themes are installed and removed through the stick (own folder, hash of the user's files, plan entry).
+
+## Later phases
+
+### Meters: shift sounds
+
+- [ ] Play a sound on the Meters pages when it is time to shift (rev-based shift point, ideally with a configurable
+  RPM threshold per gear or a single shift light RPM).
+- [ ] Research: can a Meters page (Chromium/WebKit on the CMU) play audio at all, and through which output? Check the
+  autoplay rules, latency, whether it mixes with or interrupts the current audio source, and the volume control.
+- [ ] Decide the sound design: a short beep or chime, kept subtle and not annoying; an option to turn it off; no sound
+  while the car is stationary or the engine is warming up.
+- [ ] Reuse the Meters settings file (see "Meters: more configuration") for the on/off switch and the shift RPM.
+- [ ] Add it to the simulator and the Meters tests. Ship the sound files with the Meters pages (hash-guarded).
