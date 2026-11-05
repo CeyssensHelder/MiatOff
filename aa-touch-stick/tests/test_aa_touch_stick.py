@@ -304,17 +304,40 @@ BLM = b"\x7fELF fake blmjciaapa"
 AAP = b"\x7fELF fake aap_service"
 
 
+def write_in_container(root: Path, rel: str, data: bytes):
+    """Write a file the way the container (root) would: the folder it made is not writable for the host user."""
+    stage = root.parent / ".write-stage"
+    stage.write_bytes(data)
+    try:
+        target = f"/w/{root.name}/{rel}"
+        r = subprocess.run(["docker", "run", "--rm", "-v", f"{root.parent}:/w", DOCKER_IMAGE, "sh", "-c",
+                            f'mkdir -p "$(dirname "{target}")" && cp /w/.write-stage "{target}"'],
+                           capture_output=True, text=True, timeout=120)
+        if r.returncode != 0:
+            raise PermissionError(f"cannot write {rel} in the container: {r.stderr.strip()}")
+    finally:
+        stage.unlink()
+
+
 def write(root: Path, rel: str, data):
     path = root / rel
-    path.parent.mkdir(parents=True, exist_ok=True)
     data = data if isinstance(data, bytes) else data.encode()
     try:
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
     except PermissionError:
-        # A file the root container made or replaced is not writable for the host user, but the folder is:
-        # replace it instead (the container's modes and owners stay untouched).
-        path.unlink()
-        path.write_bytes(data)
+        try:
+            # A file the root container made or replaced is not writable for the host user, but the folder is:
+            # replace it instead (the container's modes and owners stay untouched). The chmod is for Windows,
+            # which refuses to delete a read-only file.
+            path.chmod(0o666)
+            path.unlink()
+            path.write_bytes(data)
+        except (PermissionError, FileNotFoundError):
+            if not DOCKER_IMAGE:
+                raise
+            # Linux: the folder itself belongs to root (made by the container), so the container writes it.
+            write_in_container(root, rel, data)
     return path
 
 
