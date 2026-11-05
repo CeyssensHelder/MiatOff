@@ -52,11 +52,16 @@ def sha(data: bytes) -> str:
 
 
 # Independent Python versions of the two edits, to cross-check the awk in the script.
+# sm_WCP.conf starts jciAAPA with args="new_hw"; the edit is the same.
+SM_WCP_STOCK_LINE = SM_STOCK_LINE[:-1] + ' args="new_hw">'
+
+
 def patch_sm(data: bytes) -> bytes:
     lines = data.decode().split("\n")
-    assert lines.count(SM_STOCK_LINE) == 1
-    i = lines.index(SM_STOCK_LINE)
-    lines[i] = SM_STOCK_LINE.replace('reset_board="yes"', 'reset_board="no"')
+    line = SM_WCP_STOCK_LINE if SM_WCP_STOCK_LINE in lines else SM_STOCK_LINE
+    assert lines.count(line) == 1 and lines.count(SM_STOCK_LINE) + lines.count(SM_WCP_STOCK_LINE) == 1
+    i = lines.index(line)
+    lines[i] = line.replace('reset_board="yes"', 'reset_board="no"')
     lines.insert(i + 1, SM_ENV_LINE)
     return "\n".join(lines).encode()
 
@@ -165,18 +170,31 @@ SM_VARIANTS["0v"] = aha_sm(SM_VARIANTS["0f"])
 SM_VARIANTS["1v"] = aha_sm(SM_VARIANTS["1f"])
 
 
-def sm_for(aa: int, mask: int) -> bytes:
-    """sm.conf for AA touch (0/1) and a trim mask (1 DVD/TV, 2 SiriusXM, 4 Pandora, 8 Stitcher, 16 Aha)."""
-    data = PATCHED["jci/sm/sm.conf"] if aa else STOCK["jci/sm/sm.conf"]
+def sm_for(aa: int, mask: int, stock: bytes = None) -> bytes:
+    """An SM config (default sm.conf) for AA touch (0/1) and a trim mask (1 DVD/TV, 2 SiriusXM, 4 Pandora, 8 Stitcher, 16 Aha)."""
+    if stock is None:
+        data = PATCHED["jci/sm/sm.conf"] if aa else STOCK["jci/sm/sm.conf"]
+    else:
+        data = patch_sm(stock) if aa else stock
     for bit, names in zip((1, 2, 4, 8), TRIM_GROUPS.values()):
         if mask & bit:
             data = trim_sm(data, names)
     return aha_sm(data) if mask & 16 else data
 
 
-def sm_table() -> dict:
-    """Every variant code (AA digit + trim char) -> sm.conf bytes."""
-    return {f"{aa}{TRIM_DIGITS[mask]}": sm_for(aa, mask) for aa in (0, 1) for mask in range(32)}
+def sm_table(stock: bytes = None) -> dict:
+    """Every variant code (AA digit + trim char) -> SM config bytes (default sm.conf)."""
+    return {f"{aa}{TRIM_DIGITS[mask]}": sm_for(aa, mask, stock) for aa in (0, 1) for mask in range(32)}
+
+
+# sm_WCP.conf: what the Service Manager runs with wireless CarPlay. Synthetic: sm.conf
+# with an extra CarPlay service, so the two files differ outside the edited lines.
+WCP = "jci/sm/sm_WCP.conf"
+WCP_STOCK = SYNTH_SM.replace(SM_STOCK_LINE.encode(), SM_WCP_STOCK_LINE.encode()).replace(b"    </services>\n",
+                             b'        <service type="jci_service" name="jciCARPLAY" path="/jci/carplay.so" autorun="yes" reset_board="yes"/>\n'
+                             b"    </services>\n")
+WCP_VARIANTS = sm_table(WCP_STOCK)
+WCP_CMDLINE = b"/jci/sm/sm\x00-f\x00/jci/sm/sm_WCP.conf\x00-e\x00/tmp/smevents.txt\x00"
 
 # Startup warning: systemApp.js. Real file from the dump when present; otherwise a
 # small synthetic one built from the stock lines in aa-touch.sh (markers removed).
@@ -290,6 +308,7 @@ def overrides(work: Path, root_in_sh: str, **extra) -> Path:
             UCP_STOCK=sha(STOCK["etc/aap_system_attributes_UCP.xml"]),
             UCP_PATCHED=sha(PATCHED["etc/aap_system_attributes_UCP.xml"]),
             SM_TABLE="'" + "\n".join(f"{code} {sha(data)}" for code, data in sorted(sm_table().items())) + "'",
+            SM_WCP_TABLE="'" + "\n".join(f"{code} {sha(data)}" for code, data in sorted(WCP_VARIANTS.items())) + "'",
             SYS_STOCK=sha(SYS_STOCK_BYTES), SYS_PATCHED=sha(SYS_PATCHED_BYTES),
             OPERA_STOCK=sha(OPERA_STOCK_BYTES), OPERA_PATCHED=sha(OPERA_PATCHED_BYTES),
             GAP2_STOCK=sha(GAP2_STOCK_BYTES), GAP2_PATCHED=sha(GAP2_PATCHED_BYTES))
@@ -390,9 +409,15 @@ def main():
     check(b"\r" not in bs.payload()["aa-touch.sh"], "aa-touch.sh is written with LF endings")
     shim = bs.payload()["oem-aa-mod/libpatch-blmjciaapa.so"]
     check(sha(shim) == bs.pinned("SHIM_SHA256"), "stick carries the pinned oem-aa-mod 0.10.0 shim")
+    wcp_rows = re.search(r"^SM_WCP_TABLE='(.*?)'", (bs.STICK / "aa-touch.sh").read_text(), re.M | re.S).group(1).split()
+    check(not wcp_rows or (len(wcp_rows) == 128 and len(set(wcp_rows[1::2])) == 64
+                           and wcp_rows[0::2] == sorted(sm_table())),
+          "SM_WCP_TABLE is empty or 64 distinct variants in order")
     if REAL:
-        check(sha(STOCK["jci/sm/sm.conf"]) == bs.pinned("SM_STOCK"), "SM_STOCK matches the dump")
-        check(sha(PATCHED["jci/sm/sm.conf"]) == bs.pinned("SM_PATCHED"), "SM_PATCHED matches the Python edit")
+        sm_rows = dict(line.split() for line in re.search(
+            r"^SM_TABLE='(.*?)'$", (bs.STICK / "aa-touch.sh").read_text(), re.M | re.S).group(1).split("\n"))
+        check(sha(STOCK["jci/sm/sm.conf"]) == sm_rows["00"], "SM_TABLE 00 (stock) matches the dump")
+        check(sha(PATCHED["jci/sm/sm.conf"]) == sm_rows["10"], "SM_TABLE 10 (AA touch) matches the Python edit")
         check(sha(STOCK["etc/aap_system_attributes.xml"]) == bs.pinned("XML_STOCK"), "XML_STOCK matches the dump")
         check(sha(PATCHED["etc/aap_system_attributes.xml"]) == bs.pinned("XML_PATCHED"), "XML_PATCHED matches")
         check(sha(STOCK["etc/aap_system_attributes_UCP.xml"]) == bs.pinned("UCP_STOCK"), "UCP_STOCK matches the dump")
@@ -530,8 +555,9 @@ def main():
                                                 'JCI_SW_VER="MAZ_CMU-150_74.00.331"\nJCI_SW_VER_PATCH="A"\n'))
         refused("blmjciaapa-other-build", lambda c: write(c.root, "jci/aapa/blmjciaapa.so", BLM + b"x"))
         refused("aap_service-other-build", lambda c: write(c.root, "usr/bin/aap_service", AAP + b"x"))
-        refused("sm_WCP-active", lambda c: write(c.root, "proc/252/cmdline",
-                                                 b"/jci/sm/sm\x00-f\x00/jci/sm/sm_WCP.conf\x00"))
+        refused("unknown-sm-config-active", lambda c: write(c.root, "proc/252/cmdline",
+                                                            b"/jci/sm/sm\x00-f\x00/jci/sm/smtestmode.conf\x00"))
+        refused("no-service-manager", lambda c: (c.root / "proc/252/cmdline").unlink())
         refused("data_persist-read-only", lambda c: write(c.root, "proc/mounts",
                                                           "/dev/mmcblk0p2 /tmp/mnt/data_persist relfs ro 0 0\n"))
         refused("foreign-oem-aa-mod-file", lambda c: write(c.root, "data_persist/oem-aa-mod/libpatch-aap_service.so", b"x"))
@@ -540,6 +566,79 @@ def main():
         car = refused("unknown-after-install", lambda c: (c.run("install"),
                       write(c.root, "etc/aap_system_attributes.xml", b"<x/>\n")), action="remove")
         check(car.state() == "unknown", "an edited file after install is reported as unknown")
+
+        # --- wireless CarPlay: the Service Manager runs sm_WCP.conf, so only that one changes
+        def wcp_car(name, wcp=WCP_STOCK):
+            car = fresh(base, name)
+            write(car.root, WCP, wcp)
+            write(car.root, "proc/252/cmdline", WCP_CMDLINE)
+            return car
+
+        car = wcp_car("wcp")
+        stock_digest = car.digest()
+        sm_before = car.read("jci/sm/sm.conf")
+        r = car.run("install")
+        check(r.returncode == 0 and car.state() == "installed", f"WCP: install exits 0 ({car.state()} {r.stderr[-200:]})")
+        check(car.read(WCP) == WCP_VARIANTS["10"] and b'reset_board="no" retry_count="0" ping_timeout="30000" args="new_hw">' in car.read(WCP),
+              "WCP: sm_WCP.conf is exactly the patched file (args=\"new_hw\" kept)")
+        check(car.read("jci/sm/sm.conf") == sm_before, "WCP: the unused sm.conf is not touched")
+        check(car.configs_are({k: v for k, v in PATCHED.items() if k != "jci/sm/sm.conf"}), "WCP: both XMLs patched")
+        wbackup = car.root / "data_persist/miatoff/aa-touch/backup"
+        check((wbackup / "sm_WCP.conf").read_bytes() == WCP_STOCK and not (wbackup / "sm.conf").exists(),
+              "WCP: the backup holds the stock sm_WCP.conf")
+        check(car.state("sm config:") == "patched", "WCP: state report reads sm_WCP.conf")
+        r = car.run("trim_on")
+        check(r.returncode == 0 and car.read(WCP) == WCP_VARIANTS["1f"], "WCP: boot trim on top of AA touch")
+        r = car.run("trim_off")
+        r2 = car.run("remove")
+        check(r.returncode == 0 and r2.returncode == 0 and car.digest() == stock_digest,
+              "WCP: trim off and remove give byte-exact stock")
+
+        car = wcp_car("wcp-trim")
+        stock_digest = car.digest()
+        r = car.run("trim_on")
+        check(r.returncode == 0 and car.read(WCP) == WCP_VARIANTS["0f"] and car.read("jci/sm/sm.conf") == STOCK["jci/sm/sm.conf"],
+              "WCP: boot trim alone edits sm_WCP.conf only")
+        r = car.run("trim_off")
+        check(r.returncode == 0 and car.digest() == stock_digest, "WCP: trim off gives byte-exact stock")
+
+        for point in ("stage-sm", "rename-sm"):
+            car = wcp_car(f"wcp-kill-{point}")
+            stock_digest = car.digest()
+            car.run("install", fault=f"kill:{point}")
+            check(car.read(WCP) in (WCP_VARIANTS["00"], WCP_VARIANTS["10"]) and not (car.root / SHIM).exists(),
+                  f"WCP: power loss at {point}: sm_WCP.conf stock or patched, shim off")
+            r = car.run("remove")
+            check(r.returncode == 0 and car.digest() == stock_digest, f"WCP: power loss at {point}: REMOVE gives byte-exact stock")
+
+        refused("wcp-unknown-sm_WCP", lambda c: (write(c.root, WCP, WCP_STOCK + b" "),
+                                                 write(c.root, "proc/252/cmdline", WCP_CMDLINE)))
+        refused("wcp-stock-sm.conf-but-unknown-sm_WCP", lambda c: (write(c.root, WCP, b"<sm_config/>\n"),
+                                                                   write(c.root, "proc/252/cmdline", WCP_CMDLINE)),
+                action="trim_on")
+        # Installed on sm.conf, then the unit switches to sm_WCP.conf: refused, and the report says why.
+        car = fresh(base, "wcp-switched")
+        car.run("install")
+        write(car.root, WCP, WCP_STOCK)
+        write(car.root, "proc/252/cmdline", WCP_CMDLINE)
+        before = car.digest()
+        r = car.run("remove")
+        report = (car.stick / "aa-touch-state.txt").read_text()
+        check(r.returncode != 0 and car.digest() == before and "the backup was made while the unit ran sm.conf" in report,
+              "switched to sm_WCP.conf after an install: refused, the report explains")
+        write(car.root, "proc/252/cmdline", b"/jci/sm/sm\x00-f\x00/jci/sm/sm.conf\x00-e\x00/tmp/smevents.txt\x00")
+        r = car.run("remove")
+        check(r.returncode == 0 and car.state() == "stock", "switched back to sm.conf: REMOVE works again")
+
+        # As with an unknown sm.conf, an unknown active config is an unknown state: nothing changes.
+        refused("wcp-unknown-sm_WCP-warning", lambda c: (write(c.root, WCP, WCP_STOCK + b" "),
+                                                         write(c.root, "proc/252/cmdline", WCP_CMDLINE)),
+                action="disc_off")
+        car = wcp_car("wcp-sm.conf-line")
+        write(car.root, WCP, SYNTH_SM)  # the sm.conf jciAAPA line in sm_WCP.conf: not a known sm_WCP.conf
+        before = car.digest()
+        r = car.run("install")
+        check(r.returncode != 0 and car.digest() == before, "WCP: sm_WCP.conf with the sm.conf jciAAPA line is refused")
 
         # --- boot trim: on its own, combined with AA touch, and back
         car = fresh(base, "trim")

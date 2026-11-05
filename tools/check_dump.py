@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "aa-touch-stick" / "stick" / "aa-touch.sh"
 REPORT_NAME = "CHECK-REPORT.txt"
 
-CFG_ATTRS = "775 1000 1000"          # sm.conf and both AAP XMLs, as aa-touch.sh checks
+CFG_ATTRS = "775 1000 1000"          # the SM config and both AAP XMLs, as aa-touch.sh checks
 OURS_PRELOAD = "/data_persist/oem-aa-mod/libpatch-blmjciaapa.so"
 
 # Order the report lists components in.
@@ -54,19 +54,24 @@ def pinned_constants(script: Path = SCRIPT) -> dict:
     """NAME -> 64-hex sha256 for every pinned constant, plus FW_WANTED."""
     text = script.read_text(encoding="utf-8")
     found = {m.group(1): m.group(2) for m in re.finditer(r"^([A-Z][A-Z0-9_]*)=([0-9a-f]{64})\b", text, re.M)}
-    table = re.search(r"^SM_TABLE='(.*?)'$", text, re.M | re.S)
-    if table:
-        found["SM_TABLE"] = table.group(1)
+    for name in ("SM_TABLE", "SM_WCP_TABLE"):
+        table = re.search(rf"^{name}='(.*?)'$", text, re.M | re.S)
+        if table:
+            found[name] = table.group(1)
     fw = re.search(r"^FW_WANTED=(\S+)", text, re.M)
     if fw:
         found["FW_WANTED"] = fw.group(1)
     return found
 
 
-def sm_variants(pin: dict) -> dict:
-    """sha256 of sm.conf -> (AA touch installed, trim mask: 1 DVD/TV, 2 SiriusXM, 4 Pandora, 8 Stitcher, 16 Aha)."""
+# The configs the Service Manager may run on, and the pinned table of each.
+SM_CONFIGS = {"/jci/sm/sm.conf": "SM_TABLE", "/jci/sm/sm_WCP.conf": "SM_WCP_TABLE"}
+
+
+def sm_variants(pin: dict, table: str = "SM_TABLE") -> dict:
+    """sha256 of the SM config -> (AA touch installed, trim mask: 1 DVD/TV, 2 SiriusXM, 4 Pandora, 8 Stitcher, 16 Aha)."""
     out = {}
-    for line in pin.get("SM_TABLE", "").splitlines():
+    for line in pin.get(table, "").splitlines():
         parts = line.split()
         if len(parts) == 2 and len(parts[0]) == 2 and parts[0][1] in TRIM_DIGITS:
             out[parts[1]] = (parts[0][0] == "1", TRIM_DIGITS.index(parts[0][1]))
@@ -178,8 +183,9 @@ def check(dump_path: Path, pinned: dict = None) -> dict:
              "known build" if digest == pin.get(key) else ("not in this dump" if digest is None else f"unknown build {digest[:12]}"))
     ps = dump.text("runtime/ps.txt") + dump.text("runtime/ps-w.txt")
     active = re.search(r"/jci/sm/sm -f (\S+)", ps)
-    gate("service manager config", None if not active else active.group(1) == "/jci/sm/sm.conf",
-         active.group(1) if active else "not in this dump")
+    sm_path = active.group(1) if active else None
+    gate("service manager config", None if not active else sm_path in SM_CONFIGS,
+         sm_path or "not in this dump")
     mounts = dump.text("runtime/proc-mounts.txt")
     persist = next((l for l in mounts.splitlines() if "/data_persist" in l), None)
     gate("/data_persist writable", None if persist is None else bool(re.search(r"\brw\b|[ ,]rw[ ,]", persist)),
@@ -200,8 +206,11 @@ def check(dump_path: Path, pinned: dict = None) -> dict:
                                 {"stock": "Common.js is stock", "patched": "Common.js has the TouchTune edit",
                                  "unknown": "Common.js is an unknown version"}.get(common, "Common.js not in this dump"))
 
-    sm_digest = dump.sha("/jci/sm/sm.conf")
-    variant = sm_variants(pin).get(sm_digest) if sm_digest else None
+    # The installer only changes the config the Service Manager runs on.
+    sm_path = sm_path if sm_path in SM_CONFIGS else "/jci/sm/sm.conf"
+    sm_name = sm_path.rsplit("/", 1)[1]
+    sm_digest = dump.sha(sm_path)
+    variant = sm_variants(pin, SM_CONFIGS[sm_path]).get(sm_digest) if sm_digest else None
     xml = state_of(dump.sha("/etc/aap_system_attributes.xml"), pin.get("XML_STOCK"), pin.get("XML_PATCHED"))
     ucp = state_of(dump.sha("/etc/aap_system_attributes_UCP.xml"), pin.get("UCP_STOCK"), pin.get("UCP_PATCHED"))
     if sm_digest is None or UNCHECKED in (xml, ucp):
@@ -209,9 +218,9 @@ def check(dump_path: Path, pinned: dict = None) -> dict:
         for key in TRIM_KEYS:
             comps[key] = {"state": UNCHECKED, "detail": "needs a FULL dump"}
     elif variant is None or "unknown" in (xml, ucp):
-        comps["aa_touch"] = {"state": BLOCKED, "detail": "sm.conf or an AAP XML is not a known version"}
+        comps["aa_touch"] = {"state": BLOCKED, "detail": f"{sm_name} or an AAP XML is not a known version"}
         for key in TRIM_KEYS:
-            comps[key] = {"state": BLOCKED, "detail": "sm.conf is not a known version"}
+            comps[key] = {"state": BLOCKED, "detail": f"{sm_name} is not a known version"}
     else:
         aa_on, mask = variant
         parts = [aa_on, xml == "patched", ucp == "patched"]
@@ -228,7 +237,7 @@ def check(dump_path: Path, pinned: dict = None) -> dict:
             comps[key] = result(INSTALLED if on else AVAILABLE, "off at boot" if on else "starts as usual")
     for key in ("aa_touch", *TRIM_KEYS):
         if comps[key]["state"] in (AVAILABLE, INSTALLED, PARTIAL):
-            for path in ("/jci/sm/sm.conf", "/etc/aap_system_attributes.xml", "/etc/aap_system_attributes_UCP.xml"):
+            for path in (sm_path, "/etc/aap_system_attributes.xml", "/etc/aap_system_attributes_UCP.xml"):
                 attrs = dump.attrs(path)
                 if attrs is not None and attrs != CFG_ATTRS:
                     comps[key] = {"state": BLOCKED, "detail": f"{path} has unexpected permissions ({attrs})"}
