@@ -274,6 +274,14 @@ class App(tk.Tk):
                  text="Choose per part. After you have read a dump on step 1, options the car cannot take are greyed out. "
                       "In the car the steps are offered one at a time (INSTALL or REMOVE, then CANCEL), each confirmed and each restarting the unit."
                  ).pack(anchor="w", pady=(8, 0))
+        self.override = tk.BooleanVar(value=False)
+        override = tk.Checkbutton(
+            body, variable=self.override, command=self._override_changed, bg=BG, activebackground=BG, anchor="w",
+            justify="left", font=("Segoe UI", 9), wraplength=680,
+            text="Override the check: allow Install and Remove for every part, even where the last dump says it is not possible. "
+                 "Use this when the car has changed since the dump. The installer on the car still checks the real files "
+                 "and changes nothing it does not recognise.")
+        override.pack(anchor="w", pady=(8, 0))
         for category, items in COMPONENTS:
             frame = self.card(body, category)
             for key, title, description, install_label, remove_label in items:
@@ -328,12 +336,16 @@ class App(tk.Tk):
             state = comp["state"]
             bg, fg = BADGE[state]
             self.badges[key].configure(text=state.upper(), bg=bg, fg=fg)
-            ok = allowed_options(state)
+            ok = {"install", "remove"} if self.override.get() else allowed_options(state)
             for value in ("install", "remove"):
                 self.options[key][value].configure(state="normal" if value in ok else "disabled",
                                                    cursor="hand2" if value in ok else "arrow")
             if self.vars[key].get() not in ("keep", *ok):
                 self.vars[key].set("keep")
+
+    def _override_changed(self):
+        if self.verdict:
+            self.apply_verdict(self.verdict)
 
     # ---------------------------------------------------------------- actions
     def refresh(self):
