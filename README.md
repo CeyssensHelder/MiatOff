@@ -37,14 +37,15 @@ Only one combination has been analysed so far, and **nothing has been fully acce
 |---|---|---|---|
 | 74.00.324A | EU MX-5 ND1 | Check my car (read-only dump) | Tested in the car |
 | 74.00.324A | EU MX-5 ND1 | Touch in Android Auto, boot trim, startup warning | Experimental: tested on a simulator, in-car acceptance still open |
-| 74.00.324A | EU MX-5 ND1 with wireless CarPlay (`sm_WCP.conf`) | Touch in Android Auto, boot trim | Experimental: same edits on `sm_WCP.conf`, tested on a simulator only |
+| 74.00.324A | EU MX-5 ND1 with wireless CarPlay (`sm_WCP.conf`) | Touch in Android Auto, boot trim | Experimental: same edits on `sm_WCP.conf`, tested on a simulator and on an ND2 (next row) |
 | 74.00.324A | EU MX-5 ND1 | Shorter list delay, camera safety text, parking sensor graphics | Experimental: tested on a simulator only |
 | 74.00.324A | EU MX-5 ND1 | Meters | Experimental: one in-car failure (busy root remount) was fixed but not re-tested |
 | 74.00.324A | EU MX-5 ND1 | Shorter list delay | Experimental: ran on our car without problems; the effect is only visible when scrolling lists |
 | 74.00.324A | EU MX-5 ND1 | Blank reversing-camera safety text | Experimental: simulator and the contributor's unit only; **not tested by us** (no camera) |
 | 74.00.324A | EU MX-5 ND1 | Semi-transparent parking sensor graphics | Experimental: all 44 image hashes match our unit; no visible effect on a car without a reversing camera (our car only beeps), so **not tested by us** |
 | 74.00.324A | US-spec MX-5 ND1 | Not specified | Reported working by a user; not verified by us |
-| 74.00.324A | MX-5 ND2 | everything | Same software as far as we know, but not analysed by us: run the check first |
+| 74.00.324A | EU MX-5 ND2 (RF, 2.0, 2022) with wireless CarPlay (`sm_WCP.conf`) | Check, install and the `sm_WCP.conf` edits | **Reported working by a contributor** who ran it on their own car. Android Auto showed up but was not tried |
+| 74.00.324A | other MX-5 ND2 | everything | Same software as far as we know, but not analysed by us: run the check first |
 | anything else | any | everything | Unsupported: the tools refuse to change anything |
 
 Stay on firmware **74.00.324A** and do **not** upgrade to 74.00.331: it breaks wireless CarPlay more often and cannot be
