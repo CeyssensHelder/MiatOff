@@ -19,6 +19,8 @@ refuses to touch anything it does not recognise.
 | **Touch in Android Auto** | Tap, swipe and drag in Android Auto (uses the oem-aa-mod touch shim). |
 | **Boot trim** | Stops things you don't use from starting at boot, each on its own: DVD/TV, SiriusXM, Pandora, Stitcher, Aha. |
 | **Startup warning** | Skips the warning screen at startup. |
+| **Shorter list delay** | Holding the Commander tilted starts scrolling a list after 0.15 s instead of 1.5 s (after MZD-AIO). |
+| **Camera safety text** | Blanks the safety text over the reversing camera picture (MZD-AIO's blank image); the originals stay on the unit. |
 | **Meters** | Gauges under *Applications*: speed, rpm, G-meter, lap timer, fed by the car's own data. No OBD adapter needed. |
 
 You choose per tweak: **Install**, **Remove** or **Leave as-is**. The tool never changes anything you did not pick.
@@ -32,6 +34,7 @@ Only one combination has been analysed so far, and **nothing has been fully acce
 | 74.00.324A | EU MX-5 ND1 | Check my car (read-only dump) | Tested in the car |
 | 74.00.324A | EU MX-5 ND1 | Touch in Android Auto, boot trim, startup warning | Experimental: tested on a simulator, in-car acceptance still open |
 | 74.00.324A | EU MX-5 ND1 with wireless CarPlay (`sm_WCP.conf`) | Touch in Android Auto, boot trim | Experimental: same edits on `sm_WCP.conf`, tested on a simulator only |
+| 74.00.324A | EU MX-5 ND1 | Shorter list delay, camera safety text | Experimental: tested on a simulator only |
 | 74.00.324A | EU MX-5 ND1 | Meters | Experimental: one in-car failure (busy root remount) was fixed but not re-tested |
 | 74.00.324A | US-spec MX-5 ND1 | Not specified | Reported working by a user; not verified by us |
 | 74.00.324A | MX-5 ND2 | everything | Same software as far as we know, but not analysed by us: run the check first |

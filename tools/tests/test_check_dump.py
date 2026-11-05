@@ -40,7 +40,10 @@ FILES = {
     "sm_trim_aha": b"sm trim aha", "sm_aa_trim_aha": b"sm aa trim aha", "sm_custom": b"sm custom",
     "wcp_stock": b"wcp stock", "wcp_aa_trim": b"wcp aa trim", "wcp_other": b"other wcp",
     "blm": b"blm", "aap": b"aap",
+    "list_stock": b"list stock", "list_patched": b"list patched",
 }
+SAFETY = {f"SafetyText_{i}.png": b"stock image %d" % i for i in range(3)}
+BLANK = b"blank image"
 PIN = {"FW_WANTED": "74.00.324A", "BLM_SHA256": sha(FILES["blm"]), "AAP_SHA256": sha(FILES["aap"])}
 for pin_name, key in (("COMMON_STOCK", "common_stock"), ("COMMON_PATCHED", "common_patched"),
                       ("SYS_STOCK", "sys_stock"), ("SYS_PATCHED", "sys_patched"),
@@ -48,7 +51,8 @@ for pin_name, key in (("COMMON_STOCK", "common_stock"), ("COMMON_PATCHED", "comm
                       ("UCP_STOCK", "ucp_stock"), ("UCP_PATCHED", "ucp_patched"),
                       ("OPERA_STOCK", "opera_stock"), ("OPERA_PATCHED", "opera_patched"),
                       ("GAP2_STOCK", "gap2_stock"), ("GAP2_PATCHED", "gap2_patched"),
-                      ("SM_STOCK", "sm_stock"), ("SM_PATCHED", "sm_patched")):
+                      ("SM_STOCK", "sm_stock"), ("SM_PATCHED", "sm_patched"),
+                      ("LIST_STOCK", "list_stock"), ("LIST_PATCHED", "list_patched")):
     PIN[pin_name] = sha(FILES[key])
 # 0f = the four groups, 0v = all five, 05 = DVD/TV + Pandora only
 PIN["SM_TABLE"] = "\n".join(f"{code} {sha(FILES[key])}" for code, key in (
@@ -58,14 +62,17 @@ PIN["SM_TABLE"] = "\n".join(f"{code} {sha(FILES[key])}" for code, key in (
 PIN["SM_WCP_TABLE"] = "\n".join(f"{code} {sha(FILES[key])}" for code, key in (
     ("00", "wcp_stock"), ("1f", "wcp_aa_trim")))
 
+PIN["SAFETY_TABLE"] = "\n".join(f"{name} {sha(data)} {sha(BLANK)}" for name, data in SAFETY.items())
+
 PATHS = {"/jci/gui/common/js/Common.js": "common", "/jci/gui/apps/system/js/systemApp.js": "sys",
          "/etc/aap_system_attributes.xml": "xml", "/etc/aap_system_attributes_UCP.xml": "ucp",
          "/jci/opera/opera_home/opera.ini": "opera", "/jci/scripts/stage_gap2.sh": "gap2", "/jci/sm/sm.conf": "sm",
-         "/jci/sm/sm_WCP.conf": "wcp"}
+         "/jci/sm/sm_WCP.conf": "wcp", "/jci/gui/common/controls/List2/js/List2Ctrl.js": "list"}
 
 
 def make_dump(base: Path, name="001-full-up10s", mode="full", state="stock", sm="sm_stock", wcp="wcp_stock", fw="74.00.324A",
-              active="/jci/sm/sm.conf", persist="rw", tools="md5=md5sum sha256=openssl", preload="", **override) -> Path:
+              active="/jci/sm/sm.conf", persist="rw", tools="md5=md5sum sha256=openssl", preload="", images=None,
+              **override) -> Path:
     d = base / name
     (d / "runtime").mkdir(parents=True)
     (d / "SUMMARY.txt").write_text(f"MiatOff dump 1.3.0\nmode:             {mode}\nfirmware:         {fw}\n"
@@ -83,6 +90,12 @@ def make_dump(base: Path, name="001-full-up10s", mode="full", state="stock", sm=
         target = d / "static/files" / unit_path.lstrip("/")
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(content)
+    # images: name -> bytes for the SafetyText images (default: stock, or all blank when everything is patched)
+    images = images if images is not None else {n: (BLANK if state == "patched" else d) for n, d in SAFETY.items()}
+    for name, data in images.items():
+        target = d / "static/files/jci/nativegui/images" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
     for unit_path, content in (("/jci/aapa/blmjciaapa.so", FILES["blm"]), ("/usr/bin/aap_service", FILES["aap"])):
         rows.append(f"{unit_path}\t1\t755 1000 1000\t1:1\tx\t{sha(override.get(unit_path, content))}")
     (d / "inventory").mkdir()
@@ -153,6 +166,22 @@ def main():
         check(states(v)["aa_touch"] == "blocked" and states(v)["trim_dvdtv"] == "blocked"
               and states(v)["warning"] == "available" and "sm_WCP.conf" in v["components"]["aa_touch"]["detail"],
               "an unknown sm_WCP.conf blocks only AA touch and the boot trim")
+
+        names = list(SAFETY)
+        v = verdict(make_dump(base / "img1", images={names[0]: BLANK, names[1]: SAFETY[names[1]], names[2]: SAFETY[names[2]]}))
+        check(states(v)["safety"] == "partial", "camera text: a mix of blank and stock is partial")
+        v = verdict(make_dump(base / "img2", images={**SAFETY, names[1]: b"other"}))
+        check(states(v)["safety"] == "blocked" and v["overall"] == "supported", "camera text: an unknown image blocks only it")
+        v = verdict(make_dump(base / "img3", images={}))
+        check(states(v)["safety"] == "not checked" and v["overall"] == "incomplete",
+              "camera text: a dump without the images (before 1.4.0) is incomplete, not guessed")
+        d = make_dump(base / "img4")
+        (d / "inventory/key-files.tsv").write_text((d / "inventory/key-files.tsv").read_text()
+                                                   + f"/jci/nativegui/images/{names[0]}\t1\t644 0 0\t1:1\tx\t{sha(SAFETY[names[0]])}\n")
+        v = verdict(d)
+        check(states(v)["safety"] == "blocked", "camera text: an image with other permissions is blocked")
+        v = verdict(make_dump(base / "list", **{"list": b"other"}))
+        check(states(v)["delay"] == "blocked" and states(v)["warning"] == "available", "an unknown List2Ctrl.js blocks only the delay")
 
         v = verdict(make_dump(base / "ours", preload="3492\tL_jciAAPA\tLD_PRELOAD=" + cd.OURS_PRELOAD + "\n",
                               state="patched", sm="sm_aa_trim"))

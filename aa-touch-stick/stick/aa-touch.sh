@@ -22,8 +22,14 @@
 # /jci/gui/apps/system/js/systemApp.js that skips the Disclaimer screen.
 # Meters (menu EXTRA -> METERS) adds two folders (/jci/gui/apps/miatoff,
 # /jci/opera/opera_dir/userjs-miatoff) and edits opera.ini and stage_gap2.sh.
-# The file MIATOFF-RESTORE on the stick takes back Meters and the warning
-# patch without a dialog.
+# Shorter list delay (menu EXTRA -> MORE -> DELAY) is a fixed edit of four
+# autoscroll timings in /jci/gui/common/controls/List2/js/List2Ctrl.js (after
+# MZD-AIO "Shorter Delay Mod"). Camera text (menu EXTRA -> MORE -> CAMERA)
+# replaces the reversing-camera safety text images
+# /jci/nativegui/images/SafetyText_*.png with a blank one (from MZD-AIO); the
+# originals are kept in /data_persist/miatoff/aa-touch/safety.
+# The file MIATOFF-RESTORE on the stick takes back Meters, the warning patch
+# and the list delay without a dialog.
 #
 # Safety model:
 # - Every file is recognised by its exact sha256: stock or patched. Anything
@@ -45,7 +51,7 @@
 # 1.2.1 (GPL-3.0-or-later). libpatch-blmjciaapa.so is oem-aa-mod 0.10.0 by
 # Vitaliy Kurokhtin (AGPL-3.0); see NOTICE on this stick.
 
-MO_VERSION=1.5.0
+MO_VERSION=1.6.0
 R="${MO_ROOT:-}"                        # test hook: fixture root; empty on the CMU
 MO_TEST="${MO_TEST:-0}"                 # test hook: 1 = no dialogs, remount, watchdog or reboot
 MO_ACTION="${MO_ACTION:-}"              # test hook: install | disable | enable | remove | cancel
@@ -205,6 +211,56 @@ GAP2_STOCK=2ec71fc955d0107a6e90d1ab4e6f00c9438b56d3e621ef018d57c8ef07bfae7f     
 GAP2_PATCHED=449c4bfccc8a32b88639abd499aa5ed8e83cbf551b0a2d54c65dfebdb896430e   # stage_gap2.sh, starts the collector
 SYS_STOCK=23106b04bd6bad514dd879b217a34a0f0289d58f86a0ae022488be6a022ca8e1      # systemApp.js (docs/05)
 SYS_PATCHED=65bb9d50020f83ab3e3cf3c1390e4b83ee1882bfb8b7aa405f966c05c35ada53    # systemApp.js, no disclaimer
+LIST_STOCK=52195d55c6615b9d61e9b25f48f90382e8ebe671edb154daa08d8915eca6f96f     # List2Ctrl.js (dump 1.4.0)
+LIST_PATCHED=5a41a407f217a662d470611ec5ffe85a14a0ec2e5ace30e3329ae37b60d4e5bd   # List2Ctrl.js, shorter delay
+# Camera text: every SafetyText image of the unit, its stock sha256 and the sha256
+# it gets (the blank image from MZD-AIO, on the stick as images/safety/<name>).
+SAFETY_TABLE='SafetyText_ADR_English.png e02c4ee5dcfbfb3847eef85f86c37c8ea0d9e2cacf24d97a746628b49393c79c 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_AU_English.png 0ad75c8610fe1ce3c71017cad74d93da1e2589ba85001befcfb0d3b0df76eb2b 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_BG_Bulgarian.png 8c1b038cba7015bef56c903fe27d62dcf9454dde95e9744abffaa1ab53ea8789 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_BR_Portuguese.png dacd036879763d61e5c65b832fa4de41f87df1bfbd0ef3fe8744e6805d1e4ba8 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_BS_Malaysia.png 2af3fdc281705d2f2f223a3ede3faaf9772920e606e4868283015456d7c81760 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_CH_Cantonese.png e02c4ee5dcfbfb3847eef85f86c37c8ea0d9e2cacf24d97a746628b49393c79c 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_CN_Chinese.png feea7a39f59869ffc0f444926f75f41473b3d50594e29b254b84c3fb3e5ecbfd 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_CN_Croatian.png 08ad5643b63d1fe42cefec6ee285c5e4a3bc1923f906281e62daa1d613c73555 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_CN_French.png 75bc1cf3367d95f489aa25c3bdca6a6f39baa771872989818282d887f8696054 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_CZ_Czech.png ca9762150acc35eca8db74536366733dae0dcf75ee9b8d790b8f517a1d0eba53 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_DA_Danish.png be604f1c399be602465c99c5aa42417550fccb5e22127fa70cdce34f3492fda4 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_DE_German.png 651ab79e931501c93dac7f75e8ceced91ad096cdb65f7c4cd875fd3b4e44be83 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_ET_Estonian.png 0d44bcd5a52f04e3c00d569c9d6f017267027b09895383465fe3ea5f2f4372e5 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_FI_Finnish.png a4ff00fd752bdfdec8d5c1a450296c5426ce6adbdf25c26222d524b7a58babc3 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_FR_French.png 75bc1cf3367d95f489aa25c3bdca6a6f39baa771872989818282d887f8696054 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_GCC_Arabic.png 2e8f7ee413aa8b5a4e7add98ed1808f75332591bf34a3ca02b2d52b59fbd224c 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_GR_Greek.png a6315c86b96a11e662c301488b13c0689ef9af143c29e9fe5cb60d0f315d0300 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_HB_Hebrew.png d6466ed15a7ac70e3bb3f86ed9197352e6cd3ee111f9b982a5cc3dd28df176dd 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_HK_Cantonese.png d920f95edc2a750bf7694f13a5041ecb8344d8884d239b9689f69bb3cce93fc2 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_HU_Hungarian.png 819b7f840708027a004651b72403b11f25e8f2c24dd6e022376a51f5640b4bc3 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_IN_Indonesia.png d816433d33f1b0b624b8031cd459ec3bd3ea700fd3486a62c187e2ceebb655b7 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_IT_Italian.png 9192e63823111925ec4cac10c55f4df56789186bc0894395170bd160cc53eba2 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_JA_Japanese.png 5509076dc0d21306cb9c445414109d7b67afeddf0633ca4e241502e8229d50f7 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_KO_Korean.png e02c4ee5dcfbfb3847eef85f86c37c8ea0d9e2cacf24d97a746628b49393c79c 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_LT_Lithuanian.png a0787fd15d4fc3e9e2589a674bc5f2fe4bdc261441932a435410b9ba27932e2a 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_LV_Latvian.png 2c5e73b895b79971d53dd8861de497c1a229fccfb2822c76b216c769c544e202 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_ML_Malay.png 217ea6ddeeb88b154f6875d16a90f796439f171e8f1972ca74735c47aa67a276 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_MN_Chinese.png d0792cffe3868c3e74cefdd4330ef62836417de9fdf3bdf96e7327be1f9625b0 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_NA_Spanish.png 35754c11fd29b0c55238016086315c68069582750bdc411c286e5b3745eeb8c6 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_NL_Dutch.png 1440a73200f4b8d02747d4f8d9d6eae40d97d016e54dba5ccc4f7cfa4809e1e7 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_NO_Norwegian.png d0bc3f8b9584d7d6ab4561ae4cc39555c162a4f0b5113aee0a198686f9ff3e5f 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_PL_Polish.png d3dd8dca97a71634b1131e42d731ec832075eaf8c05272bcb904aaa133451fb6 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_PT_Portuguese.png ab6e47597e3b74cd680ad75b76e737f343dfdcf270228c33cbe488ea77e213b6 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_RO_Romanian.png fe7db237f399baaed1e256420f32d9c40742f1c3b6245cf7fba1136cdbe598e5 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_RU_Russian.png ed75a70d88e1108eb93ed7805624647d4b148a036193aa0700d174a913a472d0 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_SE_Serbian.png 4622636c1cc0fb7682adbe5f6ea2e9f8ef344100dad00c35727da8f7c2fdbe64 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_SK_Slovak.png fadf52dace1a3b86c1236bece7e2d5b92847d2d6440d32be4aa873408a6416e4 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_SP_Spanish.png 35754c11fd29b0c55238016086315c68069582750bdc411c286e5b3745eeb8c6 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_SW_Swedish.png ca57f89e8c4717184949c4a8b7dfd4fa1cc13d839f7a802d2f8937d9cc8858b1 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_TH_Thai.png 8181550162ae94fdbcdc38c9d71f6ee635a466bf40025d39af4a08a5663fe82e 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_TR_Turkish.png 250be13a49b608023fb6b7b53073d3af2c02438a509753807040dfdf13174931 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_TW_Chinese.png dbdc7a96f4ad99a6992abace9cff6c4dd12d8aa914eaa3826cfc764bc1809fe3 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_TW_Mandarin.png 25628f2584a1f6c06bdbc7c99e4b5d3d25cb30694eccff5cb0479dcbde786846 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_UK_English.png 661c1d8bcf8b45f1bcd567d91bf85f2c7f35a962c8616ec63452d532cdf8407f 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_UK_Ukrainian.png b58afd5c6178791c9852cd808b7284936b6518aec9b1357300ae7b31738f8423 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c
+SafetyText_US_English.png e02c4ee5dcfbfb3847eef85f86c37c8ea0d9e2cacf24d97a746628b49393c79c 009b4ac1f36eb2b5d91125e79ba9dcff7f1a24cfe19169b7e6aa2fe3209e339c'
 COMMON_STOCK=376b30a46366a543122956d7feb1b44f147425015837a4d83fedf12a67943351    # Common.js, from TouchTune 1.2.1
 COMMON_PATCHED=019eba18e8d629ddb1d55563aab138ce1eb3329fab67b71d9b4178377cf9d9ce  # Common.js with TouchTune
 CFG_MODE=775                            # sm.conf and both XMLs: mode, uid, gid
@@ -308,6 +364,13 @@ systemApp.prototype._noMoreDisclaimer = function()
 EOF
 )
 
+# Shorter list delay: the four autoscroll timings of List2Ctrl.js (ms), stock -> new
+# (tier 1 = hold the Commander tilted, tier 2 = keep holding: page by page).
+DELAY_LINES='autoscrollTier1Timeout :                1500,|autoscrollTier1Timeout :                150,
+autoscrollTier2Timeout :                5000,|autoscrollTier2Timeout :                300,
+autoscrollTier1Interval :               500,|autoscrollTier1Interval :               200,
+autoscrollTier2Interval :               1000,|autoscrollTier2Interval :               300,'
+
 # Tests replace the hashes above with those of their fixture files.
 if [ "$MO_TEST" = 1 ] && [ -n "${MO_TEST_OVERRIDES:-}" ]; then
     . "$MO_TEST_OVERRIDES" || exit 1
@@ -357,6 +420,8 @@ STICK_CONF="$USB/oem-aa-mod/libpatch.conf"
 COMMON="$R/jci/gui/common/js/Common.js"
 SYSAPP="$R/jci/gui/apps/system/js/systemApp.js"
 SYS_BACKUP="$STATE_DIR/systemApp.js.stock"   # own file, so the AA backup set stays as it is
+LIST2="$R/jci/gui/common/controls/List2/js/List2Ctrl.js"
+NATIVE_IMAGES="$R/jci/nativegui/images"
 OPERA_INI="$R/jci/opera/opera_home/opera.ini"
 GAP2="$R/jci/scripts/stage_gap2.sh"
 MAPP_DIR="$R/jci/gui/apps/miatoff"           # the Meters app (+ page, + collector)
@@ -474,7 +539,7 @@ sm_conf_active() { [ -n "$SM_NAME" ]; }
 
 cfg_path() {
     case "$1" in
-        sm) echo "$SM" ;; xml) echo "$XML" ;; ucp) echo "$UCP" ;; sys) echo "$SYSAPP" ;;
+        sm) echo "$SM" ;; xml) echo "$XML" ;; ucp) echo "$UCP" ;; sys) echo "$SYSAPP" ;; list) echo "$LIST2" ;;
         opera) echo "$OPERA_INI" ;; gap2) echo "$GAP2" ;;
     esac
 }
@@ -484,6 +549,7 @@ cfg_sha() {    # cfg_sha <key> <stock|patched>
         xml:stock) echo "$XML_STOCK" ;; xml:patched) echo "$XML_PATCHED" ;;
         ucp:stock) echo "$UCP_STOCK" ;; ucp:patched) echo "$UCP_PATCHED" ;;
         sys:stock) echo "$SYS_STOCK" ;; sys:patched) echo "$SYS_PATCHED" ;;
+        list:stock) echo "$LIST_STOCK" ;; list:patched) echo "$LIST_PATCHED" ;;
         opera:stock) echo "$OPERA_STOCK" ;; opera:patched) echo "$OPERA_PATCHED" ;;
         gap2:stock) echo "$GAP2_STOCK" ;; gap2:patched) echo "$GAP2_PATCHED" ;;
     esac
@@ -491,6 +557,7 @@ cfg_sha() {    # cfg_sha <key> <stock|patched>
 cfg_backup() {  # cfg_backup <key>: where the stock copy is kept
     case "$1" in
         sys) echo "$SYS_BACKUP" ;;
+        list) echo "$STATE_DIR/List2Ctrl.js.stock" ;;
         opera) echo "$STATE_DIR/opera.ini.stock" ;;
         gap2) echo "$STATE_DIR/stage_gap2.sh.stock" ;;
         *) local live; live=$(cfg_path "$1"); echo "$BACKUP/${live##*/}" ;;
@@ -678,6 +745,21 @@ disc_transform() {  # disc_transform <src> <dst> <install|remove>
         END { exit (blocks == 1 && anchors == 1 && !skip) ? 0 : 1 }' "$1" > "$2"
 }
 
+delay_transform() { # delay_transform <src> <dst> <install|remove>: the four timings, nothing else
+    awk -v mode="$3" -v lines="$DELAY_LINES" '
+        BEGIN {
+            n = split(lines, l, "\n")
+            for (i = 1; i <= n; i++) {
+                split(l[i], p, "|")
+                if (mode == "install") map["        " p[1]] = "        " p[2]
+                else map["        " p[2]] = "        " p[1]
+            }
+        }
+        ($0 in map) { print map[$0]; done[$0]++; next }
+        { print }
+        END { for (k in map) if (done[k] != 1) exit 1; exit 0 }' "$1" > "$2"
+}
+
 opera_transform() { # opera_transform <src> <dst> <install|remove>
     awk -v mode="$3" -v off="$OPERA_JS_OFF" -v on="$OPERA_JS_ON" -v xhr="$OPERA_XHR" \
         -v dstock="$OPERA_DIR_STOCK" -v dours="$OPERA_DIR_OURS" '
@@ -707,6 +789,7 @@ cfg_transform() {   # cfg_transform <key> <src> <dst> <install|remove>
         xml) xml_transform "$2" "$3" "$4" true ;;
         ucp) xml_transform "$2" "$3" "$4" false ;;
         sys) disc_transform "$2" "$3" "$4" ;;
+        list) delay_transform "$2" "$3" "$4" ;;
         opera) opera_transform "$2" "$3" "$4" ;;
         gap2) gap2_transform "$2" "$3" "$4" ;;
         *) return 1 ;;
@@ -813,7 +896,8 @@ meters_leftovers() {
 
 rootfs_leftovers() {
     meters_leftovers
-    cfg_leftovers sm xml ucp sys
+    cfg_leftovers sm xml ucp sys list
+    image_leftovers
 }
 
 remove_rootfs_leftovers() {
@@ -957,10 +1041,11 @@ remove_state_dir() {
         rm -f "$BACKUP/$SM_OTHER" || return 1
         rmdir "$BACKUP" || return 1
     fi
-    for key in sys opera gap2; do
+    for key in sys list opera gap2; do
         live=$(cfg_backup "$key")
         rm -f "$live" "$live.new" || return 1
     done
+    remove_image_backup safety || return 1
     if [ -d "$STATE_DIR" ]; then
         rmdir "$STATE_DIR" || { log "ERROR: ${STATE_DIR#"$R"} holds other files"; return 1; }
     fi
@@ -970,14 +1055,16 @@ remove_state_dir() {
 
 # ---------------------------------------------------------------- state
 
-S_SM= S_XML= S_UCP= S_SHIM= S_CONF= S_BACKUP= S_TT= S_TRIM= S_DISC= S_METERS= FOREIGN= LEFTOVERS= STATE=
+S_SM= S_XML= S_UCP= S_SHIM= S_CONF= S_BACKUP= S_TT= S_TRIM= S_DISC= S_DELAY= S_SAFETY= S_METERS= FOREIGN= LEFTOVERS= STATE=
 # refresh_state: sets the S_* component states and STATE (AA touch), which is
 # one of stock | installed | disabled | partial | unknown, S_TRIM (boot trim char, see SM_TABLE;
-# unknown) and S_DISC (startup warning: stock | patched |
-# unknown). Runs in the main shell.
+# unknown), S_DISC (startup warning) and S_DELAY (list delay): stock | patched |
+# unknown, S_SAFETY (camera text): stock | patched | partial | unknown. Runs in the main shell.
 refresh_state() {
     S_SM=$(file_state sm "$SM")
     S_DISC=$(file_state sys "$SYSAPP")
+    S_DELAY=$(file_state list "$LIST2")
+    S_SAFETY=$(image_set_state safety)
     S_METERS=$(meters_state)
     S_TRIM=$(sm_variant "$SM")
     S_TRIM=${S_TRIM#?}
@@ -998,8 +1085,10 @@ refresh_state() {
     esac
     if [ -n "$FOREIGN" ]; then
         STATE=unknown
-    elif [ -z "$LEFTOVERS" ] && aa_files_stock && { other_features_on || ! exists "$STATE_DIR"; }; then
-        STATE=stock     # with the boot trim or the warning patch on, their backups stay in STATE_DIR
+    elif [ -z "$LEFTOVERS" ] && aa_files_stock && { other_features_on || ! exists "$BACKUP"; }; then
+        # STATE_DIR may still hold backups of features (on, or left by an interrupted
+        # RESTORE); only the AA backup set without any feature on means an AA run was cut.
+        STATE=stock
     elif [ -z "$LEFTOVERS" ] && [ "$S_SM $S_XML $S_UCP $S_CONF $S_SHIM" = "patched patched patched ours on" ]; then
         STATE=installed
     elif [ -z "$LEFTOVERS" ] && [ "$S_SM $S_XML $S_UCP $S_CONF $S_SHIM" = "patched patched patched ours off" ]; then
@@ -1013,8 +1102,11 @@ aa_files_stock() {
     [ "$S_SM $S_XML $S_UCP $S_SHIM $S_CONF" = "stock stock stock absent absent" ] && ! exists "$MOD_DIR"
 }
 
-# Boot trim or warning patch installed: STATE_DIR then holds their backups.
-other_features_on() { [ "$S_TRIM" != 0 ] || [ "$S_DISC" = patched ] || [ "$S_METERS" != off ]; }
+# A feature that is on, half done or unknown: its backup in STATE_DIR must stay.
+other_features_on() {
+    [ "$S_TRIM" != 0 ] || [ "$S_DISC" != stock ] || [ "$S_METERS" != off ] || [ "$S_DELAY" != stock ] || \
+        [ "$S_SAFETY" != stock ]
+}
 
 report_state() {
     refresh_state
@@ -1036,6 +1128,8 @@ describe_state() {
     printf 'TouchTune:    %s (Common.js)\n' "$S_TT"
     printf 'boot trim:    %s (groups on:%s)\n' "$(trim_name "$S_TRIM")" "$( [ "$S_TRIM" = unknown ] && echo ' ?' || trim_list "$S_TRIM")"
     printf 'disclaimer:   %s (stock = startup warning shown, patched = skipped)\n' "$S_DISC"
+    printf 'list delay:   %s (patched = shorter)\n' "$S_DELAY"
+    printf 'camera text:  %s (patched = blank safety text)\n' "$S_SAFETY"
     printf 'meters:       %s (app %s, userscript %s)\n' "$S_METERS" "$(area_state app)" "$(area_state userjs)"
     if exists "$BACKUP/$SM_OTHER"; then
         printf 'NOTE:         the backup was made while the unit ran %s; it now runs %s.\n' "$SM_OTHER" "${SM_NAME:-?}"
@@ -1045,7 +1139,7 @@ describe_state() {
     [ -z "$LEFTOVERS" ] || printf 'leftovers:    %s\n' $LEFTOVERS
     f=$(meters_leftovers)
     [ -z "$f" ] || printf 'meters left:  %s\n' $f
-    for f in "$SM" "$XML" "$UCP" "$BLM" "$AAP" "$SHIM" "$SHIM_OFF" "$CONF" "$COMMON" "$SYSAPP" "$OPERA_INI" "$GAP2"; do
+    for f in "$SM" "$XML" "$UCP" "$BLM" "$AAP" "$SHIM" "$SHIM_OFF" "$CONF" "$COMMON" "$SYSAPP" "$LIST2" "$OPERA_INI" "$GAP2"; do
         exists "$f" || continue
         printf '  %s  %s  %s\n' "$(sha256_of "$f" || echo -)" "$(attrs_of "$f")" "${f#"$R"}"
     done
@@ -1150,7 +1244,8 @@ do_remove() {
     root_ro || return 1
     purge_mod_dir || return 1
     # The boot trim and the warning patch are independent; their backups stay while they are on.
-    if [ "$(sm_variant "$SM")" = 00 ] && [ "$(file_state sys "$SYSAPP")" != patched ] && [ "$(meters_state)" = off ]; then
+    refresh_state
+    if [ "$(sm_variant "$SM")" = 00 ] && ! other_features_on; then
         remove_state_dir || return 1
     fi
     refresh_state
@@ -1381,6 +1476,8 @@ revert_hmi() {
     case "$S_METERS" in on|partial) do_meters off || ok=1 ;; esac
     refresh_state
     [ "$S_DISC" = patched ] && { do_disc stock || ok=1; }
+    refresh_state
+    [ "$S_DELAY" = patched ] && { do_delay stock || ok=1; }
     return $ok
 }
 
@@ -1399,46 +1496,265 @@ ensure_file_backup() {
     mkdir -p "$STATE_DIR" || return 1
     make_stock "$1" "$bak.new" || return 1
     chmod 444 "$bak.new" && fsync_path "$bak.new" || return 1
+    fault "backup-$1" || return 1
     mv "$bak.new" "$bak" && fsync_path "$STATE_DIR" || return 1
     log "backup of stock ${bak##*/} written to ${STATE_DIR#"$R"}"
 }
 
 ensure_sys_backup() { ensure_file_backup sys; }
 
-do_disc() {         # do_disc <patched | stock>
-    if [ "$1" = patched ]; then
-        ensure_sys_backup || return 1
+# do_hmi_file <sys | list> <patched | stock>: one HMI file, one atomic rename on
+# root; the stock copy stays in STATE_DIR while the patch is on.
+do_hmi_file() {
+    local key="$1" live bak st
+    live=$(cfg_path "$key")
+    bak=$(cfg_backup "$key")
+    if [ "$2" = patched ]; then
+        ensure_file_backup "$key" || return 1
     fi
     root_rw || return 1
-    if ! publish_cfg sys "$1"; then
-        # systemApp.js is unchanged (the rename is the only write); clean up.
+    if ! publish_cfg "$key" "$2"; then
+        # The file is unchanged (the rename is the only write); clean up.
         remove_rootfs_leftovers
         root_ro
         refresh_state
-        if [ "$S_DISC" != patched ]; then
-            rm -f "$SYS_BACKUP" "$SYS_BACKUP.new"
+        if [ "$(file_state "$key" "$live")" != patched ]; then
+            rm -f "$bak" "$bak.new"
             if aa_files_stock && ! other_features_on; then remove_state_dir; fi
         fi
         return 1
     fi
     root_ro || return 1
     refresh_state
-    if [ "$1" = stock ]; then
-        rm -f "$SYS_BACKUP" "$SYS_BACKUP.new" || return 1
+    if [ "$2" = stock ]; then
+        rm -f "$bak" "$bak.new" || return 1
         if aa_files_stock && ! other_features_on; then
             remove_state_dir || return 1     # nothing of MiatOff is left on the unit
         fi
         refresh_state
     fi
-    case "$S_DISC:$STATE" in
-        "$1:stock"|"$1:installed"|"$1:disabled") return 0 ;;
+    st=$(file_state "$key" "$live")
+    case "$st:$STATE" in
+        "$2:stock"|"$2:installed"|"$2:disabled") return 0 ;;
     esac
-    log "ERROR: after warning patch: systemApp.js $S_DISC (wanted $1), AA touch $STATE"
+    log "ERROR: after the ${live##*/} change: $st (wanted $2), AA touch $STATE"
     return 1
 }
 
+do_disc() { do_hmi_file sys "$1"; }     # do_disc <patched | stock>
+do_delay() { do_hmi_file list "$1"; }   # do_delay <patched | stock>
+do_delay_on() { do_delay patched; }     # shorter delay = the patch on
+do_delay_off() { do_delay stock; }
+
 do_disc_off() { do_disc patched; }      # warning off = the patch on
 do_disc_on() { do_disc stock; }
+
+# ---------------------------------------------------------------- image sets
+# A set of PNGs replaced as one feature (camera text: SafetyText_*.png). Each
+# file is either its stock or its new version; anything else is unknown and
+# nothing changes. All stock files are backed up (verified) before the first one
+# is replaced; then each file is staged, verified and renamed on its own, so a
+# power loss leaves a mix of stock and new files: "partial", which both
+# directions can finish.
+
+image_table() { case "$1" in safety) echo "$SAFETY_TABLE" ;; esac; }
+image_dir() { case "$1" in safety) echo "$NATIVE_IMAGES" ;; esac; }
+image_backup() { echo "$STATE_DIR/$1"; }
+image_src() { echo "$USB/images/$1/$2"; }        # image_src <set> <name>: the new file on the stick
+# image_stage <dir> <name>: where a file is staged before its rename (same folder;
+# a name may hold one subfolder, e.g. MiniView/Car_sm.png).
+image_stage() {
+    case "$2" in
+        */*) echo "$1/${2%/*}/.${2##*/}.miatoff.new" ;;
+        *) echo "$1/.$2.miatoff.new" ;;
+    esac
+}
+image_names() { image_table "$1" | awk '{ print $1 }'; }
+
+# image_hashes <dir> <names>: "name sha256" per file, one hashing process for all.
+image_hashes() {
+    local dir="$1" out
+    shift
+    if [ -n "$OPENSSL" ]; then
+        out=$(cd "$dir" 2>/dev/null && "$OPENSSL" dgst -sha256 "$@" 2>/dev/null)
+    fi
+    if [ -z "$out" ] && [ "$HAVE_SHA256SUM" = 1 ]; then
+        out=$(cd "$dir" 2>/dev/null && sha256sum "$@" 2>/dev/null)
+    fi
+    printf '%s\n' "$out" | awk '
+        /\)= / { h = $NF; f = $0; sub(/^[^(]*\(/, "", f); sub(/\)= [0-9A-Fa-f]+$/, "", f); print f, tolower(h); next }
+        NF == 2 { f = $2; sub(/^\*/, "", f); print f, tolower($1) }'
+}
+
+# image_check <set> <where: live | backup | stick>: "name stock|new|other" per entry.
+image_check() {
+    local set="$1" dir names
+    case "$2" in live) dir=$(image_dir "$set") ;; backup) dir=$(image_backup "$set") ;; stick) dir="$USB/images/$set" ;; esac
+    names=$(image_names "$set")
+    # shellcheck disable=SC2086
+    image_hashes "$dir" $names | awk -v table="$(image_table "$set")" '
+        BEGIN { n = split(table, t, "\n"); for (i = 1; i <= n; i++) { split(t[i], f, " "); st[f[1]] = f[2]; nw[f[1]] = f[3]; order[i] = f[1] } }
+        { h[$1] = $2 }
+        END {
+            for (i = 1; i <= n; i++) {
+                k = order[i]
+                print k, (h[k] == st[k] ? "stock" : (h[k] == nw[k] ? "new" : "other"))
+            }
+        }'
+}
+
+image_set_state() {  # stock | patched | partial | unknown
+    local set="$1" name dir
+    dir=$(image_dir "$set")
+    [ -n "$(image_table "$set")" ] || { echo unknown; return 0; }
+    for name in $(image_names "$set"); do
+        is_file "$dir/$name" || { echo unknown; return 0; }
+    done
+    if [ "$CHECK_ATTRS" = 1 ]; then
+        # one stat for all: "mode uid:gid" per file, all must be the stock attributes
+        # shellcheck disable=SC2046
+        (cd "$dir" && stat -c '%a %u:%g' $(image_names "$set")) 2>/dev/null | \
+            awk -v want="$CFG_MODE $CFG_OWNER" -v n="$(image_names "$set" | wc -l)" '$0 == want { ok++ } END { exit ok == n ? 0 : 1 }' || \
+            { echo unknown; return 0; }
+    fi
+    image_check "$set" live | awk '
+        { c[$2]++ }
+        END {
+            if (c["other"] > 0) print "unknown"
+            else if (c["new"] == 0) print "stock"
+            else if (c["stock"] == 0) print "patched"
+            else print "partial"
+        }'
+}
+
+image_backup_valid() {  # image_backup_valid <set>: every stock file, verified
+    local bak
+    bak=$(image_backup "$1")
+    [ -d "$bak" ] && [ ! -L "$bak" ] || return 1
+    ! image_check "$1" backup | grep -qv ' stock$'
+}
+
+IMAGE_SETS=safety
+image_set_leftovers() {  # image_set_leftovers <set>: staged copies left by a run that was cut off
+    local name dir f
+    dir=$(image_dir "$1")
+    for name in $(image_names "$1"); do
+        f=$(image_stage "$dir" "$name")
+        exists "$f" && echo "$f"
+    done
+    return 0
+}
+image_leftovers() {
+    local set
+    for set in $IMAGE_SETS; do image_set_leftovers "$set"; done
+}
+
+ensure_image_backup() {
+    local set="$1" bak new name dir
+    bak=$(image_backup "$set")
+    image_backup_valid "$set" && return 0
+    [ "$(image_set_state "$set")" = stock ] || { log "ERROR: no verified backup and the $set images are not all stock"; return 1; }
+    if exists "$bak"; then
+        # Left by an interrupted RESTORE: every live image is stock, so this copy is not needed.
+        log "discarding the incomplete backup ${bak#"$R"} (the live $set images are all stock)"
+        rm -rf "$bak" || return 1
+    fi
+    dir=$(image_dir "$set")
+    new="$STATE_DIR/.$set.new"
+    rm -rf "$new"
+    mkdir -p "$new" || return 1
+    for name in $(image_names "$set"); do
+        case "$name" in */*) mkdir -p "$new/${name%/*}" || return 1 ;; esac
+        cp "$dir/$name" "$new/$name" && chmod 444 "$new/$name" && fsync_path "$new/$name" || return 1
+    done
+    fsync_path "$new" || return 1
+    fault "image-backup-$set" || return 1
+    mv "$new" "$bak" && fsync_path "$STATE_DIR" || return 1
+    image_backup_valid "$set" || { log "ERROR: backup of the $set images failed verification"; rm -rf "$bak"; return 1; }
+    log "backup of the stock $set images written to ${bak#"$R"}"
+}
+
+remove_image_backup() {
+    local bak name
+    bak=$(image_backup "$1")
+    rm -rf "$STATE_DIR/.$1.new" || return 1
+    exists "$bak" || return 0
+    for name in $(image_names "$1"); do
+        rm -f "$bak/$name" || return 1
+    done
+    for name in $(image_names "$1" | awk -F/ 'NF > 1 { print $1 }' | sort -u); do
+        [ ! -d "$bak/$name" ] || rmdir "$bak/$name" || return 1
+        fault "image-rmdir-$1" || return 1
+    done
+    rmdir "$bak"
+}
+
+# image_put <set> <name> <src> <sha256>: one file, staged beside the target, verified, renamed.
+image_put() {
+    local dir new
+    dir=$(image_dir "$1")
+    new=$(image_stage "$dir" "$2")
+    rm -f "$new"
+    cp "$3" "$new" || return 1
+    chmod "$CFG_MODE" "$new" || return 1
+    chown "$CFG_OWNER" "$new" 2>/dev/null || [ "$CHECK_ATTRS" = 0 ] || return 1
+    [ "$(sha256_of "$new")" = "$4" ] || { log "ERROR: staged $2 failed verification"; rm -f "$new"; return 1; }
+    fsync_path "$new" || return 1
+    fault "put-$1-$2" || return 1
+    mv -f "$new" "$dir/$2" || return 1
+}
+
+# do_images <set> <patched | stock>
+do_images() {
+    local set="$1" want="$2" name state sum src n=0
+    state=$(image_set_state "$set")
+    case "$state" in stock|patched|partial) ;; *) log "ERROR: the $set images are not a known version"; return 1 ;; esac
+    if [ "$want" = patched ]; then
+        if image_check "$set" stick | grep -qv ' new$'; then
+            log "ERROR: the $set images on the stick are missing or damaged"
+            return 1
+        fi
+        ensure_image_backup "$set" || return 1
+    else
+        image_backup_valid "$set" || { log "ERROR: no verified backup of the $set images"; return 1; }
+    fi
+    root_rw || return 1
+    for name in $(image_set_leftovers "$set"); do
+        rm -f "$name" || return 1     # never a live file: the name is the hidden staging name
+    done
+    image_check "$set" live > "$MO_GUARD/images" || return 1
+    while read -r name state; do
+        if [ "$want" = patched ] && [ "$state" = stock ]; then
+            src=$(image_src "$set" "$name")
+            sum=$(image_table "$set" | awk -v k="$name" '$1 == k { print $3 }')
+        elif [ "$want" = stock ] && [ "$state" = new ]; then
+            src="$(image_backup "$set")/$name"
+            sum=$(image_table "$set" | awk -v k="$name" '$1 == k { print $2 }')
+        else
+            continue
+        fi
+        image_put "$set" "$name" "$src" "$sum" || { rm -f "$MO_GUARD/images"; remove_rootfs_leftovers; root_ro; return 1; }
+        n=$((n + 1))
+    done < "$MO_GUARD/images"
+    rm -f "$MO_GUARD/images"
+    for name in $(image_names "$set" | awk -F/ 'NF > 1 { print $1 }' | sort -u); do
+        fsync_path "$(image_dir "$set")/$name" || return 1
+    done
+    fsync_path "$(image_dir "$set")" || return 1
+    root_ro || return 1
+    log "$set images: $n replaced"
+    [ "$(image_set_state "$set")" = "$want" ] || { log "ERROR: $set images are not all $want"; return 1; }
+    if [ "$want" = stock ]; then
+        fault "image-unbackup-$set" || return 1
+        remove_image_backup "$set" || return 1
+        refresh_state
+        if aa_files_stock && ! other_features_on; then remove_state_dir || return 1; fi
+    fi
+    refresh_state
+}
+
+do_safety_on() { do_images safety patched; }    # camera text blank
+do_safety_off() { do_images safety stock; }
 
 do_trim_on() { do_trim f; }
 do_trim_aha() { do_trim v; }
@@ -1497,7 +1813,7 @@ do_enable() {
 
 # ---------------------------------------------------------------- plan
 # miatoff-plan.txt holds the end state chosen in the PC builder, one key=value per
-# line: touchtune, aa_touch, meters, warning, trim_dvdtv, trim_sirius, trim_pandora,
+# line: touchtune, aa_touch, meters, warning, delay, safety, trim_dvdtv, trim_sirius, trim_pandora,
 # trim_stitcher, trim_aha = install | remove | keep. Every run offers the next step that
 # differs from the unit's current state, so the plan is followed one confirmed
 # step (and one restart) at a time. An invalid plan is ignored.
@@ -1507,7 +1823,7 @@ plan_valid() {
     awk '
         /^[ \t\r]*(#|$)/ { next }
         { gsub(/[ \t\r]/, ""); split($0, kv, "="); k = kv[1]; v = kv[2]
-          if (k == "touchtune" || k == "aa_touch" || k == "meters" || k == "warning")
+          if (k == "touchtune" || k == "aa_touch" || k == "meters" || k == "warning" || k == "delay" || k == "safety")
               ok = (v == "install" || v == "remove" || v == "keep")
           else if (k == "trim_dvdtv" || k == "trim_sirius" || k == "trim_pandora" || k == "trim_stitcher" || k == "trim_aha")
               ok = (v == "install" || v == "remove" || v == "keep")
@@ -1555,12 +1871,16 @@ plan_candidates() {
     aa=$(plan_get aa_touch); tt=$(plan_get touchtune); me=$(plan_get meters)
     wa=$(plan_get warning)
     [ "$aa" = remove ] && echo remove
+    [ "$(plan_get delay)" = remove ] && echo delay_off
+    [ "$(plan_get safety)" = remove ] && echo safety_off
     [ "$tt" = remove ] && echo tt_remove
     [ "$me" = remove ] && echo meters_off
     [ "$wa" = remove ] && echo disc_on
     [ -n "$(plan_target_trim)" ] && [ "$(plan_target_trim)" != "$S_TRIM" ] && echo trim_plan
     [ "$me" = install ] && echo meters_on
     [ "$wa" = install ] && echo disc_off
+    [ "$(plan_get delay)" = install ] && echo delay_on
+    [ "$(plan_get safety)" = install ] && echo safety_on
     [ "$tt" = install ] && is_file "$TT_SCRIPT" && echo tt_install
     if [ "$aa" = install ]; then
         case "$1" in disabled) echo enable ;; *) echo install ;; esac
@@ -1610,6 +1930,10 @@ plan_text() {
         trim_aha_off) echo "let Aha start again" ;;
         disc_off) echo "skip the startup warning" ;;
         disc_on) echo "show the startup warning again" ;;
+        delay_on) echo "shorter list delay" ;;
+        delay_off) echo "stock list delay" ;;
+        safety_on) echo "blank camera safety text" ;;
+        safety_off) echo "camera safety text back" ;;
         meters_on) echo "install Meters" ;;
         meters_off) echo "remove Meters" ;;
         *) echo "$1" ;;
@@ -1631,6 +1955,12 @@ plan_blockers() {   # plan_blockers <state>: why a wanted step cannot run now, o
     fi
     if [ "$(plan_get warning)" != keep ] && [ "$S_DISC" != stock ] && [ "$S_DISC" != patched ]; then
         echo "systemApp.js is not a known version (startup warning)."
+    fi
+    if [ "$(plan_get delay)" != keep ] && [ "$S_DELAY" = unknown ]; then
+        echo "List2Ctrl.js is not a known version (list delay)."
+    fi
+    if [ "$(plan_get safety)" != keep ] && [ "$S_SAFETY" = unknown ]; then
+        echo "The camera safety text images are not a known version."
     fi
     if [ "$(plan_get meters)" != keep ] && [ "$S_METERS" = unknown ]; then
         echo "opera.ini or stage_gap2.sh is not a known version (Meters)."
@@ -1661,7 +1991,7 @@ EOF
 plan_button() {     # plan_button <action>: INSTALL for steps that add something, REMOVE for those that undo it
     case "$1" in
         trim_plan) [ -n "$(plan_trim_diff on)" ] && echo INSTALL || echo REMOVE ;;
-        remove|tt_remove|meters_off|disc_on|trim_off|trim_*_off) echo REMOVE ;;
+        remove|tt_remove|meters_off|disc_on|delay_off|safety_off|trim_off|trim_*_off) echo REMOVE ;;
         *) echo INSTALL ;;
     esac
 }
@@ -1703,6 +2033,8 @@ choose_action() {   # choose_action <state>: prints the action
 }
 
 disc_label() { case "$S_DISC" in stock) echo on ;; patched) echo removed ;; *) echo unknown ;; esac; }
+delay_label() { case "$S_DELAY" in stock) echo stock ;; patched) echo shorter ;; *) echo unknown ;; esac; }
+safety_label() { case "$S_SAFETY" in stock) echo shown ;; patched) echo blank ;; partial) echo incomplete ;; *) echo unknown ;; esac; }
 meters_label() {
     case "$S_METERS" in off) echo off ;; on) echo on ;; partial) echo incomplete ;; *) echo unknown ;; esac
 }
@@ -1710,12 +2042,56 @@ meters_label() {
 # Each next dialog has its own CANCEL.
 choose_extra() {
     local a
-    a=$(ask TRIM WARNING METERS "Extras\n\nTRIM = turn off services ($(trim_name "$S_TRIM"))\nWARNING = startup warning ($(disc_label))\nMETERS = gauges in Applications ($(meters_label))") || return 1
+    a=$(ask TRIM WARNING MORE "Extras\n\nTRIM = turn off services ($(trim_name "$S_TRIM"))\nWARNING = startup warning ($(disc_label))\nMORE = Meters, list delay, camera text") || return 1
     case "$a" in
         0) choose_trim ;;
         1) choose_disc ;;
-        2) choose_meters ;;
+        2) choose_more ;;
         *) echo cancel ;;
+    esac
+}
+
+choose_more() {
+    local a
+    a=$(ask METERS DELAY CAMERA "More extras\n\nMETERS = gauges in Applications ($(meters_label))\nDELAY = list scroll delay ($(delay_label))\nCAMERA = reversing camera safety text ($(safety_label))") || return 1
+    case "$a" in
+        0) choose_meters ;;
+        1) choose_delay ;;
+        2) choose_safety ;;
+        *) echo cancel ;;
+    esac
+}
+
+choose_delay() {
+    local a
+    case "$S_DELAY" in
+        stock)
+            a=$(ask SHORTER CANCEL "Shorter list delay?\n\nHolding the Commander tilted scrolls\nlists after 0.15 s instead of 1.5 s.\nThe unit restarts afterwards.") || return 1
+            case "$a" in 0) echo delay_on ;; *) echo cancel ;; esac ;;
+        patched)
+            a=$(ask RESTORE CANCEL "The list delay is shorter.\n\nRESTORE = back to stock") || return 1
+            case "$a" in 0) echo delay_off ;; *) echo cancel ;; esac ;;
+        *)
+            popup "List2Ctrl.js is not the analysed file.\n\nNothing was changed."
+            echo cancel ;;
+    esac
+}
+
+choose_safety() {
+    local a
+    case "$S_SAFETY" in
+        stock)
+            a=$(ask BLANK CANCEL "Blank the reversing camera safety text?\n\nThe originals are kept on the unit.\nThe unit restarts afterwards.") || return 1
+            case "$a" in 0) echo safety_on ;; *) echo cancel ;; esac ;;
+        patched)
+            a=$(ask RESTORE CANCEL "The camera safety text is blank.\n\nRESTORE = back to stock") || return 1
+            case "$a" in 0) echo safety_off ;; *) echo cancel ;; esac ;;
+        partial)
+            a=$(ask FINISH RESTORE CANCEL "A previous run was not finished:\nsome camera texts are blank.\n\nFINISH = blank them all\nRESTORE = back to stock") || return 1
+            case "$a" in 0) echo safety_on ;; 1) echo safety_off ;; *) echo cancel ;; esac ;;
+        *)
+            popup "The camera safety text images are not\nthe analysed files.\n\nNothing was changed."
+            echo cancel ;;
     esac
 }
 
@@ -1819,6 +2195,10 @@ action_allowed() {  # action_allowed <state> <action>
         stock:trim_*_off|installed:trim_*_off|disabled:trim_*_off) trim_group_allowed "$2" off; return ;;
         stock:disc_off|installed:disc_off|disabled:disc_off) [ "$S_DISC" = stock ]; return ;;
         stock:disc_on|installed:disc_on|disabled:disc_on) [ "$S_DISC" = patched ]; return ;;
+        stock:delay_on|installed:delay_on|disabled:delay_on) [ "$S_DELAY" = stock ]; return ;;
+        stock:delay_off|installed:delay_off|disabled:delay_off) [ "$S_DELAY" = patched ]; return ;;
+        stock:safety_on|installed:safety_on|disabled:safety_on) [ "$S_SAFETY" = stock ] || [ "$S_SAFETY" = partial ]; return ;;
+        stock:safety_off|installed:safety_off|disabled:safety_off) [ "$S_SAFETY" = patched ] || [ "$S_SAFETY" = partial ]; return ;;
         stock:meters_on|installed:meters_on|disabled:meters_on) [ "$S_METERS" = off ] || [ "$S_METERS" = partial ]; return ;;
         stock:meters_off|installed:meters_off|disabled:meters_off) [ "$S_METERS" = on ] || [ "$S_METERS" = partial ]; return ;;
     esac
@@ -1850,7 +2230,7 @@ cleanup() {
     # step leaves a bootable state, so no rollback is attempted here.
     [ "$ROOT_WRITABLE" = 0 ] && [ "$WATCHDOG_DISABLED" = 0 ] || root_ro || status=1
     sync 2>/dev/null
-    [ "$GUARD_CREATED" = 0 ] || { rm -f "$MO_GUARD/pid" "$MO_GUARD/sm.a" "$MO_GUARD/sm.b"; rmdir "$MO_GUARD" 2>/dev/null; }
+    [ "$GUARD_CREATED" = 0 ] || { rm -f "$MO_GUARD/pid" "$MO_GUARD/sm.a" "$MO_GUARD/sm.b" "$MO_GUARD/images"; rmdir "$MO_GUARD" 2>/dev/null; }
     exit "$status"
 }
 trap cleanup 0
@@ -1887,7 +2267,7 @@ if ! mkdir "$MO_GUARD" 2>/dev/null; then
         exit 0
     fi
     log "stale guard (pid ${old_pid:-?} gone); taking over"
-    rm -f "$MO_GUARD/pid" "$MO_GUARD/sm.a" "$MO_GUARD/sm.b"
+    rm -f "$MO_GUARD/pid" "$MO_GUARD/sm.a" "$MO_GUARD/sm.b" "$MO_GUARD/images"
     rmdir "$MO_GUARD" 2>/dev/null
     mkdir "$MO_GUARD" 2>/dev/null || { log "ERROR: cannot take guard $MO_GUARD"; exit 1; }
 fi
@@ -1910,12 +2290,12 @@ fi
 report_state
 
 # Emergency route for a broken HMI (where a dialog may not show): take back
-# Meters and the startup-warning patch, then restart. Triggered by the file
+# Meters, the startup-warning patch and the list delay, then restart. Triggered by the file
 # MIATOFF-RESTORE on the stick, or by two failed dialogs while one is on.
 hmi_emergency() {
-    log "EMERGENCY ($1): reverting the HMI changes (Meters, startup warning)"
-    if [ "$S_METERS" = off ] && [ "$S_DISC" != patched ]; then
-        log "nothing to revert: Meters off and the startup warning is stock; no restart"
+    log "EMERGENCY ($1): reverting the HMI changes (Meters, startup warning, list delay)"
+    if [ "$S_METERS" = off ] && [ "$S_DISC" != patched ] && [ "$S_DELAY" != patched ]; then
+        log "nothing to revert: Meters off, the startup warning and list delay stock; no restart"
         exit 0
     fi
     if revert_hmi; then log "HMI changes reverted"; else log "ERROR: HMI revert incomplete"; fi
@@ -1926,6 +2306,13 @@ hmi_emergency() {
 }
 if [ -f "$RESTORE" ]; then
     hmi_emergency "MIATOFF-RESTORE on the stick"
+fi
+
+# Backups left in STATE_DIR by an interrupted RESTORE of a feature that is stock
+# again (and no AA backup): not needed any more, so they go (only /data_persist).
+if [ "$STATE" = stock ] && ! other_features_on && ! exists "$BACKUP" && exists "$STATE_DIR"; then
+    log "removing leftover backups of features that are stock again"
+    remove_state_dir && refresh_state
 fi
 
 if [ "$STATE" = unknown ]; then
@@ -1939,7 +2326,7 @@ NVRAM_LVDS=
 log "NVRAM lvds_speed_restriction=${NVRAM_LVDS:-absent (factory: enable)} (touch while driving needs TouchTune)"
 
 if ! ACTION=$(choose_action "$STATE"); then
-    if [ "$S_METERS" = off ] && [ "$S_DISC" != patched ]; then
+    if [ "$S_METERS" = off ] && [ "$S_DISC" != patched ] && [ "$S_DELAY" != patched ]; then
         log "ERROR: dialog failed; nothing done"
         exit 1
     fi
@@ -2010,6 +2397,10 @@ case "$ACTION" in
     trim_off) done_text="Boot trim restored to stock." ;;
     disc_off) done_text="The startup warning has been removed." ;;
     disc_on) done_text="The startup warning is on again." ;;
+    delay_on) done_text="The list delay is shorter." ;;
+    delay_off) done_text="The list delay is back to stock." ;;
+    safety_on) done_text="The camera safety text is blank." ;;
+    safety_off) done_text="The camera safety text is back." ;;
     meters_on) done_text="Meters is under Applications.\nThe collector starts at every boot." ;;
     meters_off) done_text="Meters has been removed." ;;
 esac
