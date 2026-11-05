@@ -11,3 +11,8 @@ __pycache__/
 *.pyc
 build/
 dist/
+
+# Audio research captures (copyrighted Mazda scripts + audio state) and built kits
+miatoff-audio/
+audio-research-stick/*.zip
+audio-research-stick/audio-test-*/

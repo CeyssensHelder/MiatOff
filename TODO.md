@@ -9,8 +9,14 @@ User report: "Is there a way to change the default audio source when you start t
 to FM radio whenever I start the car and it drives me crazy because I always have to manually switch it back to
 Bluetooth. Heck I'd even be down to disable FM entirely if that fixed it."
 
+- [x] Initial public-source feasibility review: Mazda documents FM fallback after slow Bluetooth reconnection on
+  older firmware; MZD-AIO exposes a Bluetooth-selection request. Neither strict Bluetooth-first nor safe FM
+  disablement is verified on v74. See [research and evidence](docs/14-bluetooth-startup.md).
 - [ ] Find out where the unit decides the audio source at start (last-source restore in the HMI/MMUI, the audio manager
-  settings, or a persisted value) on 74.00.324A. Use the read-only dump; do not publish dump contents.
+  settings, or a persisted value) on 74.00.324A. Use permitted public sources or explicitly permitted on-unit
+  investigation; AGENTS.md prohibits reading `dumps/` and `miatoff-dumps/`.
+- [ ] Verify `SelectBTAudio`, the Bluetooth-audio-ready notification and a startup hook outside `Common.js` on v74.
+  Investigate silent waiting / suppressing automatic FM fallback; a delayed Bluetooth switch alone may still play FM first.
 - [ ] Check whether Bluetooth can be started before, or instead of, FM at boot. Options to compare: change the stored
   last source, change the start-up order, or hide FM (see [docs/04](docs/04-boot-speedup.md), [docs/05](docs/05-ui-tweaks.md)).
 - [ ] Check what the unit does when no phone is connected yet at start-up (fall back to FM, or stay silent?).
