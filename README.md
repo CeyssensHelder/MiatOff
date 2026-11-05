@@ -21,6 +21,7 @@ refuses to touch anything it does not recognise.
 | **Startup warning** | Skips the warning screen at startup. |
 | **Shorter list delay** | Lists scroll sooner and faster when you hold the Commander tilted. |
 | **Camera safety text** | Blanks the safety text over the reversing camera picture (untested by us). |
+| **Parking sensor graphics** | Makes the on-screen parking sensor graphics semi-transparent (needs a reversing camera view; untested by us). |
 | **Shorter list delay** | Holding the Commander tilted starts scrolling a list after 0.15 s instead of 1.5 s (after MZD-AIO). |
 | **Parking sensor graphics** | Semi-transparent parking sensor graphics over the camera picture (MZD-AIO's images); the originals stay on the unit. |
 | **Camera safety text** | Blanks the safety text over the reversing camera picture (MZD-AIO's blank image); the originals stay on the unit. |
@@ -41,6 +42,7 @@ Only one combination has been analysed so far, and **nothing has been fully acce
 | 74.00.324A | EU MX-5 ND1 | Meters | Experimental: one in-car failure (busy root remount) was fixed but not re-tested |
 | 74.00.324A | EU MX-5 ND1 | Shorter list delay | Experimental: ran on our car without problems; the effect is only visible when scrolling lists |
 | 74.00.324A | EU MX-5 ND1 | Blank reversing-camera safety text | Experimental: simulator and the contributor's unit only; **not tested by us** (no camera) |
+| 74.00.324A | EU MX-5 ND1 | Semi-transparent parking sensor graphics | Experimental: all 44 image hashes match our unit; no visible effect on a car without a reversing camera (our car only beeps), so **not tested by us** |
 | 74.00.324A | US-spec MX-5 ND1 | Not specified | Reported working by a user; not verified by us |
 | 74.00.324A | MX-5 ND2 | everything | Same software as far as we know, but not analysed by us: run the check first |
 | anything else | any | everything | Unsupported: the tools refuse to change anything |
