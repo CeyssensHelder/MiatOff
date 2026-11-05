@@ -31,15 +31,14 @@ You choose per tweak: **Install**, **Remove** or **Leave as-is**. The tool never
 
 ## Support status
 
-Only one combination has been analysed so far, and **nothing has been fully accepted in a car yet**.
+Only one car has been analysed in depth (a 2017 EU ND1, plain `sm.conf`). Everything below was tested on it unless a row says otherwise.
 
 | Firmware | Car | Feature | Status |
 |---|---|---|---|
 | 74.00.324A | EU MX-5 ND1 | Check my car (read-only dump) | Tested in the car |
-| 74.00.324A | EU MX-5 ND1 | Touch in Android Auto, boot trim, startup warning | Experimental: tested on a simulator, in-car acceptance still open |
-| 74.00.324A | EU MX-5 ND1 with wireless CarPlay (`sm_WCP.conf`) | Touch in Android Auto, boot trim | Experimental: same edits on `sm_WCP.conf`, tested on a simulator and on an ND2 (next row) |
-| 74.00.324A | EU MX-5 ND1 | Shorter list delay, camera safety text, parking sensor graphics | Experimental: tested on a simulator only |
-| 74.00.324A | EU MX-5 ND1 | Meters | Experimental: one in-car failure (busy root remount) was fixed but not re-tested |
+| 74.00.324A | EU MX-5 ND1 | Touch in Android Auto, boot trim, startup warning | Experimental: installed and running on our car (also on the simulator) |
+| 74.00.324A | EU MX-5 ND1 with wireless CarPlay (`sm_WCP.conf`) | Touch in Android Auto, boot trim | Experimental: same edits on `sm_WCP.conf`; tested on a simulator and by a contributor on an ND2 (below), not on our own car (it uses `sm.conf`) |
+| 74.00.324A | EU MX-5 ND1 | Meters | Experimental: installed on our car; an earlier in-car failure (busy root remount) was fixed |
 | 74.00.324A | EU MX-5 ND1 | Shorter list delay | Experimental: ran on our car without problems; the effect is only visible when scrolling lists |
 | 74.00.324A | EU MX-5 ND1 | Blank reversing-camera safety text | Experimental: simulator and the contributor's unit only; **not tested by us** (no camera) |
 | 74.00.324A | EU MX-5 ND1 | Semi-transparent parking sensor graphics | Experimental: all 44 image hashes match our unit; no visible effect on a car without a reversing camera (our car only beeps), so **not tested by us** |
