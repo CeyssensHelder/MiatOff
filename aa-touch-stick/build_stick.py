@@ -14,7 +14,8 @@ The unmodified TouchTune 1.2.1 release (vendor/touchtune/, checked against its
 page from meters/, the collector, the userscript) with a MANIFEST of sha256s
 that aa-touch.sh checks before and after copying. Camera text: the blank safety
 text image from vendor/mzd-aio/ (checked against its SHA256SUMS) goes into
-images/safety/ once per SafetyText image in SAFETY_TABLE of aa-touch.sh.
+images/safety/ once per SafetyText image in SAFETY_TABLE of aa-touch.sh; the
+parking sensor images in SENSOR_TABLE go into images/sensors/.
 
 SPDX-License-Identifier: GPL-3.0-or-later
 """
@@ -145,6 +146,17 @@ def safety_files() -> dict:
     return files
 
 
+def sensor_files() -> dict:
+    """images/sensors/<folder>/<name>: the MZD-AIO parking sensor images in SENSOR_TABLE."""
+    files = {}
+    for rel, _stock, new in table("SENSOR_TABLE"):
+        data = aio_file("transparent-parking-sensor/" + rel)
+        if sha256(data) != new:
+            raise SystemExit(f"ERROR: SENSOR_TABLE wants {new[:12]} for {rel}, vendor/mzd-aio has {sha256(data)[:12]}")
+        files["images/sensors/" + rel] = data
+    return files
+
+
 def make_kit() -> stickkit.Kit:
     conf = stickkit.lf_bytes(STICK / "libpatch.conf")
     if sha256(conf) != pinned("CONF_SHA256"):
@@ -162,6 +174,7 @@ def make_kit() -> stickkit.Kit:
             **touchtune_files(),
             **meters_files(),
             **safety_files(),
+            **sensor_files(),
         },
     )
 

@@ -22,6 +22,7 @@ refuses to touch anything it does not recognise.
 | **Shorter list delay** | Lists scroll sooner and faster when you hold the Commander tilted. |
 | **Camera safety text** | Blanks the safety text over the reversing camera picture (untested by us). |
 | **Shorter list delay** | Holding the Commander tilted starts scrolling a list after 0.15 s instead of 1.5 s (after MZD-AIO). |
+| **Parking sensor graphics** | Semi-transparent parking sensor graphics over the camera picture (MZD-AIO's images); the originals stay on the unit. |
 | **Camera safety text** | Blanks the safety text over the reversing camera picture (MZD-AIO's blank image); the originals stay on the unit. |
 | **Meters** | Gauges under *Applications*: speed, rpm, G-meter, lap timer, fed by the car's own data. No OBD adapter needed. |
 
@@ -36,7 +37,7 @@ Only one combination has been analysed so far, and **nothing has been fully acce
 | 74.00.324A | EU MX-5 ND1 | Check my car (read-only dump) | Tested in the car |
 | 74.00.324A | EU MX-5 ND1 | Touch in Android Auto, boot trim, startup warning | Experimental: tested on a simulator, in-car acceptance still open |
 | 74.00.324A | EU MX-5 ND1 with wireless CarPlay (`sm_WCP.conf`) | Touch in Android Auto, boot trim | Experimental: same edits on `sm_WCP.conf`, tested on a simulator only |
-| 74.00.324A | EU MX-5 ND1 | Shorter list delay, camera safety text | Experimental: tested on a simulator only |
+| 74.00.324A | EU MX-5 ND1 | Shorter list delay, camera safety text, parking sensor graphics | Experimental: tested on a simulator only |
 | 74.00.324A | EU MX-5 ND1 | Meters | Experimental: one in-car failure (busy root remount) was fixed but not re-tested |
 | 74.00.324A | EU MX-5 ND1 | Shorter list delay | Experimental: ran on our car without problems; the effect is only visible when scrolling lists |
 | 74.00.324A | EU MX-5 ND1 | Blank reversing-camera safety text | Experimental: simulator and the contributor's unit only; **not tested by us** (no camera) |

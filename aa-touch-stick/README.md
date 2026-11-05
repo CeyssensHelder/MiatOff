@@ -17,7 +17,8 @@ Separately, only if you choose them (menu **EXTRA**): the boot trim (`sm.conf`, 
 the startup warning (`/jci/gui/apps/system/js/systemApp.js` + stock copy `systemApp.js.stock`, EXTRA →
 WARNING), **Meters** (gauges under Applications, EXTRA → MORE → METERS), the **shorter list delay**
 (`List2Ctrl.js` + stock copy `List2Ctrl.js.stock`, EXTRA → MORE → DELAY) and the **camera safety text**
-(`/jci/nativegui/images/SafetyText_*.png` + stock copies in `safety/`, EXTRA → MORE → CAMERA). See the sections below.
+(`/jci/nativegui/images/SafetyText_*.png` + stock copies in `safety/`, EXTRA → MORE → CAMERA) and the
+**parking sensor graphics** (44 images in `VerticalSensors/` and `MiniView/` + stock copies in `sensors/`). See the sections below.
 
 File permissions stay as stock (`775`, uid/gid `1000`). `Common.js`, NVRAM, the audio, the navigation and the HUD
 are not touched. In `libpatch.conf` **every** key is written out: a missing key falls back to the built-in
@@ -118,6 +119,16 @@ Blanks the safety text shown over the reversing camera picture, like MZD-AIO's "
   offers **FINISH** or **RESTORE**. RESTORE puts the byte-exact originals back and removes the copies.
 - Only useful with a reversing camera. The images are not part of the Opera HMI, so not of the emergency route.
 
+## Parking sensor graphics (menu EXTRA → MORE → CAMERA → SENSORS)
+MZD-AIO's "Semi-Transparent Parking Sensor Graphics": the sensor overlay lets the camera picture show through.
+- **Files:** 44 images in `/jci/nativegui/images/VerticalSensors/` (20) and `MiniView/` (24), MZD-AIO's versions
+  (`vendor/mzd-aio/transparent-parking-sensor/`, on the stick in `images/sensors/`). Left out on purpose: MZD-AIO's
+  `HorizontalSensors` arcs (they are about 30 % smaller than the 74.00 ones and would be drawn at the wrong size), its
+  images that are identical to stock, and the `_Dis`/`_Frz`/`CarSensorFail` images it has no version of.
+- **Safety:** the same image-set machinery as the camera text (`SENSOR_TABLE`, verified backup in
+  `/data_persist/miatoff/aa-touch/sensors/`, one verified rename per image, FINISH/RESTORE after a power loss).
+- Only useful with parking sensors.
+
 ## Meters (menu EXTRA → MORE → METERS)
 Puts **Meters** under **Applications**: the gauges from `meters/`, fed by the collector. How the app gets into the menu
 is in [meters-app/README.md](../meters-app/README.md), the research in [docs/13](../docs/13-gauges.md).
@@ -207,8 +218,9 @@ plan or delete `miatoff-plan.txt`. An invalid plan is ignored, and with no plan 
    - **EXTRA:** first **TRIM** / **WARNING** / **MORE**; MORE gives **METERS** / **DELAY** / **CAMERA**.
      - **METERS:** see [Meters](#meters-menu-extra--more--meters). The unit restarts afterwards.
      - **DELAY:** **SHORTER** or **RESTORE**. See [Shorter list delay](#shorter-list-delay-menu-extra--more--delay).
-     - **CAMERA:** **BLANK**, **RESTORE**, or after an interrupted run **FINISH** / **RESTORE**. See
-       [Camera safety text](#camera-safety-text-menu-extra--more--camera).
+     - **CAMERA:** **SAFETY TEXT** or **SENSORS**; then **BLANK**/**INSTALL**, **RESTORE**, or after an interrupted
+       run **FINISH** / **RESTORE**. See [Camera safety text](#camera-safety-text-menu-extra--more--camera) and
+       [Parking sensor graphics](#parking-sensor-graphics-menu-extra--more--camera--sensors).
      - **WARNING:** **REMOVE** (the startup warning is skipped) or **RESTORE**. The unit restarts
        afterwards. See [Startup warning](#startup-warning-menu-extra--warning).
      - **TRIM:** the buttons depend on the trim. The unit restarts afterwards.

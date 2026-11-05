@@ -44,6 +44,8 @@ FILES = {
 }
 SAFETY = {f"SafetyText_{i}.png": b"stock image %d" % i for i in range(3)}
 BLANK = b"blank image"
+SENSORS = {f"MiniView/S_{i}_sm.png": b"stock sensor %d" % i for i in range(2)}
+SENSOR_NEW = {name: b"new " + data for name, data in SENSORS.items()}
 PIN = {"FW_WANTED": "74.00.324A", "BLM_SHA256": sha(FILES["blm"]), "AAP_SHA256": sha(FILES["aap"])}
 for pin_name, key in (("COMMON_STOCK", "common_stock"), ("COMMON_PATCHED", "common_patched"),
                       ("SYS_STOCK", "sys_stock"), ("SYS_PATCHED", "sys_patched"),
@@ -63,6 +65,7 @@ PIN["SM_WCP_TABLE"] = "\n".join(f"{code} {sha(FILES[key])}" for code, key in (
     ("00", "wcp_stock"), ("1f", "wcp_aa_trim")))
 
 PIN["SAFETY_TABLE"] = "\n".join(f"{name} {sha(data)} {sha(BLANK)}" for name, data in SAFETY.items())
+PIN["SENSOR_TABLE"] = "\n".join(f"{name} {sha(data)} {sha(SENSOR_NEW[name])}" for name, data in SENSORS.items())
 
 PATHS = {"/jci/gui/common/js/Common.js": "common", "/jci/gui/apps/system/js/systemApp.js": "sys",
          "/etc/aap_system_attributes.xml": "xml", "/etc/aap_system_attributes_UCP.xml": "ucp",
@@ -71,7 +74,7 @@ PATHS = {"/jci/gui/common/js/Common.js": "common", "/jci/gui/apps/system/js/syst
 
 
 def make_dump(base: Path, name="001-full-up10s", mode="full", state="stock", sm="sm_stock", wcp="wcp_stock", fw="74.00.324A",
-              active="/jci/sm/sm.conf", persist="rw", tools="md5=md5sum sha256=openssl", preload="", images=None,
+              active="/jci/sm/sm.conf", persist="rw", tools="md5=md5sum sha256=openssl", preload="", images=None, sensors=None,
               **override) -> Path:
     d = base / name
     (d / "runtime").mkdir(parents=True)
@@ -92,6 +95,8 @@ def make_dump(base: Path, name="001-full-up10s", mode="full", state="stock", sm=
         target.write_bytes(content)
     # images: name -> bytes for the SafetyText images (default: stock, or all blank when everything is patched)
     images = images if images is not None else {n: (BLANK if state == "patched" else d) for n, d in SAFETY.items()}
+    sensors = sensors if sensors is not None else {n: (SENSOR_NEW[n] if state == "patched" else d) for n, d in SENSORS.items()}
+    images = {**images, **sensors}
     for name, data in images.items():
         target = d / "static/files/jci/nativegui/images" / name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -172,7 +177,7 @@ def main():
         check(states(v)["safety"] == "partial", "camera text: a mix of blank and stock is partial")
         v = verdict(make_dump(base / "img2", images={**SAFETY, names[1]: b"other"}))
         check(states(v)["safety"] == "blocked" and v["overall"] == "supported", "camera text: an unknown image blocks only it")
-        v = verdict(make_dump(base / "img3", images={}))
+        v = verdict(make_dump(base / "img3", images={}, sensors={}))
         check(states(v)["safety"] == "not checked" and v["overall"] == "incomplete",
               "camera text: a dump without the images (before 1.4.0) is incomplete, not guessed")
         d = make_dump(base / "img4")
@@ -180,6 +185,11 @@ def main():
                                                    + f"/jci/nativegui/images/{names[0]}\t1\t644 0 0\t1:1\tx\t{sha(SAFETY[names[0]])}\n")
         v = verdict(d)
         check(states(v)["safety"] == "blocked", "camera text: an image with other permissions is blocked")
+        sn = list(SENSORS)
+        v = verdict(make_dump(base / "sens1", sensors={sn[0]: SENSOR_NEW[sn[0]], sn[1]: SENSORS[sn[1]]}))
+        check(states(v)["sensors"] == "partial" and states(v)["safety"] == "available", "parking sensors: half replaced is partial")
+        v = verdict(make_dump(base / "sens2", sensors=SENSOR_NEW))
+        check(states(v)["sensors"] == "installed", "parking sensors: all replaced is installed")
         v = verdict(make_dump(base / "list", **{"list": b"other"}))
         check(states(v)["delay"] == "blocked" and states(v)["warning"] == "available", "an unknown List2Ctrl.js blocks only the delay")
 

@@ -27,7 +27,9 @@
 # MZD-AIO "Shorter Delay Mod"). Camera text (menu EXTRA -> MORE -> CAMERA)
 # replaces the reversing-camera safety text images
 # /jci/nativegui/images/SafetyText_*.png with a blank one (from MZD-AIO); the
-# originals are kept in /data_persist/miatoff/aa-touch/safety.
+# originals are kept in /data_persist/miatoff/aa-touch/safety. Parking sensors
+# (menu EXTRA -> MORE -> CAMERA -> SENSORS) do the same with MZD-AIO's
+# semi-transparent parking sensor graphics (originals in .../sensors).
 # The file MIATOFF-RESTORE on the stick takes back Meters, the warning patch
 # and the list delay without a dialog.
 #
@@ -363,6 +365,54 @@ systemApp.prototype._noMoreDisclaimer = function()
 };
 EOF
 )
+# Parking sensors: the MZD-AIO semi-transparent images that fit this firmware
+# (same size as the stock image, and not identical to it), on the stick as
+# images/sensors/<folder>/<name>. MZD-AIO's HorizontalSensors arcs are smaller than
+# the v74 ones and are left out.
+SENSOR_TABLE='MiniView/BackCtr_1_sm.png a6a1f6bc29ee915ca69faf27c22ed76a06c75efe50abb9177d0bde4aa228f5cb 5e45f853b9a04c0e9a7346d011e26ca670761827d4e48f1bb2e2ead3841e9da0
+MiniView/BackCtr_2_sm.png ef15beba6a50492069c10a9caf5ab9ed8bd0301711b83e90676a434ffa054f5e 584ee09e55464885deb90906c598a4fb627e008292b16325412c2c6a4380b4e5
+MiniView/BackCtr_3_sm.png ba594e2f07559adf0f1fdd8d23e140d88b11205f6677c8c48fef2a8b2cbff2e7 e8e46acc3d51385e5dffdb51ceac2e6ce002ab19d394b52790ad312d462ec110
+MiniView/BackCtr_4_sm.png 3ee98e70f49748799bdf14de9da4beab5088c268bd7d63114fee8a92f44808da 2a4739720c3f63a5c4112f4c3695039fb6d1728e2753f552a420cade9e6d1ca1
+MiniView/BackLt_1_sm.png cea0216f291a3613136f71898a6398b7cd057a8a31d6bc3726cabca241e702fd 7c142235515b73f9a5f3587db4d92a0ce6b575cfc030e3c1a13590e146a00d2c
+MiniView/BackLt_2_sm.png ba05601796ae621f78ecd39d6c743c9b1788976fd75778c667084a3e45f1d08e b80d892449b0c16297778d1c379fb72288404274083854d42ed91934daf60fdf
+MiniView/BackLt_3_sm.png 12bae78a156358361c8722ab2d44917089241ef794952027821b13a34b78a93a bcd04ddea3af3aaeb42d6b41358ce14a872534b9de668e22819e5253d3974e3f
+MiniView/BackRt_1_sm.png dd3dec136fc0a084030569667bbc9451d3f40c78bbc6497f346e2d8b85c60f96 06dee94538a44cc4c3517e98fb47839957b227bfae6dccb49b57afd2cbe6b9c5
+MiniView/BackRt_2_sm.png eb9e564bfb194828cb38666c6100d4b4dc8627d0e6fff2f7af23a5173dd77ee3 4598ef689ce8e8e1e1f83b1f6430d59ec8ba5f4ea38cb9795c23871be2331993
+MiniView/BackRt_3_sm.png e8d196cfc839205e8d5259faae7cca26a3eb35f07273eeff88469b243a3c7e83 90e72c6b77fd72caf2f55232ba4e26625cebfba31b33d58ebb03ed513bdc4e9a
+MiniView/Background_sm.png 99372643929b5eb53ebc4f8635f049300a86176d96b538c2ad70c5b0d5441ecc 1ba9691984a6b2365716b92c8df9afb8592b2461777559fee7c1b7c32af25e0b
+MiniView/Background_sm_4s.png 9ca0831a39a5700f6735b95fec52b4e843152d84ba84816af15ec9c0cb8553df 8d780d91faf49ab067ca08d17f7a36a72574e6ef28281eb3b0fcbef109e6b2eb
+MiniView/Car_Ds_sm.png 0aa40d25a1c218b01db7ff4f9f1777eba7d6928abeb52d3af06dfdf9c4b5fe74 3a2874d260fd67b6b30a5684d8c4e46030d179ebec3afb80cb3108169d141c36
+MiniView/Car_sm.png 1784c506755f3e62d4187c1c158d55843c192864fb736a9ea7dd7e2c12bfc053 9556a408bcd7fb3106244d152d65b4e9548f5cb29b71c06a52584a3f6597a0bf
+MiniView/FrontCtr_1_sm.png 6571902deb545fbda82731345a7ebc2b75505af22c1cb9b221d6cf1b785f8aa3 72878e4f308db7c8604bb40e6991222ae0da0e55e6ec2f6b6080db8161f3ccff
+MiniView/FrontCtr_2_sm.png bb2bcb0a25b28a4c04a58a6eb8db2533a8ea186343082f9d7ca868957155c4b7 3acf02240cb286411d60407431b9a6a16e8e00e573f90bd46c1cef379c4bb565
+MiniView/FrontCtr_3_sm.png 8a4a542297b834f1f5ef884a859a185c48266b366a972da44bfb5039c27df3fd c27ed96ae00d5122f83f0237962fbedb1451bec3fa5cd42540e9d52e40ad63db
+MiniView/FrontCtr_4_sm.png 4cccd6708a8bdef44678f6fed5108e229d2409b4cb91cad39443666e2437ebd0 44034066c6ba745bce4372df3663669f4b7f3985b7e217b03b808e42ba8fb76e
+MiniView/FrontLt_1_sm.png fb9f2ab8d658cec007ccef5597845d68ceb504d5b86adff65e09619ba6c707f9 be0c3cdabc1c2f3d95f3e6e9d48a91f19cbb48d8f5f7b4ece92c3f032e77ab11
+MiniView/FrontLt_2_sm.png 602c6ef8204b5c49f40a81a1310a834d3cabfdb5580e93c88e337867eb2205a3 995fab7dc6fd49af3cc1dc5109881adfa8a5183fb606b24713ff98441ef14d17
+MiniView/FrontLt_3_sm.png cf4de78463c83acc4c1d381fa588e142d011a3917e9ead9095607a2ffdcfe89e 29a94425f39e8cc2db6ae3d4be6c655ff8152c691ddbeb4a9b65f16b000ee3b6
+MiniView/FrontRt_1_sm.png d7560f91fb8c82c383199e936d0e6dd4adecb2db4df8fda55fbeaf3c0bc4624b 7332a72d0be07e6c07c752a10f067289149034ebdae8fb019805fa07664831d6
+MiniView/FrontRt_2_sm.png d6868557b02fc1335ba5cbb1fd6bce70a4665ec32305d1110e97abde97db1b6a 46f2f0314d47a2c9790dda7ce250af8599b0350c25b12989c54db2b953e037d4
+MiniView/FrontRt_3_sm.png ba5163d3aeda0d8f160aba05ee2706e0761397384ca41e3d10efeef6a34c3c21 49d5b1f41211dc0e4a67c8c116fe04a5689b04788c3c946e5bebb7859c7f78a8
+VerticalSensors/BackCtr_1_lg.png 936f0afbc57b081e95eac7c0334495911917590a2ac200754167472ab76ac1e0 82d39dfec46eb0677f66c194f264552a101ecbe6758c348985a477564c9a2098
+VerticalSensors/BackCtr_2_lg.png 99a6cee528310e18ac79247cf9911e510bfb97487d315efd2d98f05da13b1dab d8e3278e69547bf46adb928df50adfb67eed5a20ccafe766f698639d387acfe8
+VerticalSensors/BackCtr_3_lg.png 92beb9dad66dbf1023df9c6dd3c9186e0113c0e123ca15d8db0058eee5f5ecd8 273b3f79063ededf935354b52f4b07c7582e391172b3f721c37d93d47e3692aa
+VerticalSensors/BackCtr_4_lg.png a611eafa0de761ea641fb2419f75997579954e5f84bddfab5c31201b3b36c800 ff2ca8e7bf0f58e1b2e9d3347bf32547c40dd0cbf6a44ed21e02f25c19595aad
+VerticalSensors/BackLt_1_lg.png e5f4444b467abd7271be3cddcf17e1ab98e48adcf8515492dd8e2a47bc41d55b 5c0b4fc27b90c3b73637ed61bc0a013da6548302c9a660a16838573b7cb9801a
+VerticalSensors/BackLt_2_lg.png ec0ded722e338063f50abdb4b812dfb11ddc63b6452e78cf8b80d21d824d070c 02052ea517abb8865b0e006b78d50bf49d8466b5aee8b160a84526e4283f4fc8
+VerticalSensors/BackLt_3_lg.png 12f12dd60a02d1ed41af1b9d5f876802d1da10e127e975862bc58293a047c3a5 275dda7d855ce2c3816b607438aaa0027cce5282cd8cda0862b0beb5d15e48ba
+VerticalSensors/BackRt_1_lg.png a2521513d5280916fe30aaf8c4242eec73d6bb461fc26da4d0476096ae05f304 f04d9b94f2668f8d76e6dc4d435447e476cbce0bacfa998773b7d75a038773cd
+VerticalSensors/BackRt_2_lg.png d2fb0b8477861613a3971afd41f3f1d91421cbd6b6a82303d2ad8cb42d226d08 b866af3302bb457827754868b6823dcacea0aa1804c636bae362669e2a792036
+VerticalSensors/BackRt_3_lg.png cf5fd36e7d989f1d8951e992c071b48e618a3eab4e094662627d0ddf437275e4 bbec938e432c557c49822edb901c2873a7929a5ecf0fc396f9e6f988ca5582fa
+VerticalSensors/FrontCtr_1_lg.png a3dce913c911f03d07585b43a1c27e56a2cb3814a7617a86f5a54d510ef94b68 72aa796b4f0f69592d3f320c4a6a6ef5d26d75e253b2d47fd78c05fc26cc53ee
+VerticalSensors/FrontCtr_2_lg.png 5a52bcc0af7e6b76e714e003aac5f02c6ae88e8fd1cd3d5bf6817491720df0be 7c0edb447e0f33c1f980150469e35f27e792ff689d097dbbe320de2f88bcf705
+VerticalSensors/FrontCtr_3_lg.png a4224fa6486dbbc3e81b6f260900bc9a4b10d9e6f534426bb8075f59eb51ab7e 894185c7c3bd4817caf044ee37487a02202fcdf692a8dcb2880b5771aa11d474
+VerticalSensors/FrontCtr_4_lg.png 895855ae29aca94968e657ca156985548426a316f8a0f3864b4039239b027af7 fcaca51bf6b96f9b2ad840d7413f7c5100f76b1e619aa19c55ce567c860ad400
+VerticalSensors/FrontLt_1_lg.png 8448f92e1a14b02c7f4d89de790a3d9853510f2512ea59964d94e92aaaea632d 55123d5b1952a3bc66764a176241f22aa21a9024f83f95a2b248c0fcf7839140
+VerticalSensors/FrontLt_2_lg.png ea6b373a761282ce42d76fc6952be0aa475c983c72b61b1341a0202fcd569927 fc8a47f750c93fe086e515d6aaa07a259343af805daecefae48067ca3c708681
+VerticalSensors/FrontLt_3_lg.png e7ab1c585ead6dddbcb3509c7a5b40caf50ab9364b865885635d307adba92c02 6a0978c4d6370354a069b9e0b67cf34645981a6282363831fcf88de25070b2b9
+VerticalSensors/FrontRt_1_lg.png a9e82cfac56aba4c19988b5a0b0c4757be98c5208c3eebf11c7263a218b0c2ee 33745d1d25a021d07bee98171642dcb8602e81282f1c36fa9d823e531b395685
+VerticalSensors/FrontRt_2_lg.png 461b3a5d275474eba3eb6593a873b23323e06901a6182cab7929bbb9ed9a897c fd8059cefb411f6f765bb86f098236e5eb4e4f4bf11be118639a86a4a6a2d0e7
+VerticalSensors/FrontRt_3_lg.png 735a6604329f278f921f0506172d08f72b581742a76a84eb2aa94186eac05c34 864b544cf5e5c332dbdf22f22c4f4df964a02082a37d9b8ed09a46f00ad3c997'
 
 # Shorter list delay: the four autoscroll timings of List2Ctrl.js (ms), stock -> new
 # (tier 1 = hold the Commander tilted, tier 2 = keep holding: page by page).
@@ -1046,6 +1096,7 @@ remove_state_dir() {
         rm -f "$live" "$live.new" || return 1
     done
     remove_image_backup safety || return 1
+    remove_image_backup sensors || return 1
     if [ -d "$STATE_DIR" ]; then
         rmdir "$STATE_DIR" || { log "ERROR: ${STATE_DIR#"$R"} holds other files"; return 1; }
     fi
@@ -1055,16 +1106,17 @@ remove_state_dir() {
 
 # ---------------------------------------------------------------- state
 
-S_SM= S_XML= S_UCP= S_SHIM= S_CONF= S_BACKUP= S_TT= S_TRIM= S_DISC= S_DELAY= S_SAFETY= S_METERS= FOREIGN= LEFTOVERS= STATE=
+S_SM= S_XML= S_UCP= S_SHIM= S_CONF= S_BACKUP= S_TT= S_TRIM= S_DISC= S_DELAY= S_SAFETY= S_SENSORS= S_METERS= FOREIGN= LEFTOVERS= STATE=
 # refresh_state: sets the S_* component states and STATE (AA touch), which is
 # one of stock | installed | disabled | partial | unknown, S_TRIM (boot trim char, see SM_TABLE;
 # unknown), S_DISC (startup warning) and S_DELAY (list delay): stock | patched |
-# unknown, S_SAFETY (camera text): stock | patched | partial | unknown. Runs in the main shell.
+# unknown, S_SAFETY (camera text) and S_SENSORS (parking sensors): stock | patched | partial | unknown. Runs in the main shell.
 refresh_state() {
     S_SM=$(file_state sm "$SM")
     S_DISC=$(file_state sys "$SYSAPP")
     S_DELAY=$(file_state list "$LIST2")
     S_SAFETY=$(image_set_state safety)
+    S_SENSORS=$(image_set_state sensors)
     S_METERS=$(meters_state)
     S_TRIM=$(sm_variant "$SM")
     S_TRIM=${S_TRIM#?}
@@ -1105,7 +1157,7 @@ aa_files_stock() {
 # A feature that is on, half done or unknown: its backup in STATE_DIR must stay.
 other_features_on() {
     [ "$S_TRIM" != 0 ] || [ "$S_DISC" != stock ] || [ "$S_METERS" != off ] || [ "$S_DELAY" != stock ] || \
-        [ "$S_SAFETY" != stock ]
+        [ "$S_SAFETY" != stock ] || [ "$S_SENSORS" != stock ]
 }
 
 report_state() {
@@ -1130,6 +1182,7 @@ describe_state() {
     printf 'disclaimer:   %s (stock = startup warning shown, patched = skipped)\n' "$S_DISC"
     printf 'list delay:   %s (patched = shorter)\n' "$S_DELAY"
     printf 'camera text:  %s (patched = blank safety text)\n' "$S_SAFETY"
+    printf 'sensors:      %s (patched = semi-transparent parking sensors)\n' "$S_SENSORS"
     printf 'meters:       %s (app %s, userscript %s)\n' "$S_METERS" "$(area_state app)" "$(area_state userjs)"
     if exists "$BACKUP/$SM_OTHER"; then
         printf 'NOTE:         the backup was made while the unit ran %s; it now runs %s.\n' "$SM_OTHER" "${SM_NAME:-?}"
@@ -1550,15 +1603,16 @@ do_disc_off() { do_disc patched; }      # warning off = the patch on
 do_disc_on() { do_disc stock; }
 
 # ---------------------------------------------------------------- image sets
-# A set of PNGs replaced as one feature (camera text: SafetyText_*.png). Each
+# A set of PNGs replaced as one feature (camera text: SafetyText_*.png; parking
+# sensors: images in HorizontalSensors/, VerticalSensors/ and MiniView/). Each
 # file is either its stock or its new version; anything else is unknown and
 # nothing changes. All stock files are backed up (verified) before the first one
 # is replaced; then each file is staged, verified and renamed on its own, so a
 # power loss leaves a mix of stock and new files: "partial", which both
 # directions can finish.
 
-image_table() { case "$1" in safety) echo "$SAFETY_TABLE" ;; esac; }
-image_dir() { case "$1" in safety) echo "$NATIVE_IMAGES" ;; esac; }
+image_table() { case "$1" in safety) echo "$SAFETY_TABLE" ;; sensors) echo "$SENSOR_TABLE" ;; esac; }
+image_dir() { case "$1" in safety|sensors) echo "$NATIVE_IMAGES" ;; esac; }
 image_backup() { echo "$STATE_DIR/$1"; }
 image_src() { echo "$USB/images/$1/$2"; }        # image_src <set> <name>: the new file on the stick
 # image_stage <dir> <name>: where a file is staged before its rename (same folder;
@@ -1634,7 +1688,7 @@ image_backup_valid() {  # image_backup_valid <set>: every stock file, verified
     ! image_check "$1" backup | grep -qv ' stock$'
 }
 
-IMAGE_SETS=safety
+IMAGE_SETS="safety sensors"
 image_set_leftovers() {  # image_set_leftovers <set>: staged copies left by a run that was cut off
     local name dir f
     dir=$(image_dir "$1")
@@ -1755,6 +1809,8 @@ do_images() {
 
 do_safety_on() { do_images safety patched; }    # camera text blank
 do_safety_off() { do_images safety stock; }
+do_sensors_on() { do_images sensors patched; }  # semi-transparent parking sensors
+do_sensors_off() { do_images sensors stock; }
 
 do_trim_on() { do_trim f; }
 do_trim_aha() { do_trim v; }
@@ -1813,7 +1869,7 @@ do_enable() {
 
 # ---------------------------------------------------------------- plan
 # miatoff-plan.txt holds the end state chosen in the PC builder, one key=value per
-# line: touchtune, aa_touch, meters, warning, delay, safety, trim_dvdtv, trim_sirius, trim_pandora,
+# line: touchtune, aa_touch, meters, warning, delay, safety, sensors, trim_dvdtv, trim_sirius, trim_pandora,
 # trim_stitcher, trim_aha = install | remove | keep. Every run offers the next step that
 # differs from the unit's current state, so the plan is followed one confirmed
 # step (and one restart) at a time. An invalid plan is ignored.
@@ -1823,7 +1879,7 @@ plan_valid() {
     awk '
         /^[ \t\r]*(#|$)/ { next }
         { gsub(/[ \t\r]/, ""); split($0, kv, "="); k = kv[1]; v = kv[2]
-          if (k == "touchtune" || k == "aa_touch" || k == "meters" || k == "warning" || k == "delay" || k == "safety")
+          if (k == "touchtune" || k == "aa_touch" || k == "meters" || k == "warning" || k == "delay" || k == "safety" || k == "sensors")
               ok = (v == "install" || v == "remove" || v == "keep")
           else if (k == "trim_dvdtv" || k == "trim_sirius" || k == "trim_pandora" || k == "trim_stitcher" || k == "trim_aha")
               ok = (v == "install" || v == "remove" || v == "keep")
@@ -1873,6 +1929,7 @@ plan_candidates() {
     [ "$aa" = remove ] && echo remove
     [ "$(plan_get delay)" = remove ] && echo delay_off
     [ "$(plan_get safety)" = remove ] && echo safety_off
+    [ "$(plan_get sensors)" = remove ] && echo sensors_off
     [ "$tt" = remove ] && echo tt_remove
     [ "$me" = remove ] && echo meters_off
     [ "$wa" = remove ] && echo disc_on
@@ -1881,6 +1938,7 @@ plan_candidates() {
     [ "$wa" = install ] && echo disc_off
     [ "$(plan_get delay)" = install ] && echo delay_on
     [ "$(plan_get safety)" = install ] && echo safety_on
+    [ "$(plan_get sensors)" = install ] && echo sensors_on
     [ "$tt" = install ] && is_file "$TT_SCRIPT" && echo tt_install
     if [ "$aa" = install ]; then
         case "$1" in disabled) echo enable ;; *) echo install ;; esac
@@ -1934,6 +1992,8 @@ plan_text() {
         delay_off) echo "stock list delay" ;;
         safety_on) echo "blank camera safety text" ;;
         safety_off) echo "camera safety text back" ;;
+        sensors_on) echo "semi-transparent parking sensors" ;;
+        sensors_off) echo "stock parking sensors" ;;
         meters_on) echo "install Meters" ;;
         meters_off) echo "remove Meters" ;;
         *) echo "$1" ;;
@@ -1961,6 +2021,9 @@ plan_blockers() {   # plan_blockers <state>: why a wanted step cannot run now, o
     fi
     if [ "$(plan_get safety)" != keep ] && [ "$S_SAFETY" = unknown ]; then
         echo "The camera safety text images are not a known version."
+    fi
+    if [ "$(plan_get sensors)" != keep ] && [ "$S_SENSORS" = unknown ]; then
+        echo "The parking sensor images are not a known version."
     fi
     if [ "$(plan_get meters)" != keep ] && [ "$S_METERS" = unknown ]; then
         echo "opera.ini or stage_gap2.sh is not a known version (Meters)."
@@ -1991,7 +2054,7 @@ EOF
 plan_button() {     # plan_button <action>: INSTALL for steps that add something, REMOVE for those that undo it
     case "$1" in
         trim_plan) [ -n "$(plan_trim_diff on)" ] && echo INSTALL || echo REMOVE ;;
-        remove|tt_remove|meters_off|disc_on|delay_off|safety_off|trim_off|trim_*_off) echo REMOVE ;;
+        remove|tt_remove|meters_off|disc_on|delay_off|safety_off|sensors_off|trim_off|trim_*_off) echo REMOVE ;;
         *) echo INSTALL ;;
     esac
 }
@@ -2035,6 +2098,7 @@ choose_action() {   # choose_action <state>: prints the action
 disc_label() { case "$S_DISC" in stock) echo on ;; patched) echo removed ;; *) echo unknown ;; esac; }
 delay_label() { case "$S_DELAY" in stock) echo stock ;; patched) echo shorter ;; *) echo unknown ;; esac; }
 safety_label() { case "$S_SAFETY" in stock) echo shown ;; patched) echo blank ;; partial) echo incomplete ;; *) echo unknown ;; esac; }
+sensors_label() { case "$S_SENSORS" in stock) echo stock ;; patched) echo semi-transparent ;; partial) echo incomplete ;; *) echo unknown ;; esac; }
 meters_label() {
     case "$S_METERS" in off) echo off ;; on) echo on ;; partial) echo incomplete ;; *) echo unknown ;; esac
 }
@@ -2053,11 +2117,11 @@ choose_extra() {
 
 choose_more() {
     local a
-    a=$(ask METERS DELAY CAMERA "More extras\n\nMETERS = gauges in Applications ($(meters_label))\nDELAY = list scroll delay ($(delay_label))\nCAMERA = reversing camera safety text ($(safety_label))") || return 1
+    a=$(ask METERS DELAY CAMERA "More extras\n\nMETERS = gauges in Applications ($(meters_label))\nDELAY = list scroll delay ($(delay_label))\nCAMERA = camera text ($(safety_label)),\n         parking sensors ($(sensors_label))") || return 1
     case "$a" in
         0) choose_meters ;;
         1) choose_delay ;;
-        2) choose_safety ;;
+        2) choose_camera ;;
         *) echo cancel ;;
     esac
 }
@@ -2073,6 +2137,34 @@ choose_delay() {
             case "$a" in 0) echo delay_off ;; *) echo cancel ;; esac ;;
         *)
             popup "List2Ctrl.js is not the analysed file.\n\nNothing was changed."
+            echo cancel ;;
+    esac
+}
+
+choose_camera() {
+    local a
+    a=$(ask "SAFETY TEXT" SENSORS CANCEL "Reversing camera\n\nSAFETY TEXT = the text over the picture ($(safety_label))\nSENSORS = parking sensor graphics ($(sensors_label))") || return 1
+    case "$a" in
+        0) choose_safety ;;
+        1) choose_sensors ;;
+        *) echo cancel ;;
+    esac
+}
+
+choose_sensors() {
+    local a
+    case "$S_SENSORS" in
+        stock)
+            a=$(ask INSTALL CANCEL "Semi-transparent parking sensor graphics?\n\nThe originals are kept on the unit.\nThe unit restarts afterwards.") || return 1
+            case "$a" in 0) echo sensors_on ;; *) echo cancel ;; esac ;;
+        patched)
+            a=$(ask RESTORE CANCEL "The parking sensor graphics are\nsemi-transparent.\n\nRESTORE = back to stock") || return 1
+            case "$a" in 0) echo sensors_off ;; *) echo cancel ;; esac ;;
+        partial)
+            a=$(ask FINISH RESTORE CANCEL "A previous run was not finished:\nsome sensor graphics are replaced.\n\nFINISH = replace them all\nRESTORE = back to stock") || return 1
+            case "$a" in 0) echo sensors_on ;; 1) echo sensors_off ;; *) echo cancel ;; esac ;;
+        *)
+            popup "The parking sensor images are not\nthe analysed files.\n\nNothing was changed."
             echo cancel ;;
     esac
 }
@@ -2199,6 +2291,8 @@ action_allowed() {  # action_allowed <state> <action>
         stock:delay_off|installed:delay_off|disabled:delay_off) [ "$S_DELAY" = patched ]; return ;;
         stock:safety_on|installed:safety_on|disabled:safety_on) [ "$S_SAFETY" = stock ] || [ "$S_SAFETY" = partial ]; return ;;
         stock:safety_off|installed:safety_off|disabled:safety_off) [ "$S_SAFETY" = patched ] || [ "$S_SAFETY" = partial ]; return ;;
+        stock:sensors_on|installed:sensors_on|disabled:sensors_on) [ "$S_SENSORS" = stock ] || [ "$S_SENSORS" = partial ]; return ;;
+        stock:sensors_off|installed:sensors_off|disabled:sensors_off) [ "$S_SENSORS" = patched ] || [ "$S_SENSORS" = partial ]; return ;;
         stock:meters_on|installed:meters_on|disabled:meters_on) [ "$S_METERS" = off ] || [ "$S_METERS" = partial ]; return ;;
         stock:meters_off|installed:meters_off|disabled:meters_off) [ "$S_METERS" = on ] || [ "$S_METERS" = partial ]; return ;;
     esac
@@ -2401,6 +2495,8 @@ case "$ACTION" in
     delay_off) done_text="The list delay is back to stock." ;;
     safety_on) done_text="The camera safety text is blank." ;;
     safety_off) done_text="The camera safety text is back." ;;
+    sensors_on) done_text="The parking sensor graphics are\nsemi-transparent." ;;
+    sensors_off) done_text="The parking sensor graphics are back to stock." ;;
     meters_on) done_text="Meters is under Applications.\nThe collector starts at every boot." ;;
     meters_off) done_text="Meters has been removed." ;;
 esac

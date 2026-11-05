@@ -65,6 +65,8 @@ COMPONENTS = [
         ("meters", "Meters", "Gauges under Applications: speed, rpm, G-meter, lap timer.", "Install", "Remove"),
         ("safety", "Camera safety text", "Blank the safety text over the reversing camera picture.",
          "Blank it", "Show it again"),
+        ("sensors", "Parking sensor graphics", "Semi-transparent parking sensor graphics (MZD-AIO), so the camera picture shows through.",
+         "Install", "Remove"),
     ]),
 ]
 KEYS = [item[0] for _, items in COMPONENTS for item in items]
