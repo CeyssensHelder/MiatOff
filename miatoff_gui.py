@@ -67,6 +67,8 @@ COMPONENTS = [
          "Blank it", "Show it again"),
         ("sensors", "Parking sensor graphics", "Semi-transparent parking sensor graphics (MZD-AIO), so the camera picture shows through.",
          "Install", "Remove"),
+        ("menu", "Hide trimmed items in the menu", "Also hide the sources you stop at boot (DVD/TV, SiriusXM, Pandora, Stitcher, Aha) in the Entertainment menu. Later changes to the boot trim are followed.",
+         "Hide them", "Show them again"),
     ]),
 ]
 KEYS = [item[0] for _, items in COMPONENTS for item in items]

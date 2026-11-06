@@ -50,6 +50,27 @@ farenheit for us Americans?"
   things per page).
 - [ ] Decide how user themes are installed and removed through the stick (own folder, hash of the user's files, plan entry).
 
+## Entertainment menu: hide the sources of trimmed services
+
+Built (not tested in a car): one builder item, "Hide trimmed items in the menu", under Interface (plan key `menu`), hides the Entertainment
+sources of every boot-trim group that is on, all in one switch. While it is on, later trim steps keep the menu in
+step. See [aa-touch-stick/README.md](aa-touch-stick/README.md#boot-trim-menu-extra--trim).
+
+How it works (74.00.324A, `/jci/gui/apps/system/js/systemApp.js`):
+
+- `_initEntertainmentDataList` holds a master list with an `appData.isVisible` flag per source; the native MMUI
+  overwrites it with `StatusMenuVisible` messages, so the default alone would not hold. `_buildEntertainmentDataList`
+  is the one place that filters on it, so its filter line also drops the names of the trimmed groups: DVD/TV
+  (`dvd`, `tv`), SiriusXM (`satradio`, `xmaudio`), Pandora, Stitcher, Aha (`aharadio`).
+- Same file as the startup-warning tweak, so `SYS_TABLE` pins all 66 combinations.
+
+- [ ] Check on the car: with Stitcher trimmed and the item on, the Stitcher entry is gone and nothing else in the
+  Entertainment list changed; after turning the item off it is back.
+- [ ] Check what the unit does when its last-used source was a hidden one (last-source restore).
+- [ ] SiriusXM and DVD/TV entries are hidden by default on most cars; confirm the names (`satradio`, `xmaudio`, `dvd`,
+  `tv`) are the ones the MMUI uses on an NA unit.
+- [ ] An on-car dialog entry for the item (the builder plan is the only way to set it today).
+
 ## Later phases
 
 ### Meters: shift sounds

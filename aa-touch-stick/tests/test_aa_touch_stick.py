@@ -200,6 +200,7 @@ WCP_CMDLINE = b"/jci/sm/sm\x00-f\x00/jci/sm/sm_WCP.conf\x00-e\x00/tmp/smevents.t
 # small synthetic one built from the stock lines in aa-touch.sh (markers removed).
 sys.path.insert(0, str(HERE))
 import disclaimer_edit  # noqa: E402
+import menu_edit  # noqa: E402
 
 SYSAPP_REAL = HERE.parent.parent / "dumps/eu-74.00.324/003-full-up88s-2026-10-27/static/files/jci/gui/apps/system/js/systemApp.js"
 
@@ -212,12 +213,25 @@ def stock_systemapp() -> bytes:
     lines = ["var systemApp = function () {}; var framework = {};", "systemApp.prototype._init = function()", "{",
              "    this._contextTable = {", disclaimer_edit.BLOCK_START]
     lines += [l[:-1] for l in body.split("\n")]
-    lines += [disclaimer_edit.BLOCK_END, "    };", "};", "", disclaimer_edit.ANCHOR, "{", "};", ""]
+    lines += [disclaimer_edit.BLOCK_END, "    };", "};", "", disclaimer_edit.ANCHOR, "{", "};", "",
+              "systemApp.prototype._buildEntertainmentDataList = function()", "{",
+              "    for (var i = 0; i < this._masterEntertainmentDataList.items.length; ++i)", "    {",
+              menu_edit.STOCK_LINE, "        {", "            dataList.items.push(this._masterEntertainmentDataList.items[i]);",
+              "        }", "    }", "};", ""]
     return "\n".join(lines).encode()
 
 
 SYS_STOCK_BYTES = stock_systemapp()
 SYS_PATCHED_BYTES = disclaimer_edit.patch(SYS_STOCK_BYTES)
+
+
+def sysb(disc: int, code: str) -> bytes:
+    """systemApp.js with the warning edit (disc 0/1) and the menu code (0 off, w on and nothing hidden, else a trim char)."""
+    return menu_edit.patch(SYS_PATCHED_BYTES if disc else SYS_STOCK_BYTES, code)
+
+
+SYS_TABLE_TEXT = "\n".join(f"{disc}{code} {hashlib.sha256(sysb(disc, code)).hexdigest()}"
+                           for disc in (0, 1) for code in menu_edit.MENU_CODES)
 SYSAPP = "jci/gui/apps/system/js/systemApp.js"
 
 # Meters: opera.ini and stage_gap2.sh, real from the dump when present.
@@ -252,7 +266,7 @@ def patch_list2(data: bytes) -> bytes:
     return data
 
 
-DUMP4 = HERE.parent.parent / "dumps/eu-74.00.324/002-full-up1596s/static/files"
+DUMP4 = HERE.parent.parent / "dumps/eu-74.00.324/003-full-up88s-2026-10-27/static/files"
 if REAL and (DUMP4 / LIST2).is_file():
     LIST2_STOCK_BYTES = (DUMP4 / LIST2).read_bytes()
 else:
@@ -387,12 +401,20 @@ def overrides(work: Path, root_in_sh: str, **extra) -> Path:
             UCP_PATCHED=sha(PATCHED["etc/aap_system_attributes_UCP.xml"]),
             SM_TABLE="'" + "\n".join(f"{code} {sha(data)}" for code, data in sorted(sm_table().items())) + "'",
             SM_WCP_TABLE="'" + "\n".join(f"{code} {sha(data)}" for code, data in sorted(WCP_VARIANTS.items())) + "'",
-            SYS_STOCK=sha(SYS_STOCK_BYTES), SYS_PATCHED=sha(SYS_PATCHED_BYTES),
+            SYS_STOCK=sha(SYS_STOCK_BYTES), SYS_PATCHED=sha(SYS_PATCHED_BYTES), SYS_TABLE="'" + SYS_TABLE_TEXT + "'",
             LIST_STOCK=sha(LIST2_STOCK_BYTES), LIST_PATCHED=sha(LIST2_PATCHED_BYTES),
             SAFETY_TABLE="'" + "\n".join(f"{n} {sha(SAFETY_STOCK[n])} {sha(SAFETY_BLANK)}" for n in SAFETY_NAMES) + "'",
             SENSOR_TABLE="'" + "\n".join(f"{n} {sha(SENSOR_STOCK[n])} {sha(SENSOR_NEW[n])}" for n in SENSOR_NAMES) + "'",
             OPERA_STOCK=sha(OPERA_STOCK_BYTES), OPERA_PATCHED=sha(OPERA_PATCHED_BYTES),
             GAP2_STOCK=sha(GAP2_STOCK_BYTES), GAP2_PATCHED=sha(GAP2_PATCHED_BYTES))
+    if REAL:
+        # The real dump has no image files to copy (only their hashes), so the fixture's fake stock images
+        # need their own tables here too; the config files still use the production hashes.
+        # Likewise sm_WCP.conf: the dump has none, the fixture's is synthetic.
+        values.update(
+            SM_WCP_TABLE="'" + "\n".join(f"{code} {sha(data)}" for code, data in sorted(WCP_VARIANTS.items())) + "'",
+            SAFETY_TABLE="'" + "\n".join(f"{n} {sha(SAFETY_STOCK[n])} {sha(SAFETY_BLANK)}" for n in SAFETY_NAMES) + "'",
+            SENSOR_TABLE="'" + "\n".join(f"{n} {sha(SENSOR_STOCK[n])} {sha(SENSOR_NEW[n])}" for n in SENSOR_NAMES) + "'")
     values.update(extra)
     path = work / "overrides.sh"
     path.write_text("".join(f"{k}={v}\n" for k, v in values.items()), newline="\n")
@@ -531,11 +553,15 @@ def main():
         if SYSAPP_REAL.is_file():
             check(sha(SYS_STOCK_BYTES) == bs.pinned("SYS_STOCK"), "SYS_STOCK matches the dump's systemApp.js")
             check(sha(SYS_PATCHED_BYTES) == bs.pinned("SYS_PATCHED"), "SYS_PATCHED matches the Python disclaimer edit")
+            script_text = (HERE.parent / "stick/aa-touch.sh").read_text()
+            pinned_sys = re.search(r"^SYS_TABLE='(.*?)'$", script_text, re.M | re.S).group(1)
+            check(pinned_sys == SYS_TABLE_TEXT, "SYS_TABLE (66 systemApp.js files) matches the Python disclaimer and menu edits")
             if shutil.which("node"):
                 js = Path(tempfile.mkdtemp(prefix="mo-js-")) / "systemApp.js"
-                js.write_bytes(SYS_PATCHED_BYTES)
-                r = subprocess.run(["node", "--check", str(js)], capture_output=True, text=True)
-                check(r.returncode == 0, f"patched systemApp.js is valid JavaScript (node --check) {r.stderr[:200]}")
+                for label, data in (("patched", SYS_PATCHED_BYTES), ("menu all five", sysb(0, "v")), ("menu Stitcher + warning", sysb(1, "8")), ("menu on, nothing hidden", sysb(0, "w"))):
+                    js.write_bytes(data)
+                    r = subprocess.run(["node", "--check", str(js)], capture_output=True, text=True)
+                    check(r.returncode == 0, f"{label} systemApp.js is valid JavaScript (node --check) {r.stderr[:200]}")
         aha = SM_VARIANTS["0v"].decode()
         check('value="blm_ira_aha"' not in aha and 'value="blm_ira_aha"' in STOCK["jci/sm/sm.conf"].decode(),
               "with Aha: no stage waits for blm_ira_aha any more")
@@ -741,8 +767,10 @@ def main():
         r = car.run("delay_on")
         check(r.returncode == 0 and car.read(LIST2) == LIST2_PATCHED_BYTES,
               f"delay on: List2Ctrl.js is exactly the patched file ({r.returncode})")
-        check(car.read(LIST2).count(b"Timeout :                150,") == 1 and b"// autoscrollTier1Timeout :                1500," in car.read(LIST2),
-              "delay on: only the four settings change (a comment stays)")
+        stock_lines, patched_lines = LIST2_STOCK_BYTES.splitlines(), car.read(LIST2).splitlines()
+        changed = sum(a != b for a, b in zip(stock_lines, patched_lines))
+        check(car.read(LIST2).count(b"Timeout :                150,") == 1 and changed == 4 and len(stock_lines) == len(patched_lines),
+              "delay on: only the four settings change (no line added or removed)")
         check((car.root / "data_persist/miatoff/aa-touch/List2Ctrl.js.stock").read_bytes() == LIST2_STOCK_BYTES,
               "delay on: the stock List2Ctrl.js is backed up")
         check(car.state() == "stock" and car.state("list delay:") == "patched", "delay on: AA stock, delay patched")
@@ -1317,16 +1345,72 @@ def main():
         r = car.run("trim_dvdtv_on", fault="fail:rename-sm")
         check(r.returncode != 0 and car.digest() == stock_digest, "group failure: nothing left behind (byte-exact stock)")
 
+        # --- hidden Entertainment sources (opt-in: one more line of systemApp.js, follows the boot trim)
+        car = fresh(base, "menu")
+        stock_digest = car.digest()
+        backup = car.root / "data_persist/miatoff/aa-touch/systemApp.js.stock"
+        r = car.run("trim_stitcher_on")
+        check(r.returncode == 0 and car.read("jci/sm/sm.conf") == table["08"] and car.read(SYSAPP) == SYS_STOCK_BYTES,
+              f"Stitcher trim without the menu item: systemApp.js untouched ({r.returncode})")
+        r = car.run("menu_off")
+        check(r.returncode != 0, "menu_off refused while the menu item is off")
+        r = car.run("menu_on")
+        check(r.returncode == 0 and car.read(SYSAPP) == sysb(0, "8") and car.state("menu hides:") == "8",
+              f"menu on: the Stitcher entry is hidden ({r.returncode})")
+        check(backup.exists() and backup.read_bytes() == SYS_STOCK_BYTES, "menu on: stock systemApp.js backed up")
+        r = car.run("trim_pandora_on")
+        check(r.returncode == 0 and car.read(SYSAPP) == sysb(0, "c"), "Pandora too: the menu follows the trim step")
+        r = car.run("trim_aha")
+        check(r.returncode == 0 and car.read(SYSAPP) == sysb(0, "v"), "all five groups: all their sources are hidden")
+        r = car.run("disc_off")
+        check(r.returncode == 0 and car.read(SYSAPP) == sysb(1, "v"), "warning off on top of the hidden sources keeps them")
+        r = car.run("disc_on")
+        check(r.returncode == 0 and car.read(SYSAPP) == sysb(0, "v") and backup.exists(), "warning on again keeps the hidden sources and the backup")
+        r = car.run("trim_off")
+        check(r.returncode == 0 and car.read(SYSAPP) == sysb(0, "w") and backup.exists(),
+              "trim off with the menu item on: nothing hidden, but the item stays on")
+        r = car.run("menu_off")
+        check(r.returncode == 0 and car.read(SYSAPP) == SYS_STOCK_BYTES and not backup.exists(),
+              "menu off: all sources shown again, backup gone")
+        check(car.digest() == stock_digest, "and the unit is byte-exact stock")
+
+        car = fresh(base, "menu-kill")
+        stock_digest = car.digest()
+        car.run("trim_stitcher_on")
+        car.run("menu_on", fault="kill:rename-sys")
+        check(car.read(SYSAPP) in (sysb(0, "0"), sysb(0, "8")), "menu power loss: systemApp.js a known file, never half")
+        car.run("cancel")
+        if car.state() == "partial":
+            car.run("remove")
+        r = car.run("menu_on")
+        check(r.returncode == 0 and car.read(SYSAPP) == sysb(0, "8"), f"menu power loss: menu_on finishes it ({r.returncode})")
+
+        car = fresh(base, "menu-fail")
+        car.run("menu_on")
+        r = car.run("trim_stitcher_on", fault="fail:rename-sys")
+        check(r.returncode != 0 and car.read("jci/sm/sm.conf") == table["08"] and car.read(SYSAPP) == sysb(0, "w"),
+              "menu failure while following a trim: the trim stays, the menu line is untouched")
+
+        car = fresh(base, "menu-unknown")
+        write(car.root, SYSAPP, SYS_STOCK_BYTES + b" ")
+        r = car.run("trim_stitcher_on")
+        check(r.returncode == 0 and car.read("jci/sm/sm.conf") == table["08"] and car.read(SYSAPP) == SYS_STOCK_BYTES + b" ",
+              "an unknown systemApp.js does not block the trim")
+        before = car.digest()
+        r = car.run("menu_on")
+        check(r.returncode != 0 and car.digest() == before, "menu_on refused for an unknown systemApp.js")
+
         # --- plan from the PC builder (miatoff-plan.txt): one confirmed step per run
         car = fresh(base, "plan")
         stock_digest = car.digest()
         plan = car.stick / "miatoff-plan.txt"
         plan.write_text("# test\naa_touch=install\ntrim_dvdtv=install\ntrim_pandora=install\ntrim_aha=install\n"
-                        "warning=install\ndelay=install\nsafety=install\nsensors=install\ntouchtune=keep\nmeters=keep\n")
+                        "warning=install\nmenu=install\ndelay=install\nsafety=install\nsensors=install\ntouchtune=keep\nmeters=keep\n")
         r = car.run("")
-        check(r.returncode == 0 and want(0, 21), f"plan step 1: all trims of the plan in one step ({r.returncode})")
+        check(r.returncode == 0 and want(0, 21) and car.read(SYSAPP) == sysb(0, "l"),
+              f"plan step 1: all trims of the plan and the hidden menu sources in one step ({r.returncode})")
         r = car.run("")
-        check(r.returncode == 0 and car.read(SYSAPP) == SYS_PATCHED_BYTES, f"plan step 2: startup warning skipped ({r.returncode})")
+        check(r.returncode == 0 and car.read(SYSAPP) == sysb(1, "l"), f"plan step 2: startup warning skipped on top ({r.returncode})")
         r = car.run("")
         check(r.returncode == 0 and car.read(LIST2) == LIST2_PATCHED_BYTES, f"plan step 3: shorter list delay ({r.returncode})")
         r = car.run("")
@@ -1338,9 +1422,9 @@ def main():
         done = car.digest()
         r = car.run("")
         check(r.returncode == 0 and car.digest() == done, "plan complete: nothing left to do, nothing changes")
-        plan.write_text("aa_touch=remove\ntrim_dvdtv=remove\ntrim_pandora=remove\ntrim_aha=remove\nwarning=remove\n"
+        plan.write_text("aa_touch=remove\ntrim_dvdtv=remove\ntrim_pandora=remove\ntrim_aha=remove\nwarning=remove\nmenu=remove\n"
                         "delay=remove\nsafety=remove\nsensors=remove\n")
-        for step in ("AA touch", "list delay", "camera text", "parking sensors", "startup warning", "all trims"):
+        for step in ("AA touch", "list delay", "camera text", "parking sensors", "startup warning", "hidden menu sources", "all trims"):
             r = car.run("")
             check(r.returncode == 0, f"plan removal: {step} ({r.returncode})")
         check(car.digest() == stock_digest, "plan removals end in a byte-exact stock tree")
@@ -1364,6 +1448,28 @@ def main():
         plan.write_text("aa_touch=install\n")
         r = car.run("remove")
         check(r.returncode != 0 and car.digest() == stock_digest, "an explicit action still wins over the plan")
+
+        # --- a plan with a trim change and the menu item is one step, one restart
+        car = fresh(base, "plan-menu")
+        stock_digest = car.digest()
+        car.run("trim_on")      # DVD/TV, SiriusXM, Pandora, Stitcher already stopped
+        (car.stick / "miatoff-plan.txt").write_text("trim_aha=install\nmenu=install\n")
+        r = car.run("")
+        check(r.returncode == 0 and want(0, 31) and car.read(SYSAPP) == sysb(0, "v"),
+              f"plan: one more trim group and the menu item in one step ({r.returncode})")
+        done = car.digest()
+        r = car.run("")
+        check(r.returncode == 0 and car.digest() == done, "plan: then nothing is left to do")
+        car = fresh(base, "plan-menu-alone")
+        car.run("trim_stitcher_on")
+        (car.stick / "miatoff-plan.txt").write_text("menu=install\n")
+        r = car.run("")
+        check(r.returncode == 0 and car.read(SYSAPP) == sysb(0, "8"), f"plan: the menu item alone, trims already on ({r.returncode})")
+        (car.stick / "miatoff-plan.txt").write_text("menu=remove\ntrim_stitcher=remove\n")
+        r = car.run("")
+        check(r.returncode == 0 and car.read(SYSAPP) == SYS_STOCK_BYTES, f"plan: menu item removed first ({r.returncode})")
+        r = car.run("")
+        check(r.returncode == 0 and car.digest() == stock_digest, "plan: and then the trim, byte-exact stock")
 
         # --- a plan step that cannot run says why instead of "complete"
         car = fresh(base, "plan-blocked")

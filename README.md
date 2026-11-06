@@ -18,6 +18,7 @@ refuses to touch anything it does not recognise.
 | **Touch while driving** | The touchscreen keeps working in the Mazda menus while the car moves (uses TouchTune). |
 | **Touch in Android Auto** | Tap, swipe and drag in Android Auto (uses the oem-aa-mod touch shim). |
 | **Boot trim** | Stops things you don't use from starting at boot, each on its own: DVD/TV, SiriusXM, Pandora, Stitcher, Aha. |
+| **Hide trimmed items in the menu** | Also hides the sources you stopped at boot in the Entertainment menu (one item for all; untested by us). |
 | **Startup warning** | Skips the warning screen at startup. |
 | **Shorter list delay** | Lists scroll sooner and faster when you hold the Commander tilted. |
 | **Camera safety text** | Blanks the safety text over the reversing camera picture (untested by us). |

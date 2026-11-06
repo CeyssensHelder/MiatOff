@@ -213,6 +213,77 @@ GAP2_STOCK=2ec71fc955d0107a6e90d1ab4e6f00c9438b56d3e621ef018d57c8ef07bfae7f     
 GAP2_PATCHED=449c4bfccc8a32b88639abd499aa5ed8e83cbf551b0a2d54c65dfebdb896430e   # stage_gap2.sh, starts the collector
 SYS_STOCK=23106b04bd6bad514dd879b217a34a0f0289d58f86a0ae022488be6a022ca8e1      # systemApp.js (docs/05)
 SYS_PATCHED=65bb9d50020f83ab3e3cf3c1390e4b83ee1882bfb8b7aa405f966c05c35ada53    # systemApp.js, no disclaimer
+# systemApp.js holds two independent edits: no disclaimer (first char 0/1) and the hidden
+# Entertainment sources of the boot-trim groups (second char, the menu code: 0 = off, w = on with
+# nothing hidden yet, else the trim char of the groups hidden; see TRIM_DIGITS). SYS_TABLE has all
+# 66 known files: "<disc 0|1><menu code> <sha256>"; 00 is SYS_STOCK and 10 is SYS_PATCHED.
+# Regenerate with tests/print_sys_table.py.
+SYS_TABLE='00 23106b04bd6bad514dd879b217a34a0f0289d58f86a0ae022488be6a022ca8e1
+0w b32dc1eb157f4a6ff6d6044c30e795d3b9b06e3ac3dab1f197d01e65af7bcf00
+01 402e2eb8c55ed777690ee5720999cca7558c6de1c81abf5bdb68f19c3f767c92
+02 cef7c71f874640a351fc9d38a1004ccf3e2abafc2475226e1d4b8a7bd04e3a09
+03 933b75d51aede088c69dbe3dba20798d98c57d37e79016a19499d6ad4f3b093c
+04 7f53bfdcf4ad302e435c4029677ac6ac1251bbac5ca544f152b03b009138d23d
+05 5fa790ea452e032527bb70c90e00a96fa9b3ca6900b6dd18b2bfff3f85170dee
+06 ba0046daca87187aa20078a4d358d344bac42dfec3ed41b86a9aa4d480a27ffd
+07 cb67a420b6bc1395169344a96567b619d2a4c14432069b5acaa2b8b87635dd6e
+08 63ed747d54ea39fd9e4f501b2a5624ef56dcde0a52a7fb00c96aac3ed582e9ef
+09 80eccaccb1cf4688026d1e350f40261e7023c908fe57160286f6ce1774ee4a6d
+0a b4a555ecc729170c15ae828b2d548146c2c7e16fb1bf0eb051d1df111f798645
+0b 27568ffb7b8cbec061ea65ac9e1b9059c9c217d99cfe0feb846378fa47dff8ba
+0c 21f4676764e412dd6a1ab200578812dd7b718a5cc0bf814a71ac7a483914e865
+0d 79855bee542de2359288d9772d9b0a85000856d5162507e70e0ec2be991cd972
+0e c51334102efdd0ee87ab00f91967c7714824099bbc7f311c263b22e78a2db9e4
+0f 7c1b85724cb02a47c66bba312ffdf846b5e1ebf3910e3481cd126b0e2b6a9748
+0g ec2c13ab42a0b7d5967a1785f6ae5cbf13607bd547f227aa41855021bcb659f8
+0h 0614be47888b5908cc99325b82f99e68da9d057dd27384efe1cc8fc9fbd54b55
+0i 5b80aba746459c98a7ad06c1f2b434843f8520660f3076f5e2ca363b26c665df
+0j 604ba2d57e016af30e212b4d9e45149d9347dd89eb6b38598370bec6174e5346
+0k b8273c19e61beb094740bc22a32d9081cdeb872148fb25f93e6129cd5cb1a666
+0l 3f4fb4e5a99d44ec5b8904260d787a93a2402d03081c71f0fd927bab24f5e0b4
+0m 0ba6ce55a271e5a099cc1a93a7423f3c150023e831886a8da2798c0e69d66a84
+0n b67ab5fae91fe73b03d925117e1ca1a4b7af101fb2d3b81d31c4026648e31b2a
+0o 540bd6435b8f29bb246edae454088968f700ce67f8a253fba1026ad6426b383b
+0p 5574234f809958aa99fac0a1cf61802ff234c13f51468b302304eeb1895374bd
+0q 0d7f2fc42486d4b6c43bf9a569938f47025cf40c30e74baf63c9f79361108329
+0r b09dcdfc0296fd7e5859c66bbc2db9e95fc4b32e4e0c680132479709e7174bef
+0s 41fc68095ef54809264489735f93b288af071980707383b983dacc641143786a
+0t b078667e39d9e65b0ca583c6696f4fa09408a24c20742a844ec7b3c52509830f
+0u 10ea4aa0d3ae4a89eb0aac8e5a77c8bd5d0d22532b1ca1aaebf68161b309af5e
+0v 8eae248dc152e67b885e47273c19b1e157d958c22daa48fe22cd173c7f21c218
+10 65bb9d50020f83ab3e3cf3c1390e4b83ee1882bfb8b7aa405f966c05c35ada53
+1w bc2801c63b2f567b5a0a7e505e8125417203b6eceb95188022e51ac32d2dde6d
+11 28b80e6c0a85a669f4fc36aa56311f97751e5c6801fc3fb8df3ab6fa43f1289c
+12 aa126a1a2f2a5d89139fcf0e4bcb13d52f9d2741ec66f0701700062d045a71e8
+13 6954e85321d9e1c04afa64bb81d1936214fa0f935655938328115bd3f58b7d42
+14 77815fee3fdc3b1c3ddba807046c0549cee5fc86e2bab79d1a3e9e511395270a
+15 8cea33f44af31b45028e50d74c4b55cb884a33407a80cdab098120662caad73d
+16 8d9b6c761d58793ef7e68fea89a2429ea9f6a9cc3bef75509e4ac49ee05bffd2
+17 5028d419df9fd588df283f5dd1a47018789b50bf634d46ed8de1c954a98d03d0
+18 b28785c8cda8b7a4b13c1106f08fed0f68a297f0e7b777738ac4467f59d7f5c9
+19 a001f7dbc5ddab3eb46c3b0fa043329ceee3258a2f09ed642d07116c809eda64
+1a e9d186867335f797f502e10607fd75a2b9caf3d1a2b60ea717bf7de4dbf8454a
+1b 4b601524b75f5fa3d4090de0ed5f3564bcafddb66a40cd7acfaff089635cd3d4
+1c 30c2858b7372d653c043807c2dba5cd95e00c0ea07d3f5823fbf5fe6b19ef154
+1d 72f4db10357603b65c34a678fb4028febdc1bf8e2e32499e655086ddcc55acef
+1e f75e20380cd1e3ca527dd08426c999efe30c63d9ec7eea71758c2a015f091127
+1f fb2dbd2d2e7e66d6d3a7e155f5532175c875ddee339497ae814de57901537c26
+1g 0e581d499b069946bed2bf75e8e806836602b026b25b8153ae5fb83ec96ed7da
+1h 7cc3ce24ae4bd9f0a88fc32ac3788ac51b059adc0437b9077022da5f6aec3455
+1i 9a7d39d972a9f534babaf5c7e681fdec42740915432b7a1db2fd1bd0e388f52e
+1j 151f9d6621bc2e52bb7003c36207bb1c64581997d5edc9203cdc3c7cd7758300
+1k e543f37b0b105f40f2f90d4087e7ad868a2d613abf9d584e2af259a295922652
+1l 11b9eeedeaa7a1d92dea8afe4fa466b7bfbba047b285c7fbffbf6ef1d3bb9f09
+1m e7c0abb00b2eb22b0f318f9a5ee73626831703785c15686abe34c289f420ca82
+1n 82d032b123304cf3bee760d214892e38a02f1757381a887d51d9eeab8de44947
+1o 87b7b8a7f7884798de09d0e2fe6e629adaf81ec0dd5ea100f95e6bfd6686394c
+1p 0bc6cff14180149bfe646634578cf7a78de81f2987d114661c045e18cf702c69
+1q b52b1fedf5d5ebed0ba1318bc37ac0fb7690974c2f1cfd8e6b4a2bbaca6d484c
+1r 8dfe2bbe9a644fd64d0f0686b41e8d328c70f8b6e78dc0e40bc464fedeb334c5
+1s 26e1679a371cc5b757f3cb2980a34aab56e5729c5c196e2595d5633faae6d695
+1t 12374fb5c4d8e8e374bd725b55b63ae48e7d9981ee87d6e68bf704ac6ca4b185
+1u f88ff2c6dccd0b8a20f9e4166b7459038a08cbd04435c0fcc48910f7cd3a4219
+1v 425fbf11a4bafb84b15abc17297071204132c26196620872fee777985c7bd988'
 LIST_STOCK=52195d55c6615b9d61e9b25f48f90382e8ebe671edb154daa08d8915eca6f96f     # List2Ctrl.js (dump 1.4.0)
 LIST_PATCHED=5a41a407f217a662d470611ec5ffe85a14a0ec2e5ace30e3329ae37b60d4e5bd   # List2Ctrl.js, shorter delay
 # Camera text: every SafetyText image of the unit, its stock sha256 and the sha256
@@ -365,6 +436,13 @@ systemApp.prototype._noMoreDisclaimer = function()
 };
 EOF
 )
+# Hidden Entertainment sources (builder item "menu", opt-in): _buildEntertainmentDataList() of
+# systemApp.js keeps the items whose isVisible flag is set. The native MMUI sets that flag too
+# (StatusMenuVisible), so the one filter line is replaced by one that also drops the sources of
+# every trimmed group (menu_line). Independent of the Disclaimer edit above; no other line is touched.
+MENU_STOCK_LINE='        if (this._masterEntertainmentDataList.items[i].appData.isVisible)'
+MENU_LINE_A='        if (this._masterEntertainmentDataList.items[i].appData.isVisible && ['
+MENU_LINE_B='].indexOf(this._masterEntertainmentDataList.items[i].appData.appName) < 0) // MiatOff: hidden with the boot trim'
 # Parking sensors: the MZD-AIO semi-transparent images that fit this firmware
 # (same size as the stock image, and not identical to it), on the stick as
 # images/sensors/<folder>/<name>. MZD-AIO's HorizontalSensors arcs are smaller than
@@ -647,11 +725,41 @@ trim_list() {       # trim_list <char>: the groups that are on
     echo "${out:- none}"
 }
 
+# sys_variant <file>: the two-char code of systemApp.js (<disc 0|1><menu: trim char>, see
+# SYS_TABLE); empty when the file is none of the 64 known files.
+sys_variant() {
+    local d
+    is_file "$1" || return 0
+    d=$(sha256_of "$1") || return 0
+    printf '%s\n' "$SYS_TABLE" | awk -v d="$d" '$2 == d { print $1; exit }'
+}
+
+# sys_part_state <disc|menu> <file>: disc: stock | patched | unknown; menu: the trim char the
+# Entertainment menu follows (0 = nothing hidden) or unknown. Content and attributes.
+sys_part_state() {
+    local v
+    v=$(sys_variant "$2")
+    [ -n "$v" ] || { echo unknown; return 0; }
+    attrs_ok "$2" || { echo unknown; return 0; }
+    if [ "$1" = menu ]; then
+        echo "${v#?}"
+    elif [ "${v%?}" = 1 ]; then
+        echo patched
+    else
+        echo stock
+    fi
+}
+
 # file_state <key> <file>: stock | patched | unknown (content and attributes).
-# For sm.conf this is the AA-touch part only; the boot trim is read apart.
+# For sm.conf this is the AA-touch part only; the boot trim is read apart. For
+# systemApp.js (sys) it is the Disclaimer edit only; see sys_part_state.
 file_state() {
     local d s
     is_file "$2" || { echo unknown; return 0; }
+    if [ "$1" = sys ]; then
+        sys_part_state disc "$2"
+        return 0
+    fi
     if [ "$1" = sm ]; then
         case "$(sm_variant "$2")" in
             0?) s=stock ;;
@@ -795,6 +903,48 @@ disc_transform() {  # disc_transform <src> <dst> <install|remove>
         END { exit (blocks == 1 && anchors == 1 && !skip) ? 0 : 1 }' "$1" > "$2"
 }
 
+# menu_line <menu code>: the filter line for the groups of that code: 0 = the stock line, w = an
+# empty list (on, nothing hidden), else the trim char. Mask bits: 1 DVD/TV, 2 SiriusXM, 4 Pandora,
+# 8 Stitcher, 16 Aha. No logs: used in $(...).
+menu_line() {
+    local m names=
+    [ "$1" != 0 ] || { printf '%s\n' "$MENU_STOCK_LINE"; return 0; }
+    if [ "$1" = w ]; then m=0; else m=$(trim_mask "$1"); fi
+    [ $(( m / 1 % 2 )) = 1 ] && names="$names,\"dvd\",\"tv\""
+    [ $(( m / 2 % 2 )) = 1 ] && names="$names,\"satradio\",\"xmaudio\""
+    [ $(( m / 4 % 2 )) = 1 ] && names="$names,\"pandora\""
+    [ $(( m / 8 % 2 )) = 1 ] && names="$names,\"stitcher\""
+    [ $(( m / 16 % 2 )) = 1 ] && names="$names,\"aharadio\""
+    printf '%s%s%s\n' "$MENU_LINE_A" "${names#,}" "$MENU_LINE_B"
+    return 0
+}
+
+menu_transform() {  # menu_transform <src> <dst> <from menu code> <to menu code>: the one filter line, nothing else
+    local old new
+    old=$(menu_line "$3"); new=$(menu_line "$4")
+    awk -v old="$old" -v new="$new" '
+        $0 == old { print new; n++; next }
+        { print }
+        END { exit n == 1 ? 0 : 1 }' "$1" > "$2"
+}
+
+# sys_build <src> <from> <dst> <to>: turn systemApp.js code <from> into <to> (two chars, see
+# sys_variant): the Disclaimer edit and the menu line are changed independently. Intermediate
+# steps stay in /tmp (RAM).
+sys_build() {
+    local a="$MO_GUARD/sys.a" b="$MO_GUARD/sys.b" fd="${2%?}" fm="${2#?}" td="${4%?}" tm="${4#?}" mode
+    cp "$1" "$a" || return 1
+    if [ "$fd" != "$td" ]; then
+        if [ "$td" = 1 ]; then mode=install; else mode=remove; fi
+        disc_transform "$a" "$b" "$mode" && mv -f "$b" "$a" || return 1
+    fi
+    if [ "$fm" != "$tm" ]; then
+        menu_transform "$a" "$b" "$fm" "$tm" && mv -f "$b" "$a" || return 1
+    fi
+    cp "$a" "$3" || return 1
+    rm -f "$a" "$b"
+}
+
 delay_transform() { # delay_transform <src> <dst> <install|remove>: the four timings, nothing else
     awk -v mode="$3" -v lines="$DELAY_LINES" '
         BEGIN {
@@ -857,6 +1007,8 @@ make_stock() {
         cp "$bak" "$dst" || return 1
     elif [ "$key" = sm ] && [ -n "$(sm_variant "$live")" ]; then
         sm_build "$live" "$(sm_variant "$live")" "$dst" 00 || return 1
+    elif [ "$key" = sys ] && [ -n "$(sys_variant "$live")" ]; then
+        sys_build "$live" "$(sys_variant "$live")" "$dst" 00 || return 1
     elif content_is "$key" "$live" stock; then
         cp "$live" "$dst" || return 1
     elif content_is "$key" "$live" patched; then
@@ -890,10 +1042,40 @@ publish_sm() {
     log "published ${SM##*/} variant $want (AA touch $1, boot trim $2:$(trim_list "$2")) ($(sha256_of "$SM"))"
 }
 
+# publish_sys <code>: systemApp.js as that code (see sys_variant). Staged beside the target,
+# verified by hash, renamed atomically.
+publish_sys() {
+    local want="$1" new="${SYSAPP%/*}/.${SYSAPP##*/}.miatoff.new" tmp="${SYSAPP%/*}/.${SYSAPP##*/}.miatoff.tmp"
+    if [ "$(sys_variant "$SYSAPP")" = "$want" ] && attrs_ok "$SYSAPP"; then
+        log "${SYSAPP#"$R"} already variant $want"
+        return 0
+    fi
+    fault stage-sys || return 1
+    make_stock sys "$tmp" || return 1
+    sys_build "$tmp" 00 "$new" "$want" || { log "ERROR: cannot build ${SYSAPP##*/} variant $want"; return 1; }
+    rm -f "$tmp"
+    chmod "$CFG_MODE" "$new" || return 1
+    chown "$CFG_OWNER" "$new" 2>/dev/null || [ "$CHECK_ATTRS" = 0 ] || return 1
+    [ "$(sys_variant "$new")" = "$want" ] && attrs_ok "$new" || { log "ERROR: staged ${SYSAPP##*/} failed verification"; return 1; }
+    fsync_path "$new" || return 1
+    fault rename-sys || return 1
+    mv -f "$new" "$SYSAPP" || return 1
+    fsync_path "${SYSAPP%/*}" || return 1
+    [ "$(sys_variant "$SYSAPP")" = "$want" ] && attrs_ok "$SYSAPP" || { log "ERROR: ${SYSAPP##*/} failed read-back"; return 1; }
+    log "published ${SYSAPP##*/} variant $want (disclaimer ${want%?}, menu follows trim ${want#?}) ($(sha256_of "$SYSAPP"))"
+}
+
 # publish_cfg <key> <stock|patched>: stage beside the target, verify, rename.
-# For sm.conf only the AA-touch part changes; the boot trim stays as it is.
+# For sm.conf only the AA-touch part changes; the boot trim stays as it is. For
+# systemApp.js (sys) only the Disclaimer edit changes; the menu line stays as it is.
 publish_cfg() {
     local key="$1" want="$2" live new tmp v
+    if [ "$key" = sys ]; then
+        v=$(sys_variant "$SYSAPP")
+        [ -n "$v" ] || { log "ERROR: ${SYSAPP##*/} is not a known variant"; return 1; }
+        if [ "$want" = patched ]; then publish_sys "1${v#?}"; else publish_sys "0${v#?}"; fi
+        return
+    fi
     if [ "$key" = sm ]; then
         v=$(sm_variant "$SM")
         [ -n "$v" ] || { log "ERROR: ${SM##*/} is not a known variant"; return 1; }
@@ -1106,14 +1288,16 @@ remove_state_dir() {
 
 # ---------------------------------------------------------------- state
 
-S_SM= S_XML= S_UCP= S_SHIM= S_CONF= S_BACKUP= S_TT= S_TRIM= S_DISC= S_DELAY= S_SAFETY= S_SENSORS= S_METERS= FOREIGN= LEFTOVERS= STATE=
+S_SM= S_XML= S_UCP= S_SHIM= S_CONF= S_BACKUP= S_TT= S_TRIM= S_DISC= S_MENU= S_DELAY= S_SAFETY= S_SENSORS= S_METERS= FOREIGN= LEFTOVERS= STATE=
 # refresh_state: sets the S_* component states and STATE (AA touch), which is
 # one of stock | installed | disabled | partial | unknown, S_TRIM (boot trim char, see SM_TABLE;
-# unknown), S_DISC (startup warning) and S_DELAY (list delay): stock | patched |
+# unknown), S_DISC (startup warning), S_MENU (the menu code: 0 = Entertainment sources not hidden, w = on with
+# nothing hidden, else the trim char of the groups hidden; unknown) and S_DELAY (list delay): stock | patched |
 # unknown, S_SAFETY (camera text) and S_SENSORS (parking sensors): stock | patched | partial | unknown. Runs in the main shell.
 refresh_state() {
     S_SM=$(file_state sm "$SM")
     S_DISC=$(file_state sys "$SYSAPP")
+    S_MENU=$(sys_part_state menu "$SYSAPP")
     S_DELAY=$(file_state list "$LIST2")
     S_SAFETY=$(image_set_state safety)
     S_SENSORS=$(image_set_state sensors)
@@ -1156,7 +1340,7 @@ aa_files_stock() {
 
 # A feature that is on, half done or unknown: its backup in STATE_DIR must stay.
 other_features_on() {
-    [ "$S_TRIM" != 0 ] || [ "$S_DISC" != stock ] || [ "$S_METERS" != off ] || [ "$S_DELAY" != stock ] || \
+    [ "$S_TRIM" != 0 ] || [ "$S_DISC" != stock ] || [ "$S_MENU" != 0 ] || [ "$S_METERS" != off ] || [ "$S_DELAY" != stock ] || \
         [ "$S_SAFETY" != stock ] || [ "$S_SENSORS" != stock ]
 }
 
@@ -1180,6 +1364,7 @@ describe_state() {
     printf 'TouchTune:    %s (Common.js)\n' "$S_TT"
     printf 'boot trim:    %s (groups on:%s)\n' "$(trim_name "$S_TRIM")" "$( [ "$S_TRIM" = unknown ] && echo ' ?' || trim_list "$S_TRIM")"
     printf 'disclaimer:   %s (stock = startup warning shown, patched = skipped)\n' "$S_DISC"
+    printf 'menu hides:   %s (0 = off, w = on and nothing trimmed, else the groups hidden in the Entertainment menu:%s)\n' "$S_MENU" "$( case "$S_MENU" in unknown) echo ' ?' ;; 0|w) echo ' none' ;; *) trim_list "$S_MENU" ;; esac)"
     printf 'list delay:   %s (patched = shorter)\n' "$S_DELAY"
     printf 'camera text:  %s (patched = blank safety text)\n' "$S_SAFETY"
     printf 'sensors:      %s (patched = semi-transparent parking sensors)\n' "$S_SENSORS"
@@ -1334,7 +1519,7 @@ do_trim() {         # do_trim <boot trim char: see SM_TABLE>
         refresh_state
     fi
     case "$S_TRIM:$STATE" in
-        "$wanted:stock"|"$wanted:installed"|"$wanted:disabled") return 0 ;;
+        "$wanted:stock"|"$wanted:installed"|"$wanted:disabled") do_menu_follow; return ;;
     esac
     log "ERROR: after boot trim: trim $S_TRIM (wanted $wanted), AA touch $STATE"
     return 1
@@ -1530,6 +1715,8 @@ revert_hmi() {
     refresh_state
     [ "$S_DISC" = patched ] && { do_disc stock || ok=1; }
     refresh_state
+    { [ "$S_MENU" != 0 ] && [ "$S_MENU" != unknown ]; } && { do_menu 0 || ok=1; }
+    refresh_state
     [ "$S_DELAY" = patched ] && { do_delay stock || ok=1; }
     return $ok
 }
@@ -1556,8 +1743,19 @@ ensure_file_backup() {
 
 ensure_sys_backup() { ensure_file_backup sys; }
 
+# hmi_file_patched <sys | list> <file>: any edit of the file is on (the stock backup must stay).
+hmi_file_patched() {
+    local v
+    if [ "$1" = sys ]; then
+        v=$(sys_variant "$2")
+        [ -n "$v" ] && [ "$v" != 00 ]
+    else
+        [ "$(file_state "$1" "$2")" = patched ]
+    fi
+}
+
 # do_hmi_file <sys | list> <patched | stock>: one HMI file, one atomic rename on
-# root; the stock copy stays in STATE_DIR while the patch is on.
+# root; the stock copy stays in STATE_DIR while any edit of the file is on.
 do_hmi_file() {
     local key="$1" live bak st
     live=$(cfg_path "$key")
@@ -1571,7 +1769,7 @@ do_hmi_file() {
         remove_rootfs_leftovers
         root_ro
         refresh_state
-        if [ "$(file_state "$key" "$live")" != patched ]; then
+        if ! hmi_file_patched "$key" "$live"; then
             rm -f "$bak" "$bak.new"
             if aa_files_stock && ! other_features_on; then remove_state_dir; fi
         fi
@@ -1579,7 +1777,7 @@ do_hmi_file() {
     fi
     root_ro || return 1
     refresh_state
-    if [ "$2" = stock ]; then
+    if [ "$2" = stock ] && ! hmi_file_patched "$key" "$live"; then
         rm -f "$bak" "$bak.new" || return 1
         if aa_files_stock && ! other_features_on; then
             remove_state_dir || return 1     # nothing of MiatOff is left on the unit
@@ -1601,6 +1799,59 @@ do_delay_off() { do_delay stock; }
 
 do_disc_off() { do_disc patched; }      # warning off = the patch on
 do_disc_on() { do_disc stock; }
+
+# Hidden Entertainment sources (opt-in, plan item "menu"): the sources of the boot-trim groups that
+# are on are dropped from the Entertainment list, one line of systemApp.js. While it is on, every
+# boot trim step moves it along (do_menu_follow). An unknown systemApp.js only skips that; the trim
+# is not blocked.
+do_menu() {         # do_menu <menu code: 0 off, w on and nothing hidden, else the trim char hidden>
+    local live="$SYSAPP" bak="$SYS_BACKUP" v want
+    v=$(sys_variant "$live")
+    [ -n "$v" ] || { log "ERROR: ${live##*/} is not a known variant"; return 1; }
+    want="${v%?}$1"
+    if [ "$want" != 00 ]; then
+        ensure_file_backup sys || return 1
+    fi
+    root_rw || return 1
+    if ! publish_sys "$want"; then
+        remove_rootfs_leftovers
+        root_ro
+        refresh_state
+        if ! hmi_file_patched sys "$live"; then
+            rm -f "$bak" "$bak.new"
+            if aa_files_stock && ! other_features_on; then remove_state_dir; fi
+        fi
+        return 1
+    fi
+    root_ro || return 1
+    refresh_state
+    if [ "$want" = 00 ]; then
+        rm -f "$bak" "$bak.new" || return 1
+        if aa_files_stock && ! other_features_on; then
+            remove_state_dir || return 1     # nothing of MiatOff is left on the unit
+        fi
+        refresh_state
+    fi
+    [ "$S_MENU" = "$1" ] && return 0
+    log "ERROR: after the menu change: menu code $S_MENU (wanted $1)"
+    return 1
+}
+
+menu_target() {     # the menu code that matches the boot trim now
+    if [ "$S_TRIM" = 0 ]; then echo w; else echo "$S_TRIM"; fi
+}
+do_menu_on() { [ "$S_TRIM" != unknown ] || return 1; do_menu "$(menu_target)"; }
+do_menu_off() { do_menu 0; }
+
+do_menu_follow() {  # after a boot trim step: the menu moves with the trim, if the user turned it on
+    refresh_state
+    case "$S_MENU" in
+        0) return 0 ;;
+        unknown) log "systemApp.js is not a known version: the Entertainment menu is left as it is"; return 0 ;;
+    esac
+    [ "$S_MENU" != "$(menu_target)" ] || return 0
+    do_menu "$(menu_target)"
+}
 
 # ---------------------------------------------------------------- image sets
 # A set of PNGs replaced as one feature (camera text: SafetyText_*.png; parking
@@ -1869,7 +2120,7 @@ do_enable() {
 
 # ---------------------------------------------------------------- plan
 # miatoff-plan.txt holds the end state chosen in the PC builder, one key=value per
-# line: touchtune, aa_touch, meters, warning, delay, safety, sensors, trim_dvdtv, trim_sirius, trim_pandora,
+# line: touchtune, aa_touch, meters, warning, menu, delay, safety, sensors, trim_dvdtv, trim_sirius, trim_pandora,
 # trim_stitcher, trim_aha = install | remove | keep. Every run offers the next step that
 # differs from the unit's current state, so the plan is followed one confirmed
 # step (and one restart) at a time. An invalid plan is ignored.
@@ -1879,7 +2130,7 @@ plan_valid() {
     awk '
         /^[ \t\r]*(#|$)/ { next }
         { gsub(/[ \t\r]/, ""); split($0, kv, "="); k = kv[1]; v = kv[2]
-          if (k == "touchtune" || k == "aa_touch" || k == "meters" || k == "warning" || k == "delay" || k == "safety" || k == "sensors")
+          if (k == "touchtune" || k == "aa_touch" || k == "meters" || k == "warning" || k == "menu" || k == "delay" || k == "safety" || k == "sensors")
               ok = (v == "install" || v == "remove" || v == "keep")
           else if (k == "trim_dvdtv" || k == "trim_sirius" || k == "trim_pandora" || k == "trim_stitcher" || k == "trim_aha")
               ok = (v == "install" || v == "remove" || v == "keep")
@@ -1918,7 +2169,14 @@ plan_trim_diff() {  # plan_trim_diff <on|off>: labels of the groups the trim ste
     echo "${out#, }"
 }
 
-do_trim_plan() { do_trim "$(plan_target_trim)"; }
+# The trim step of the plan also hides the trimmed sources when the plan asks for the menu item
+# (menu=install), so the unit restarts once for both.
+do_trim_plan() {
+    do_trim "$(plan_target_trim)" || return 1
+    if [ "$(plan_get menu)" = install ] && [ "$S_MENU" = 0 ]; then
+        do_menu_on
+    fi
+}
 
 # plan_candidates <state>: the plan's steps in a safe order, removals first
 # (AA touch before TouchTune), then installs (TouchTune before AA touch).
@@ -1933,7 +2191,9 @@ plan_candidates() {
     [ "$tt" = remove ] && echo tt_remove
     [ "$me" = remove ] && echo meters_off
     [ "$wa" = remove ] && echo disc_on
+    [ "$(plan_get menu)" = remove ] && echo menu_off
     [ -n "$(plan_target_trim)" ] && [ "$(plan_target_trim)" != "$S_TRIM" ] && echo trim_plan
+    [ "$(plan_get menu)" = install ] && echo menu_on
     [ "$me" = install ] && echo meters_on
     [ "$wa" = install ] && echo disc_off
     [ "$(plan_get delay)" = install ] && echo delay_on
@@ -1988,6 +2248,8 @@ plan_text() {
         trim_aha_off) echo "let Aha start again" ;;
         disc_off) echo "skip the startup warning" ;;
         disc_on) echo "show the startup warning again" ;;
+        menu_on) echo "hide the trimmed sources in the Entertainment menu" ;;
+        menu_off) echo "show the trimmed sources in the Entertainment menu again" ;;
         delay_on) echo "shorter list delay" ;;
         delay_off) echo "stock list delay" ;;
         safety_on) echo "blank camera safety text" ;;
@@ -2016,6 +2278,9 @@ plan_blockers() {   # plan_blockers <state>: why a wanted step cannot run now, o
     if [ "$(plan_get warning)" != keep ] && [ "$S_DISC" != stock ] && [ "$S_DISC" != patched ]; then
         echo "systemApp.js is not a known version (startup warning)."
     fi
+    case "$(plan_get menu)" in install|remove)
+        [ "$S_MENU" != unknown ] || echo "systemApp.js is not a known version (Entertainment menu)." ;;
+    esac
     if [ "$(plan_get delay)" != keep ] && [ "$S_DELAY" = unknown ]; then
         echo "List2Ctrl.js is not a known version (list delay)."
     fi
@@ -2054,7 +2319,7 @@ EOF
 plan_button() {     # plan_button <action>: INSTALL for steps that add something, REMOVE for those that undo it
     case "$1" in
         trim_plan) [ -n "$(plan_trim_diff on)" ] && echo INSTALL || echo REMOVE ;;
-        remove|tt_remove|meters_off|disc_on|delay_off|safety_off|sensors_off|trim_off|trim_*_off) echo REMOVE ;;
+        remove|tt_remove|meters_off|disc_on|menu_off|delay_off|safety_off|sensors_off|trim_off|trim_*_off) echo REMOVE ;;
         *) echo INSTALL ;;
     esac
 }
@@ -2285,6 +2550,9 @@ action_allowed() {  # action_allowed <state> <action>
             [ "$S_TRIM" != unknown ] && [ -n "$(plan_target_trim)" ] && [ "$(plan_target_trim)" != "$S_TRIM" ]; return ;;
         stock:trim_*_on|installed:trim_*_on|disabled:trim_*_on) trim_group_allowed "$2" on; return ;;
         stock:trim_*_off|installed:trim_*_off|disabled:trim_*_off) trim_group_allowed "$2" off; return ;;
+        stock:menu_on|installed:menu_on|disabled:menu_on)
+            [ "$S_MENU" != unknown ] && [ "$S_TRIM" != unknown ] && [ "$S_MENU" != "$(menu_target)" ]; return ;;
+        stock:menu_off|installed:menu_off|disabled:menu_off) [ "$S_MENU" != 0 ] && [ "$S_MENU" != unknown ]; return ;;
         stock:disc_off|installed:disc_off|disabled:disc_off) [ "$S_DISC" = stock ]; return ;;
         stock:disc_on|installed:disc_on|disabled:disc_on) [ "$S_DISC" = patched ]; return ;;
         stock:delay_on|installed:delay_on|disabled:delay_on) [ "$S_DELAY" = stock ]; return ;;
@@ -2387,8 +2655,8 @@ report_state
 # Meters, the startup-warning patch and the list delay, then restart. Triggered by the file
 # MIATOFF-RESTORE on the stick, or by two failed dialogs while one is on.
 hmi_emergency() {
-    log "EMERGENCY ($1): reverting the HMI changes (Meters, startup warning, list delay)"
-    if [ "$S_METERS" = off ] && [ "$S_DISC" != patched ] && [ "$S_DELAY" != patched ]; then
+    log "EMERGENCY ($1): reverting the HMI changes (Meters, startup warning, hidden menu entries, list delay)"
+    if [ "$S_METERS" = off ] && [ "$S_DISC" != patched ] && [ "$S_MENU" = 0 ] && [ "$S_DELAY" != patched ]; then
         log "nothing to revert: Meters off, the startup warning and list delay stock; no restart"
         exit 0
     fi
@@ -2420,7 +2688,7 @@ NVRAM_LVDS=
 log "NVRAM lvds_speed_restriction=${NVRAM_LVDS:-absent (factory: enable)} (touch while driving needs TouchTune)"
 
 if ! ACTION=$(choose_action "$STATE"); then
-    if [ "$S_METERS" = off ] && [ "$S_DISC" != patched ] && [ "$S_DELAY" != patched ]; then
+    if [ "$S_METERS" = off ] && [ "$S_DISC" != patched ] && [ "$S_MENU" = 0 ] && [ "$S_DELAY" != patched ]; then
         log "ERROR: dialog failed; nothing done"
         exit 1
     fi
@@ -2491,6 +2759,8 @@ case "$ACTION" in
     trim_off) done_text="Boot trim restored to stock." ;;
     disc_off) done_text="The startup warning has been removed." ;;
     disc_on) done_text="The startup warning is on again." ;;
+    menu_on) done_text="The sources you turned off at boot\nare hidden in the Entertainment menu." ;;
+    menu_off) done_text="The Entertainment menu shows all sources again." ;;
     delay_on) done_text="The list delay is shorter." ;;
     delay_off) done_text="The list delay is back to stock." ;;
     safety_on) done_text="The camera safety text is blank." ;;

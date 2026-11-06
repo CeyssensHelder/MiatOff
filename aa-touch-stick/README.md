@@ -85,6 +85,17 @@ each of those services goes from `autorun="yes"` to `autorun="no"`; nothing else
   **RESTORE**.
 - **Mazda voice** (`natp`) stays: the read-aloud service depends on it, and behind that the phone book, messages and
   calling via Bluetooth.
+- **Hide them in the Entertainment menu (builder item, opt-in).** One separate item in the PC builder, plan key `menu`
+  (`install` / `remove` / `keep`), hides the sources of every trimmed group in the Entertainment menu: DVD/TV hides
+  `dvd` and `tv`, SiriusXM `satradio` and `xmaudio`, Pandora `pandora`, Stitcher `stitcher`, Aha `aharadio`. FM, AM,
+  DAB, Bluetooth, USB, AUX, CarPlay and Android Auto are never touched. It is a separate step (one restart) with the
+  actions `menu_on` / `menu_off`; while it is on, every later trim step moves it along in the same run, so the menu
+  always matches the trim. With the trim off and the item on, nothing is hidden yet.
+  It is one line of `systemApp.js`, `_buildEntertainmentDataList()`: the list keeps the sources whose `isVisible` flag
+  is set, and now also drops those names. The flag alone would not hold, because the native MMUI sets it too
+  (`StatusMenuVisible`). The same file holds the startup-warning edit; the two are independent and `SYS_TABLE` pins all
+  66 combinations (`tests/print_sys_table.py` makes it). An unknown `systemApp.js` does not block the trim, the menu is
+  then left alone. `MIATOFF-RESTORE` shows the entries again. **Not tested in a car yet.**
 
 ## Startup warning (menu EXTRA → WARNING)
 Removes the warning ("disclaimer") at startup, like MZD-AIO's "No More Disclaimer". Details and how the
@@ -189,7 +200,7 @@ the stick offers **REMOVE TT** (TouchTune's own REMOVE).
 
 ## Plan from the PC builder (`miatoff-plan.txt`)
 `python miatoff_gui.py` writes your choices to the stick as `miatoff-plan.txt`, one `key=value` per line:
-`touchtune`, `aa_touch`, `meters`, `warning`, `trim_dvdtv`, `trim_sirius`, `trim_pandora`, `trim_stitcher` and
+`touchtune`, `aa_touch`, `meters`, `warning`, `menu`, `trim_dvdtv`, `trim_sirius`, `trim_pandora`, `trim_stitcher` and
 `trim_aha` take `install`, `remove` or `keep`. In the car, the dialog first offers the next step that differs from the unit's current state
 (**INSTALL** or **REMOVE**, and **CANCEL**). Removals come first (AA touch before TouchTune), then installs (TouchTune
 before AA touch). All boot trim choices of the plan are one step (one `sm.conf`, one restart), so a stock unit with

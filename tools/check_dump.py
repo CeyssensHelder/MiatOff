@@ -40,6 +40,7 @@ COMPONENTS = [
     ("trim_stitcher", "Stop Stitcher at boot"),
     ("trim_aha", "Stop Aha at boot"),
     ("warning", "Startup warning"),
+    ("menu", "Hide trimmed sources in the Entertainment menu"),
     ("delay", "Shorter list delay"),
     ("safety", "Camera safety text"),
     ("sensors", "Parking sensor graphics"),
@@ -57,7 +58,7 @@ def pinned_constants(script: Path = SCRIPT) -> dict:
     """NAME -> 64-hex sha256 for every pinned constant, plus FW_WANTED."""
     text = script.read_text(encoding="utf-8")
     found = {m.group(1): m.group(2) for m in re.finditer(r"^([A-Z][A-Z0-9_]*)=([0-9a-f]{64})\b", text, re.M)}
-    for name in ("SM_TABLE", "SM_WCP_TABLE", "SAFETY_TABLE", "SENSOR_TABLE"):
+    for name in ("SM_TABLE", "SM_WCP_TABLE", "SYS_TABLE", "SAFETY_TABLE", "SENSOR_TABLE"):
         table = re.search(rf"^{name}='(.*?)'$", text, re.M | re.S)
         if table:
             found[name] = table.group(1)
@@ -246,10 +247,27 @@ def check(dump_path: Path, pinned: dict = None) -> dict:
                     comps[key] = {"state": BLOCKED, "detail": f"{path} has unexpected permissions ({attrs})"}
                     break
 
-    warn = state_of(dump.sha("/jci/gui/apps/system/js/systemApp.js"), pin.get("SYS_STOCK"), pin.get("SYS_PATCHED"))
+    # systemApp.js has 66 known files: the warning edit (first char 0/1) and the hidden Entertainment sources
+    # (second char, the menu code: 0 = off, w = on and nothing hidden, else the trim char of the groups hidden).
+    sys_digest = dump.sha("/jci/gui/apps/system/js/systemApp.js")
+    sys_codes = {}
+    for line in pin.get("SYS_TABLE", "").splitlines():
+        if len(line.split()) == 2:
+            sys_codes[line.split()[1]] = line.split()[0]
+    if sys_digest is None:
+        warn = menu = UNCHECKED
+    elif sys_digest in sys_codes:
+        warn = "patched" if sys_codes[sys_digest].startswith("1") else "stock"
+        menu = "stock" if sys_codes[sys_digest].endswith("0") else "patched"
+    else:
+        warn = menu = "unknown"
     comps["warning"] = result({"stock": AVAILABLE, "patched": INSTALLED, "unknown": BLOCKED}.get(warn, UNCHECKED),
                               {"stock": "systemApp.js is stock", "patched": "warning is skipped",
                                "unknown": "systemApp.js is an unknown version"}.get(warn, "needs a FULL dump"))
+
+    comps["menu"] = result({"stock": AVAILABLE, "patched": INSTALLED, "unknown": BLOCKED}.get(menu, UNCHECKED),
+                           {"stock": "all sources are listed", "patched": "the sources you stop at boot are hidden",
+                            "unknown": "systemApp.js is an unknown version"}.get(menu, "needs a FULL dump"))
 
     delay = state_of(dump.sha("/jci/gui/common/controls/List2/js/List2Ctrl.js"), pin.get("LIST_STOCK"), pin.get("LIST_PATCHED"))
     comps["delay"] = result({"stock": AVAILABLE, "patched": INSTALLED, "unknown": BLOCKED}.get(delay, UNCHECKED),

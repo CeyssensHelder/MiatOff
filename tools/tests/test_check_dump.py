@@ -31,7 +31,7 @@ def sha(data: bytes) -> str:
 # Fabricated "files" with known content; the pinned table is built from them.
 FILES = {
     "common_stock": b"common stock", "common_patched": b"common patched",
-    "sys_stock": b"sys stock", "sys_patched": b"sys patched",
+    "sys_stock": b"sys stock", "sys_patched": b"sys patched", "sys_menu": b"sys menu", "sys_patched_menu": b"sys patched menu",
     "xml_stock": b"xml stock", "xml_patched": b"xml patched",
     "ucp_stock": b"ucp stock", "ucp_patched": b"ucp patched",
     "opera_stock": b"opera stock", "opera_patched": b"opera patched",
@@ -64,6 +64,9 @@ PIN["SM_TABLE"] = "\n".join(f"{code} {sha(FILES[key])}" for code, key in (
 PIN["SM_WCP_TABLE"] = "\n".join(f"{code} {sha(FILES[key])}" for code, key in (
     ("00", "wcp_stock"), ("1f", "wcp_aa_trim")))
 
+# systemApp.js: <warning 0|1><menu code>; 08 = Stitcher hidden in the Entertainment menu
+PIN["SYS_TABLE"] = "\n".join(f"{code} {sha(FILES[key])}" for code, key in (
+    ("00", "sys_stock"), ("10", "sys_patched"), ("08", "sys_menu"), ("18", "sys_patched_menu")))
 PIN["SAFETY_TABLE"] = "\n".join(f"{name} {sha(data)} {sha(BLANK)}" for name, data in SAFETY.items())
 PIN["SENSOR_TABLE"] = "\n".join(f"{name} {sha(data)} {sha(SENSOR_NEW[name])}" for name, data in SENSORS.items())
 
@@ -89,6 +92,8 @@ def make_dump(base: Path, name="001-full-up10s", mode="full", state="stock", sm=
     rows = ["path\tsize\tmode uid gid\tcksum\tmd5\tsha256"]
     for unit_path, key in PATHS.items():
         content = FILES[sm] if key == "sm" else FILES[wcp] if key == "wcp" else FILES[f"{key}_{state}"]
+        if key == "sys" and state == "patched":
+            content = FILES["sys_patched_menu"]      # everything installed: warning skipped and sources hidden
         content = override.get(key, content)
         target = d / "static/files" / unit_path.lstrip("/")
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -143,6 +148,15 @@ def main():
         v = verdict(make_dump(base / "e", **{"sys": b"something else"}))
         check(states(v)["warning"] == "blocked" and v["overall"] == "supported",
               "an unknown systemApp.js blocks only the warning")
+
+        # the menu edit follows the trim; it does not change the warning component
+        for name, warn, menu in (("sys_menu", "available", "installed"), ("sys_patched_menu", "installed", "installed"),
+                                 ("sys_stock", "available", "available"), ("sys_patched", "installed", "available")):
+            v = verdict(make_dump(base / ("sys-" + name), **{"sys": FILES[name]}))
+            check(states(v)["warning"] == warn and states(v)["menu"] == menu,
+                  f"{name}: warning {warn}, hidden sources {menu}")
+        v = verdict(make_dump(base / "sys-unknown2", **{"sys": b"something else"}))
+        check(states(v)["menu"] == "blocked", "an unknown systemApp.js blocks the menu item too")
 
         v = verdict(make_dump(base / "f", **{"/usr/bin/aap_service": b"other build"}))
         check(v["overall"] == "not supported" and all(s in ("blocked", "installed") for s in states(v).values()),
@@ -222,8 +236,11 @@ def main():
         real = ROOT / "dumps" / "eu-74.00.324"
         if (real / "001-full-up174s").is_dir():
             v = cd.check(real / "001-full-up174s")
-            check(v["overall"] == "supported" and set(states(v).values()) == {"available"},
-                  "real dump 001 (stock unit): everything available")
+            # Dump 001 is from dump stick 1.0.0, which did not hash the camera and sensor images (1.4.0 does).
+            old_dump = {k: s for k, s in states(v).items() if k not in ("safety", "sensors")}
+            check(v["overall"] == "incomplete" and set(old_dump.values()) == {"available"}
+                  and states(v)["safety"] == states(v)["sensors"] == "not checked",
+                  "real dump 001 (stock unit, old 1.0.0 dump): everything available except the images, which need a newer dump")
             a = cd.format_report(cd.check(real / "003-full-up88s-2026-10-27"))
             b = cd.format_report(cd.check(real / "003-full-up88s-2026-10-27"))
             check(a == b and "INSTALLED" in a, "real dump 003: deterministic, shows the installed parts")
