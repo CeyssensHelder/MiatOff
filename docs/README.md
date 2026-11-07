@@ -22,6 +22,7 @@ public source code, from a commercial vendor, or an unconfirmed forum report.
 | 12 | [12-handoff-aa-touch.md](12-handoff-aa-touch.md) | Brief for building AA touch: goal, facts, requirements, acceptance |
 | 13 | [13-gauges.md](13-gauges.md) | Gauges: data sources, what is on the unit, approach |
 | 14 | [14-bluetooth-startup.md](14-bluetooth-startup.md) | Bluetooth startup, FM fallback, feasibility evidence and next checks |
+| 15 | [15-meters-designer.md](15-meters-designer.md) | Standalone Meters Designer: editing, v3 migration, recovery and browser acceptance |
 | — | [sources.md](sources.md) | All sources |
 
 ## For AI assistants

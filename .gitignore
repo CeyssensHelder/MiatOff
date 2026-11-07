@@ -4,6 +4,8 @@ miatoff-dumps/
 
 # Local tooling
 .claude/
+.miatoff/
+designer-server*.log
 
 # Built USB sticks and Python cruft
 *.up

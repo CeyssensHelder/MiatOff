@@ -149,7 +149,7 @@ MiatOff stands on the work of the Mazda Connect modding community. Thank you to:
   ([mazda-aa-dr](https://github.com/junoh-moon/mazda-aa-dr)) for hard-won warnings about the vehicle data service, and
   **silverchris** ([Mazda CMU documentation](https://silverchris.github.io/mazda-cmu-documentation/)) for the boot and recovery notes.
 - The security researchers at ZDI/Trend Micro whose public work documents how the unit boots.
-- The **Chakra Petch** and **Share Tech Mono** fonts (SIL Open Font License).
+- The **Chakra Petch**, **Share Tech Mono**, **Rajdhani** and **Russo One** fonts (SIL Open Font License).
 
 See [NOTICE](NOTICE) for the exact licences. MiatOff is not affiliated with or endorsed by Mazda. It contains no Mazda files;
 the scripts only hold the hashes of the stock files they expect.

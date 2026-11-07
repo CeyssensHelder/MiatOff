@@ -15,6 +15,7 @@ for what the project does, then this file for how to change it safely.
 | `tools/stickkit.py` | Shared stick builder and launcher. |
 | `miatoff_gui.py` | Tk builder: check tab, install/remove tab, writes `miatoff-plan.txt`. |
 | `collector/`, `meters/`, `meters-app/` | Live vehicle data and the Meters gauges. |
+| `meters/designer/`, `tools/meters_designer.py`, `tools/meters_library.py` | Meters Designer: PC-only page editor and the builder's Custom pages library ([docs/15](docs/15-meters-designer.md)). |
 | `vendor/` | Third-party releases, unmodified and checked by sha256. |
 | `docs/` | Research. [docs/ai/HANDOFF.md](docs/ai/HANDOFF.md) and [docs/12-handoff-aa-touch.md](docs/12-handoff-aa-touch.md) are the briefs. |
 
@@ -43,6 +44,9 @@ MO_SYNTHETIC=1 python collector/tests/test_calibrate.py
 python tools/tests/test_check_dump.py
 python tools/tests/test_stickkit.py
 node meters-app/tests/test_meters_app.js
+python tools/tests/test_meters_library.py                                             # Meters Designer library and GUI tab
+node --test meters/tests/v3/*.test.mjs                                                # Meters Designer model
+(cd meters/tests/v3 && npm ci && npx playwright test)                                 # Meters Designer in Chromium; see its README
 python aa-touch-stick/tests/test_aa_touch_stick.py                                   # uses the real dump if present, ~10 min
 MO_SYNTHETIC=1 MO_DOCKER_IMAGE=busybox:1.25 python aa-touch-stick/tests/test_aa_touch_stick.py   # BusyBox + Meters scenarios
 ```

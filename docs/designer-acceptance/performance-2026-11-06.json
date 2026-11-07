@@ -1,0 +1,11 @@
+{
+  "p95Ms": 1.199999999254942,
+  "historySamples": 1200,
+  "cacheSizes": {
+    "background": 1,
+    "finish": 5,
+    "images": 0
+  },
+  "samples": 150,
+  "description": "24 mixed widgets, 120-second charts, all five treatments, warmed canvas renderer"
+}

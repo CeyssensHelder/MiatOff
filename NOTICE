@@ -23,8 +23,10 @@ vendor/mzd-aio/
   follows its "Shorter Delay Mod".
 
 meters/fonts/
-  Chakra Petch and Share Tech Mono (google/fonts), SIL Open Font License 1.1,
-  with their license texts alongside.
+  Chakra Petch, Share Tech Mono, Rajdhani (Bold) and Russo One (google/fonts),
+  unmodified, SIL Open Font License 1.1, with their license texts alongside.
+  Rajdhani and Russo One are used by the Meters Designer only (as "MO Condensed"
+  and "MO Sport"); they are not copied to the car.
 
 Idea credits: MZD-AIO additionalApps.js (GPL-3.0) for the userscript approach.
 

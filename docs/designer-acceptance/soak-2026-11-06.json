@@ -1,0 +1,127 @@
+{
+  "elapsedMs": 601173,
+  "samples": [
+    {
+      "time": 60.064400000001285,
+      "history": 301,
+      "caches": {
+        "background": 1,
+        "finish": 1,
+        "images": 0
+      },
+      "undo": 1,
+      "frames": 3604,
+      "galleryFrames": 296
+    },
+    {
+      "time": 120.0786000000137,
+      "history": 301,
+      "caches": {
+        "background": 1,
+        "finish": 1,
+        "images": 0
+      },
+      "undo": 1,
+      "frames": 7205,
+      "galleryFrames": 589
+    },
+    {
+      "time": 180.09280000002573,
+      "history": 301,
+      "caches": {
+        "background": 1,
+        "finish": 1,
+        "images": 0
+      },
+      "undo": 1,
+      "frames": 10806,
+      "galleryFrames": 883
+    },
+    {
+      "time": 240.0905000000394,
+      "history": 301,
+      "caches": {
+        "background": 1,
+        "finish": 1,
+        "images": 0
+      },
+      "undo": 1,
+      "frames": 14406,
+      "galleryFrames": 1176
+    },
+    {
+      "time": 300.1047000000478,
+      "history": 301,
+      "caches": {
+        "background": 1,
+        "finish": 1,
+        "images": 0
+      },
+      "undo": 1,
+      "frames": 18007,
+      "galleryFrames": 1470
+    },
+    {
+      "time": 360.11900000006153,
+      "history": 301,
+      "caches": {
+        "background": 1,
+        "finish": 1,
+        "images": 0
+      },
+      "undo": 1,
+      "frames": 21608,
+      "galleryFrames": 1764
+    },
+    {
+      "time": 420.1333000000752,
+      "history": 301,
+      "caches": {
+        "background": 1,
+        "finish": 1,
+        "images": 0
+      },
+      "undo": 1,
+      "frames": 25209,
+      "galleryFrames": 2058
+    },
+    {
+      "time": 480.14750000008894,
+      "history": 301,
+      "caches": {
+        "background": 1,
+        "finish": 1,
+        "images": 0
+      },
+      "undo": 1,
+      "frames": 28810,
+      "galleryFrames": 2351
+    },
+    {
+      "time": 540.1618000000367,
+      "history": 301,
+      "caches": {
+        "background": 1,
+        "finish": 1,
+        "images": 0
+      },
+      "undo": 1,
+      "frames": 32411,
+      "galleryFrames": 2646
+    },
+    {
+      "time": 600.1759999998576,
+      "history": 301,
+      "caches": {
+        "background": 1,
+        "finish": 1,
+        "images": 0
+      },
+      "undo": 1,
+      "frames": 36012,
+      "galleryFrames": 2939
+    }
+  ],
+  "errors": [],
+  "pausedFramesAdded": 1
+}
