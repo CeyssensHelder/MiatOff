@@ -396,6 +396,17 @@ class App(tk.Tk):
         self.custom_export.pack(anchor="w", padx=16, pady=(0, 8))
         self.custom_status = tk.Label(custom, bg=CARD, fg=MUTED, anchor="w", justify="left", wraplength=650, font=("Segoe UI", 9))
         self.custom_status.pack(fill="x", padx=16, pady=(0, 14))
+        # Shown while Meters is not set to Install on tab 2: only then do the selected pages go on the stick.
+        self.meters_hint = tk.Frame(custom, bg=WARN_BG)
+        tk.Label(self.meters_hint, bg=WARN_BG, fg=WARN_INK, anchor="w", justify="left", wraplength=470,
+                 font=("Segoe UI", 9),
+                 text="Meters is not set to Install. To put the selected pages on a stick, set Meters to Install "
+                      "on tab 2 (tick Override there if Install is greyed out) and build the stick on that tab."
+                 ).pack(side="left", fill="x", expand=True, padx=10, pady=8)
+        ttk.Button(self.meters_hint, text="Go to Install / remove", style="Small.TButton",
+                   command=lambda: self.tabs.select(self.choose_tab)).pack(side="right", padx=10, pady=8)
+        self.vars["meters"].trace_add("write", lambda *_: self._update_meters_hint())
+        self._update_meters_hint()
         self.custom_notice = tk.Label(custom, bg=CARD, fg="#92400e", anchor="w", justify="left", wraplength=650, font=("Segoe UI", 9))
         removed = self.card(page, "Removed pages")
         tk.Label(removed, bg=CARD, fg=INK, justify="left", anchor="w", wraplength=650, font=("Segoe UI", 10),
@@ -418,6 +429,12 @@ class App(tk.Tk):
                  ).pack(anchor="w", padx=16, pady=(0, 14))
         self.refresh_custom_meters()
         self.after(1000, self._poll_custom_meters)
+
+    def _update_meters_hint(self):
+        if self.vars["meters"].get() == "install":
+            self.meters_hint.pack_forget()
+        elif not self.meters_hint.winfo_manager():
+            self.meters_hint.pack(fill="x", padx=16, pady=(0, 10), before=self.custom_export)
 
     def _ensure_designer(self):
         import meters_designer

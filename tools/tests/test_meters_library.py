@@ -445,6 +445,24 @@ class GuiTests(unittest.TestCase):
 
     setUp = LibraryTests.setUp
 
+    def test_designer_tab_hints_that_meters_must_be_set_to_install(self):
+        import miatoff_gui as gui
+        with patch.dict("os.environ", {"MIATOFF_METERS_LIBRARY": str(self.library.path)}), patch.object(gui, "removable_drives", return_value=[]):
+            app = gui.App()
+        app.withdraw()
+        self.addCleanup(app.destroy)
+        app.tabs.select(app.designer_tab)
+        app.update_idletasks()
+        self.assertEqual(app.vars["meters"].get(), "keep")
+        self.assertEqual(app.meters_hint.winfo_manager(), "pack")
+        app.vars["meters"].set("install")
+        self.assertEqual(app.meters_hint.winfo_manager(), "")
+        app.vars["meters"].set("remove")
+        self.assertEqual(app.meters_hint.winfo_manager(), "pack")
+        button = [w for w in app.meters_hint.winfo_children() if isinstance(w, gui.ttk.Button)][0]
+        button.invoke()
+        self.assertEqual(app.tabs.select(), str(app.choose_tab))
+
     def test_gui_library_checkboxes_and_build_archive(self):
         import miatoff_gui as gui
         with patch.dict("os.environ", {"MIATOFF_METERS_LIBRARY": str(self.library.path)}), patch.object(gui, "removable_drives", return_value=[]):
