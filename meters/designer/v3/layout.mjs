@@ -8,6 +8,13 @@ import {
   warning,
   intersects,
 } from "./model.mjs";
+// Text metrics the car's browser can reproduce: it has no bounding-box measurements, so the height of a line of
+// text is a fixed share of its size, and sizes are whole pixels. Keep these in step with meters/js/custom.js.
+export const TEXT_ASCENT = 0.72,
+  TEXT_DESCENT = 0.04,
+  FONT_FALLBACK = ', Arial, Helvetica, "DejaVu Sans", sans-serif';
+export const fontString = (weight, size, family) =>
+  `${weight} ${size}px "${family}"${FONT_FALLBACK}`;
 export const rect = (x, y, w, h) => ({
   x,
   y,
@@ -127,17 +134,14 @@ export function measurement(ctx, w, theme, state, mode = "night") {
     } = {},
   ) => {
     text = String(text);
-    ctx.font = `${weight} ${preferred}px "${s.font}"`;
-    let metrics = ctx.measureText(text),
-      h =
-        (metrics.actualBoundingBoxAscent ?? preferred * 0.8) +
-        (metrics.actualBoundingBoxDescent ?? preferred * 0.2);
-    const fit = Math.min(
-      preferred,
-      (preferred * box.w) / Math.max(1, metrics.width),
-      (preferred * box.h) / Math.max(1, h + 3),
-    );
-    let size = Math.max(8, fit);
+    const ratio = TEXT_ASCENT + TEXT_DESCENT;
+    ctx.font = fontString(weight, preferred, s.font);
+    const first = ctx.measureText(text).width,
+      fit = Math.min(
+        preferred,
+        (preferred * box.w) / Math.max(1, first),
+        (preferred * box.h) / Math.max(1, ratio * preferred + 3),
+      );
     if (fit < 8) {
       diagnostics.push({
         kind: "unreadable",
@@ -146,18 +150,15 @@ export function measurement(ctx, w, theme, state, mode = "night") {
       });
       return null;
     }
-    ctx.font = `${weight} ${size}px "${s.font}"`;
-    metrics = ctx.measureText(text);
+    let size = Math.max(8, Math.floor(fit));
+    ctx.font = fontString(weight, size, s.font);
+    let width = ctx.measureText(text).width;
     for (
       let attempt = 0;
-      attempt < 10 &&
-      ((metrics.actualBoundingBoxAscent ?? size * 0.8) +
-        (metrics.actualBoundingBoxDescent ?? size * 0.2) >
-        box.h ||
-        metrics.width > box.w);
+      attempt < 10 && (ratio * size > box.h || width > box.w);
       attempt++
     ) {
-      size -= 0.5;
+      size -= 1;
       if (size < 8) {
         diagnostics.push({
           kind: "unreadable",
@@ -166,11 +167,11 @@ export function measurement(ctx, w, theme, state, mode = "night") {
         });
         return null;
       }
-      ctx.font = `${weight} ${size}px "${s.font}"`;
-      metrics = ctx.measureText(text);
+      ctx.font = fontString(weight, size, s.font);
+      width = ctx.measureText(text).width;
     }
-    const ascent = metrics.actualBoundingBoxAscent ?? size * 0.8,
-      descent = metrics.actualBoundingBoxDescent ?? size * 0.2,
+    const ascent = TEXT_ASCENT * size,
+      descent = TEXT_DESCENT * size,
       x =
         align === "center"
           ? box.x + box.w / 2
@@ -180,11 +181,11 @@ export function measurement(ctx, w, theme, state, mode = "night") {
       y = box.y + (box.h - ascent - descent) / 2 + ascent;
     const left =
         align === "center"
-          ? x - metrics.width / 2
+          ? x - width / 2
           : align === "right"
-            ? x - metrics.width
+            ? x - width
             : x,
-      bounds = rect(left, y - ascent, metrics.width, ascent + descent);
+      bounds = rect(left, y - ascent, width, ascent + descent);
     if (size < minimum)
       diagnostics.push({
         kind: "small-text",

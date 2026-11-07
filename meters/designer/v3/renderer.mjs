@@ -12,15 +12,17 @@ import {
 const GREEN = "#3ddc84",
   AMBER = "#ffba55";
 // A tick count that gives round scale labels (1, 2, 2.5 or 5 times a power of ten).
+// Math.floor(log10(x)) the way the car computes it (no Math.log10 there); the epsilon keeps exact powers of ten exact.
+const log10floor = (x) => Math.floor(Math.log(x) / Math.LN10 + 1e-9);
 function niceCount(span, limit) {
   for (let n = limit; n >= 2; n--) {
     const step = span / n,
-      p = 10 ** Math.floor(Math.log10(step)),
+      p = Math.pow(10, log10floor(step)),
       f = step / p;
     if ([1, 2, 2.5, 5, 10].some((k) => Math.abs(f - k) < 1e-9)) return n;
   }
   // Otherwise steps in tens (or the matching power of ten), whole-number steps, or just the ends.
-  const unit = 10 ** Math.max(0, Math.floor(Math.log10(span)) - 1);
+  const unit = Math.pow(10, Math.max(0, log10floor(span) - 1));
   for (let n = limit; n >= 2; n--)
     if (Math.abs(span / n / unit - Math.round(span / n / unit)) < 1e-9) return n;
   for (let n = limit; n >= 2; n--)
@@ -41,8 +43,41 @@ const layer = (w, h) => {
   c.height = Math.max(1, Math.ceil(h));
   return c;
 };
-export function shapePath(c, r, kind = "rounded", radius = 14) {
+// Rounded rectangle through arcTo: the car's old browser has no roundRect. Same clamp as before.
+export function roundedPath(c, x, y, w, h, radius) {
+  const r = Math.max(0, Math.min(radius, w / 2, h / 2));
   c.beginPath();
+  if (!(r > 0)) {
+    c.rect(x, y, w, h);
+    return;
+  }
+  c.moveTo(x + r, y);
+  c.lineTo(x + w - r, y);
+  c.arcTo(x + w, y, x + w, y + r, r);
+  c.lineTo(x + w, y + h - r);
+  c.arcTo(x + w, y + h, x + w - r, y + h, r);
+  c.lineTo(x + r, y + h);
+  c.arcTo(x, y + h, x, y + h - r, r);
+  c.lineTo(x, y + r);
+  c.arcTo(x, y, x + r, y, r);
+  c.closePath();
+}
+// A dashed circle drawn as short arcs (3 px on, 5 px off): the car has no setLineDash.
+export function dashedCircle(c, cx, cy, radius, dash, gap) {
+  if (!(radius > 0)) return;
+  const n = Math.max(1, Math.round((Math.PI * 2 * radius) / (dash + gap))),
+    step = (Math.PI * 2) / n,
+    sweep = (step * dash) / (dash + gap);
+  c.beginPath();
+  for (let i = 0; i < n; i++) {
+    const a = i * step;
+    c.moveTo(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius);
+    c.arc(cx, cy, radius, a, a + sweep);
+  }
+  c.stroke();
+}
+export function shapePath(c, r, kind = "rounded", radius = 14) {
+  if (kind !== "rounded") c.beginPath();
   if (kind === "circle") {
     c.arc(
       r.x + r.w / 2,
@@ -59,14 +94,7 @@ export function shapePath(c, r, kind = "rounded", radius = 14) {
       i ? c.lineTo(x, y) : c.moveTo(x, y);
     }
     c.closePath();
-  } else if (kind === "rounded")
-    c.roundRect(
-      r.x,
-      r.y,
-      r.w,
-      r.h,
-      Math.max(0, Math.min(radius, r.w / 2, r.h / 2)),
-    );
+  } else if (kind === "rounded") roundedPath(c, r.x, r.y, r.w, r.h, radius);
   else c.rect(r.x, r.y, r.w, r.h);
 }
 function image(asset) {
@@ -639,13 +667,8 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
         c.stroke();
         // Rings every 0.5 g (every 1 g above a 3 g range).
         const step = w.gRange > 3 ? 1 : 0.5;
-        c.setLineDash([3, 5]);
-        for (let ring = step; ring < w.gRange - 1e-9; ring += step) {
-          c.beginPath();
-          c.arc(cx, cy, ((radius - 5) * ring) / w.gRange, 0, Math.PI * 2);
-          c.stroke();
-        }
-        c.setLineDash([]);
+        for (let ring = step; ring < w.gRange - 1e-9; ring += step)
+          dashedCircle(c, cx, cy, ((radius - 5) * ring) / w.gRange, 3, 5);
         c.globalAlpha = 1;
         c.lineWidth = 2;
       }
