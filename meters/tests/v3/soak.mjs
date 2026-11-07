@@ -1,4 +1,5 @@
 // A wall-clock ten-minute soak in an isolated browser context and database.
+import { DESIGNER_URL } from "./config.mjs";
 import { chromium } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
@@ -11,7 +12,7 @@ const browser = await chromium.launch(),
 page.on("pageerror", (e) => errors.push(e.message));
 try {
   await page.goto(
-    "http://127.0.0.1:8890/designer/index.html?test=1&db=soak-" + Date.now(),
+    DESIGNER_URL + "?test=1&db=soak-" + Date.now(),
   );
   await page.waitForFunction(() => !!window.__studio);
   await page.evaluate(async () => {

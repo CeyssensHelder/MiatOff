@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { DESIGNER_URL } from "./config.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -11,7 +12,7 @@ test("preview keeps a usable canvas on desktop and phone, including 100% zoom", 
   page,
 }) => {
   await page.goto(
-    "http://127.0.0.1:8890/designer/index.html?test=1&db=preview-" +
+    DESIGNER_URL + "?test=1&db=preview-" +
       crypto.randomUUID(),
   );
   await page.waitForFunction(() => !!window.__studio);

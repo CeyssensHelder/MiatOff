@@ -1,7 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { DESIGNER_URL } from "./config.mjs";
 async function open(page) {
   await page.goto(
-    "http://127.0.0.1:8890/designer/index.html?test=1&db=pages-" +
+    DESIGNER_URL + "?test=1&db=pages-" +
       crypto.randomUUID(),
   );
   await page.waitForFunction(() => !!window.__studio);

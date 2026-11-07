@@ -1,4 +1,5 @@
 // Presentation-only fixtures: isolated drafts, frozen telemetry, loaded fonts.
+import { DESIGNER_URL } from "./config.mjs";
 export const shellStates = [
   { name: "basic", level: "Basic", width: 1366, height: 768 },
   { name: "advanced", level: "Advanced", width: 1366, height: 768 },
@@ -9,7 +10,7 @@ export const shellStates = [
 export async function shellFixture(page, state) {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto(
-    "http://127.0.0.1:8890/designer/index.html?test=1&db=shell-" +
+    DESIGNER_URL + "?test=1&db=shell-" +
       crypto.randomUUID(),
   );
   await page.waitForFunction(() => !!window.__studio);

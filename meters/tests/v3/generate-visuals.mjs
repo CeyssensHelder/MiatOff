@@ -1,4 +1,5 @@
 // Generates candidates only. A human/agent must inspect and copy approved PNGs into baselines.
+import { DESIGNER_URL } from "./config.mjs";
 import { chromium } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { contactFixture } from "./visual-fixture.mjs";
@@ -18,7 +19,7 @@ try {
       deviceScaleFactor: 1,
     });
     await page.goto(
-      "http://127.0.0.1:8890/designer/index.html?test=1&db=visual-" +
+      DESIGNER_URL + "?test=1&db=visual-" +
         crypto.randomUUID(),
     );
     await page.waitForFunction(() => !!window.__studio);

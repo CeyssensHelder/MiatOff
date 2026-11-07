@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { DESIGNER_URL } from "./config.mjs";
 import { contactFixture } from "./visual-fixture.mjs";
 for (const name of [
   "Street",
@@ -11,7 +12,7 @@ for (const name of [
   test(name + " reviewed day/night pages", async ({ page }) => {
     await page.setViewportSize({ width: 1600, height: 1040 });
     await page.goto(
-      "http://127.0.0.1:8890/designer/index.html?test=1&db=visual-" +
+      DESIGNER_URL + "?test=1&db=visual-" +
         crypto.randomUUID(),
     );
     await page.waitForFunction(() => !!window.__studio);

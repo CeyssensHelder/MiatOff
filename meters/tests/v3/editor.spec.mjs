@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
-const base = "http://127.0.0.1:8890/designer/index.html";
+import { DESIGNER_URL } from "./config.mjs";
+const base = DESIGNER_URL;
 
 test("touching framed widgets are accepted while actual overlap is reported", async ({
   page,

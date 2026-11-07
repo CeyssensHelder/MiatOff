@@ -1,8 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { DESIGNER_URL } from "./config.mjs";
 import { shellStates, shellFixture } from "./shell-fixture.mjs";
 async function open(page) {
   await page.goto(
-    "http://127.0.0.1:8890/designer/index.html?test=1&db=ux-" +
+    DESIGNER_URL + "?test=1&db=ux-" +
       crypto.randomUUID(),
   );
   await page.waitForFunction(() => !!window.__studio);
