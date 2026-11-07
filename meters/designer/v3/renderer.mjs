@@ -403,7 +403,9 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
   } else if (w.type === "radial") {
     const inside = w.valuePosition === "center",
       g = inside ? plot : rect(plot.x, plot.y, plot.w, plot.h * 0.7),
-      radius = Math.max(0, Math.min(g.w, g.h) / 2 - 8),
+      // Labels outside the arc need a ring of room, so the arc itself gets smaller.
+      outer = w.tickLabels === "outside",
+      radius = Math.max(0, Math.min(g.w, g.h) / 2 - 8 - (outer ? 40 : 0)),
       cx = g.x + g.w / 2,
       cy = g.y + g.h / 2,
       start = Math.PI * (1.5 - w.sweep / 360),
@@ -414,17 +416,31 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
         : w.variant === "needle"
           ? rect(cx - radius * 0.4, cy + radius * 0.36, radius * 0.8, radius * 0.46)
           : rect(cx - radius * 0.5, cy - radius * 0.3, radius * 1.0, radius * 0.6),
-      labelRadius = radius - Math.max(w.thickness, 8) / 2 - 22;
-    let count = Math.min(w.ticks, Math.max(2, Math.floor(radius / 26)));
-    if (plot.w < 160 || plot.h < 140) count = 0;
-    else count = niceCount(r.max - r.min, count);
+      labelRadius = outer
+        ? radius + Math.max(w.thickness, 8) / 2 + 18
+        : radius - Math.max(w.thickness, 8) / 2 - 22,
+      span = r.max - r.min;
+    // Scale marks: every `tickStep` display units when set, otherwise a round automatic count.
+    let marks = [];
+    if (plot.w >= 160 && plot.h >= 140 && span > 0) {
+      if (w.tickStep > 0 && span / w.tickStep <= 24)
+        for (let v = r.min; v <= r.max + w.tickStep * 1e-9; v += w.tickStep)
+          marks.push(Math.min(v, r.max));
+      else {
+        const count = niceCount(
+          span,
+          Math.min(w.ticks, Math.max(2, Math.floor(radius / 26))),
+        );
+        if (w.ticks > 0)
+          marks = Array.from({ length: count + 1 }, (_, k) => r.min + (span * k) / count);
+      }
+      if (w.sweep === 360 && marks.length > 1) marks.pop();
+    }
     const tickRuns = [];
-    for (let k = 0; k <= count && count > 0; k++) {
-      if (w.sweep === 360 && k === count) continue;
-      const a = start + (sweep * k) / count,
+    for (const v of marks) {
+      const a = start + (sweep * (v - r.min)) / span,
         x = cx + Math.cos(a) * labelRadius,
         y = cy + Math.sin(a) * labelRadius,
-        v = r.min + ((r.max - r.min) * k) / count,
         label =
           w.signal === "rpm" && w.abbreviate
             ? v === 0
@@ -433,7 +449,7 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
             : String(Number(v.toFixed(w.decimals)));
       const box = rect(x - 26, y - 11, 52, 22);
       // A label that would run into the value inside the dial is left out; its tick stays.
-      if (containsRect(g, box) && !(inside && overlaps(box, valueBox))) {
+      if (containsRect(g, box) && !(inside && !outer && overlaps(box, valueBox))) {
         const bounds = emit(label, box, 18, {
           minimum: 14,
           role: "scale",

@@ -105,3 +105,22 @@ test("simulated acceleration keeps speed, RPM and gear consistent with the geari
     assert.ok(st.rpm <= v.rpm.shift + 1);
   }
 });
+
+test("dial scale labels can sit outside the arc with a chosen step", () => {
+  const w = M.widget("radial");
+  assert.equal(w.tickLabels, "inside");
+  assert.equal(w.tickStep, 0, "automatic by default");
+  const p = M.defaults(),
+    dial = p.themes[0].pages[0].widgets[0];
+  Object.assign(dial, { tickLabels: "outside", tickStep: 1000 });
+  M.validate(p);
+  for (const [key, value] of [
+    ["tickLabels", "around"],
+    ["tickStep", -1],
+    ["tickStep", "1000"],
+  ]) {
+    const bad = M.clone(p);
+    bad.themes[0].pages[0].widgets[0][key] = value;
+    assert.throws(() => M.validate(bad), /scale/i);
+  }
+});

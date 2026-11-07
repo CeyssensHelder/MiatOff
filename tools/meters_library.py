@@ -297,6 +297,10 @@ def validate_setup(doc):
             # Newer instrument options; older documents may not have them.
             if "valuePosition" in w:
                 require(w["valuePosition"] in ("center", "below"), "Invalid value position")
+            if "tickLabels" in w:
+                require(w["tickLabels"] in ("inside", "outside"), "Invalid scale label position")
+            if "tickStep" in w:
+                require(number(w["tickStep"], 0, 1e300), "Invalid scale step")
             for key in ("colorRamp", "readout"):
                 if key in w:
                     require(type(w[key]) is bool, "Invalid " + key)

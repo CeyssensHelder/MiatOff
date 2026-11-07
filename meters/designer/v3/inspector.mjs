@@ -288,6 +288,8 @@ export class Inspector {
         this.variants(c, appearance, definition.choices, disabled);
         continue;
       }
+      if (key === "tickStep")
+        definition.label = `Scale step (${M.range(ws[0], vehicle).unit || "value"}, 0 = automatic)`;
       if (key === "orientation" && ws.every((w) => w.type === "shape"))
         definition.choices = ["horizontal", "vertical", "diagonal", "custom"];
       const parent =
@@ -306,7 +308,16 @@ export class Inspector {
             if (this.api.locked(w) && key !== "locked")
               throw Error("Unlock this instrument or its group first");
             if (key === "signal") M.bind(w, value);
-            else {
+            else if (key === "tickStep") {
+              const span = M.range(w, vehicle).max - M.range(w, vehicle).min;
+              if (!(value >= 0))
+                throw Error("Use 0 (automatic) or a positive step.");
+              if (value > 0 && span / value > 24)
+                throw Error(
+                  `That step gives more than 24 labels; use at least ${Number((span / 24).toPrecision(2))}.`,
+                );
+              w.tickStep = value;
+            } else {
               w[key] = value;
               if (key === "label") w.labelMode = "custom";
             }

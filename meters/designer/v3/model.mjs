@@ -64,6 +64,8 @@ export const registry = {
       "segments",
       "abbreviate",
       "valuePosition",
+      "tickLabels",
+      "tickStep",
       "zones",
     ],
   ),
@@ -216,6 +218,8 @@ export function widget(type = "number", variant) {
     grid: true,
     // Newer options. normalizeWidget() gives older documents values that keep their look.
     valuePosition: "center",
+    tickLabels: "inside",
+    tickStep: 0,
     zones: { mode: "auto", base: null, steps: [] },
     shiftLead: 1500,
     colorRamp: true,
@@ -873,6 +877,14 @@ export function validate(s) {
     requireValue(
       ["center", "below"].includes(w.valuePosition),
       "Invalid value position",
+    );
+    requireValue(
+      ["inside", "outside"].includes(w.tickLabels),
+      "Invalid scale label position",
+    );
+    requireValue(
+      Number.isFinite(w.tickStep) && w.tickStep >= 0,
+      "Scale step must be 0 (automatic) or a positive number",
     );
     requireValue(
       Number.isInteger(w.shiftLead) && w.shiftLead >= 0 && w.shiftLead <= 5000,

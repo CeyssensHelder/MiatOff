@@ -106,6 +106,8 @@ const labels = {
   endX: "End X (0–1)",
   endY: "End Y (0–1)",
   valuePosition: "Value position",
+  tickLabels: "Scale labels",
+  tickStep: "Scale step (0 = automatic)",
   zones: "Colour zones",
   shiftLead: "Start before amber (rpm)",
   colorRamp: "Green, amber, red lights",
@@ -122,6 +124,7 @@ const essential = new Set([
   "showRpm",
   "showLaps",
   "variant",
+  "valuePosition",
 ]);
 const expert = new Set([
   "role",
@@ -151,6 +154,10 @@ const choices = {
   valuePosition: [
     ["center", "Inside the dial"],
     ["below", "Below the dial"],
+  ],
+  tickLabels: [
+    ["inside", "Inside the arc"],
+    ["outside", "Outside the arc"],
   ],
 };
 export const properties = {};

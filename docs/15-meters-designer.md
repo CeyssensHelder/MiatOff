@@ -24,7 +24,7 @@ Free dragging, snapping, duplication, deletion and **Resize…** (Width/Height) 
 
 ### Instruments and starters
 
-- **Dials** show the value inside the arc by default (Advanced: Value position). Scale labels are at least 14 px (18 px where they fit) and use round steps; a label that would run into the value is left out, its tick stays. Needle dials keep the value in the open bottom of the arc.
+- **Dials** show the value inside the arc by default; **Value position** (Basic) switches between inside and below the dial. Scale labels are at least 14 px (18 px where they fit) and use round steps; **Scale step** (Advanced, in the display unit, 0 = automatic, at most 24 labels) sets them explicitly, for example 1000 rpm. **Scale labels** (Advanced) puts them inside or outside the arc; outside, the arc shrinks to make room and the labels never collide with the value. Inside, a label that would run into the value is left out (its tick stays). Needle dials keep the value in the open bottom of the arc.
 - **Colour zones** (Advanced, for Number, Dial and Bar) colour the value, the dial track and bar segments by value. Automatic follows the vehicle RPM settings (amber, red) and each reading's warning threshold (for example low fuel). Custom offers up to four zones, each from a value in the display unit, plus an optional colour below the first zone; it starts from what Automatic shows. Warnings (red, flashing) still take priority.
 - **Shift lights** start a configurable number of rpm before the amber line (default 1,500) and use a green, amber and red ramp; all lights flash at the shift point.
 - **G-meters** draw dashed rings every 0.5 g with labels when Show grid is on, and a live g readout (Show live g).

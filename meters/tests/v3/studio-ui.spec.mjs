@@ -564,3 +564,34 @@ test("a page's look and background can be used on every page in one undoable ste
   await page.keyboard.press("Control+z");
   expect(await pages()).toEqual(before);
 });
+test("a dial's value position is in Basic, and its scale step and label position in Advanced", async ({
+  page,
+}) => {
+  await open(page);
+  await page.locator("#layers-tab").click();
+  await page
+    .locator("#layers button")
+    .filter({ hasText: "ENGINE RPM · Dial" })
+    .click();
+  const dial = () =>
+    page.evaluate(() =>
+      __studio.store.project.themes[0].pages[0].widgets.find(
+        (w) => w.type === "radial",
+      ),
+    );
+  await page.getByLabel("Value position", { exact: true }).selectOption("below");
+  expect((await dial()).valuePosition).toBe("below");
+  await expect(page.getByLabel("Scale labels", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Advanced", exact: true }).click();
+  await page.getByLabel("Scale labels", { exact: true }).selectOption("outside");
+  const step = page.getByLabel("Scale step (rpm, 0 = automatic)", { exact: true });
+  await step.fill("10");
+  await step.press("Tab");
+  await expect(page.locator("#property-widget-tickStep-error")).toContainText(
+    "more than 24 labels",
+  );
+  expect((await dial()).tickStep).toBe(0);
+  await step.fill("1000");
+  await step.press("Tab");
+  expect(await dial()).toMatchObject({ tickLabels: "outside", tickStep: 1000 });
+});
