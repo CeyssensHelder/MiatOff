@@ -1,6 +1,6 @@
 # Meters Designer v3
 
-The standalone editor is served by `python tools/meters_designer.py --port 8890` at `http://127.0.0.1:8890/designer/index.html`. Keep the same origin and port when returning to a browser draft. It uses native JavaScript modules, bundled fonts and local browser storage; no production build, account, CDN or network service is needed. This work does not connect v3 designs to the car app or USB installer.
+The standalone editor is served by `python tools/meters_designer.py --port 8890` at `http://127.0.0.1:8890/designer/index.html`. Keep the same origin and port when returning to a browser draft. It uses native JavaScript modules, bundled fonts and local browser storage; no production build, account, CDN or network service is needed. The pages you select in the builder reach the car through the Meters payload; see "On the car" below.
 
 ## Custom pages
 
@@ -37,15 +37,37 @@ Documents saved before these options existed keep their original appearance: mis
 
 Preview hides editing guides and fits the full canvas, temporarily fitting an earlier 100% editing zoom and restoring it on exit. Escape exits. Simulation starts paused and is labelled Simulated. Desktop panels resize; tablet/phone expose Tools and Properties through focus-managed scrolling sheets. Phone controls have touch targets. Image/gradient contrast diagnostics remain advisory.
 
-## Builder selection and design archives
+## Builder selection and export
 
-The desktop builder refreshes its Custom pages list automatically. Choose up to eight individual pages for **Export selected meters…**. When Meters = Install is selected in Install/remove, the checked pages are also copied to the stick as `miatoff-custom-meters.json`, separate from the executable app manifest. A recognized older archive is updated or cleared to avoid retaining stale selections; an unknown/corrupt archive is refused. Selection changes alone never write a USB stick.
+The desktop builder refreshes its Custom pages list automatically. Choose up to eight individual pages. **Export selected meters…** saves them as a design backup file (`MetersThemeSelection`, version 1, independently checksummed single-page snapshots with a vehicle snapshot); the car does not read that file. Selection changes alone never write a USB stick.
 
-**This is a design archive, not a car installation.** Car activation remains deferred. The archive retains the legacy `MetersThemeSelection` version-1 wrapper, with independently checksummed v3 single-page snapshots and a vehicle snapshot for accurate preview. Neither the four built-ins nor the car navigation are changed. A future runtime adapter and separately guarded configuration lifecycle are still required.
+The local library is per user, not per checkout: `%APPDATA%\MiatOff\custom-meters.sqlite3` on Windows, `~/Library/Application Support/MiatOff/` on macOS, `$XDG_DATA_HOME/MiatOff` or `~/.local/share/MiatOff` on Linux (override with `MIATOFF_METERS_LIBRARY`). On first use an older `.miatoff/custom-meters.sqlite3` in the checkout is copied there with SQLite's backup API; the old file is never modified. It is separate from browser drafts. Send to builder asks first when the draft lacks pages that are in the builder list (`POST /api/builder/pages/plan` is a dry run); the server refuses such a send with 409 unless `X-MiatOff-Confirm-Removal` lists the ids. Removed pages stay in `retired_pages` and are restored from the builder's Removed pages section. Older theme records that cannot be converted are skipped and listed in `migration_skipped`; their rows stay untouched. Original grouped records are retained; page-library initialization and full-collection updates use transactions. Failed sends leave the current library intact, and unchanged sends are no-ops. The builder's Preview is read-only and does not open/edit the browser draft. Back up through the editor's project JSON or the builder export.
 
-The local library is per user, not per checkout: `%APPDATA%\MiatOff\custom-meters.sqlite3` on Windows, `~/Library/Application Support/MiatOff/` on macOS, `$XDG_DATA_HOME/MiatOff` or `~/.local/share/MiatOff` on Linux (override with `MIATOFF_METERS_LIBRARY`). On first use an older `.miatoff/custom-meters.sqlite3` in the checkout is copied there with SQLite's backup API; the old file is never modified. It is separate from browser drafts. Send to builder asks first when the draft lacks pages that are in the builder list (`POST /api/builder/pages/plan` is a dry run); the server refuses such a send with 409 unless `X-MiatOff-Confirm-Removal` lists the ids. Removed pages stay in `retired_pages` and are restored from the builder's Removed pages section. Older theme records that cannot be converted are skipped and listed in `migration_skipped`; their rows stay untouched. Original grouped records are retained; page-library initialization and full-collection updates use transactions. Failed sends leave the current library intact, and unchanged sends are no-ops. The builder's Preview is read-only and does not open/edit the browser draft. Back up through the editor's project JSON or the builder selection archive.
+Run `python miatoff_gui.py --designer` to open the list directly. The loopback bridge uses protocol 2, Host/Origin checks and a same-origin request token.
 
-Run `python miatoff_gui.py --designer` to open the list directly. The loopback bridge uses protocol 2, Host/Origin checks and a same-origin request token. Restart an older server at the same port before sending. Test drafts may send only to a temporary test-library server (`--library-db PATH`).
+## On the car
+
+**Nothing here has been tested in a real car.** It is tested in Chromium on a PC (below). Opera Presto speed and memory with eight pages and background images are unknown, and so is the scale of the consumption reading (`Drv1AvlFuelE`, shown under "CONSUMPTION"). Try one simple page first.
+
+- **Where it shows.** Applications > Meters > **CUSTOM**, the fifth style next to Street, Track, Cyberpunk and 2077. It lists the pages you selected (at most eight, in the order of the builder list) with live previews. With no pages the group does not appear. The style list has five 69 px rows; the picker has three columns up to six pages and four smaller columns for seven or eight.
+- **How it gets there.** The stick builder (`aa-touch-stick/build_stick.py`) writes the selected pages into the Meters payload as `miatoff-app/app/meters/js/custom-pages.js` (generated, ASCII, same pages give the same bytes, at most 6 MiB; fewer pages or smaller background images if it is too big). `custom.js`, the generated file and the two extra fonts (Rajdhani Bold, Russo One, with their OFL texts) are listed in `miatoff-app/MANIFEST` like every other Meters file, so the car's existing hash-guarded flow installs them. In the GUI, set Meters to Install on tab 2 and build; the selection is read at that moment. A stick built without Meters also carries the current selection, so a Meters already on the car is not reported as outdated. On the command line: `python aa-touch-stick/build_stick.py --custom-pages selection.json E:\` (and the same flag with `--check`).
+- **Updating.** Change the selection, build a new stick (Meters shows as **Update** once a check finds it installed) and press **REPAIR** in the car: the car sees a Meters that differs from the stick ("incomplete or older") and reinstalls it. A failed REPAIR rolls back to Meters off, which boots stock. `aa-touch.sh` was not changed.
+- **What is drawn.** Night styling only (the car app has no day mode). The page, its colours, fonts, effects, backgrounds (including one image per page, deduplicated across pages) and every instrument type, variant and option of the editor, including scale labels, tick step, colour zones, shift lights, G-meter rings and readout, charts and session cards. Editor guides, diagnostics and day mode are not part of it.
+- **Where the values come from.**
+
+| Reading | Car source |
+| --- | --- |
+| speed, rpm, throttle, coolant, intake air, outside, fuel, trip | the live values of the Meters app (smoothed like the built-in pages) |
+| gear | the app's derived gear (rpm per km/h) |
+| consumption | `econ` (`Drv1AvlFuelE`), scale unverified |
+| G lateral / longitudinal | the app's G values, with the same "what you feel" sign as the built-in G-meter (`?gm=car` mirrors it) |
+| power, torque | the dyno estimate (`dyno.live`), crank estimates only |
+| laps, last, best, delta, top speed, max rpm | the app's session; tap a lap instrument to lap, hold to stop the timer, tap a G-meter to reset its peak and trail |
+| chart history | the app's own 10 Hz ring buffer, as long as the longest chart window of the selected pages (at most 120 s) |
+
+A missing value shows an em dash. Units and RPM thresholds come from each page's own vehicle settings, as in the designer.
+- **Same picture on both.** The designer and the car draw with the same primitives (rounded rectangles through `arcTo`, G-meter rings as short arcs, text height as a fixed share of the font size, whole-pixel text sizes), and a pixel-parity test holds `renderer.mjs` and `custom.js` together: all starter pages and about 150 instrument cases, each in four states, differ by no more than ten pixels per page. Where an instrument's colour depends on live data (rings, ticks, bars) it is drawn per frame; panels, captions and G-meter frames are drawn once. When instruments overlap the page is drawn in one pass in painter's order instead.
+- **Known differences.** Bold text in the two older MO fonts (Chakra, Mono) is faux-bold in Chromium on the PC (the editor declares those faces without a weight) but the real face on the car, whose stylesheet declares them bold; how Opera renders it is not known.
 
 ## Simulated telemetry
 
@@ -85,8 +107,8 @@ Legacy reciprocal consumption scales used a 0-80 fallback when an endpoint was u
 | `commands.mjs` | Transaction rollback, bounded undo/redo, selection snapshots and gestures |
 | `persistence.mjs` | Atomic saves, revision checks, checkpoints, asset hashes/decoding/collection |
 | `signals.mjs` | Canonical signal catalog, units, scales, precision and warnings |
-| `layout.mjs` | Shared panel/text measurements, diagnostics, clamping, guides and arrangement |
-| `renderer.mjs` | Canvas painting and bounded background/effect/image caches |
+| `layout.mjs` | Shared panel/text measurements (fixed text-height ratios, whole-pixel sizes), diagnostics, clamping, guides and arrangement |
+| `renderer.mjs` | Canvas painting (arcTo rounded rectangles, arc dashes) and bounded background/effect/image caches |
 | `simulation.mjs` | Controlled clock, scenarios, gaps, track state and recording/replay |
 | `exports.mjs` | Referenced-asset JSON documents and guide-free PNGs |
 | `pages.mjs` | Flat Custom-page navigation, readable legacy labels, independent page creation/style and snapshots |
@@ -95,7 +117,7 @@ Legacy reciprocal consumption scales used a 0-80 fallback when an endpoint was u
 | `inspector.mjs` | Incremental scoped properties, mixed values, inheritance and inline errors |
 | `app.mjs` | Existing commands, galleries, layers, clipboard and browser interactions |
 
-The legacy ES5 car renderer is separate. No car installation scripts, stock hashes or `Common.js` were changed for this studio work.
+`meters/js/custom.js` is the car's ES5 port of `renderer.mjs`, the text fitting of `layout.mjs` and `signals.mjs` (see "On the car"). No car installation scripts (`aa-touch.sh`), stock hashes or `Common.js` were changed for this.
 
 ## Verification and limits
 

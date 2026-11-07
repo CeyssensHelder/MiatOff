@@ -15,7 +15,8 @@ for what the project does, then this file for how to change it safely.
 | `tools/stickkit.py` | Shared stick builder and launcher. |
 | `miatoff_gui.py` | Tk builder: check tab, install/remove tab, writes `miatoff-plan.txt`. |
 | `collector/`, `meters/`, `meters-app/` | Live vehicle data and the Meters gauges. |
-| `meters/designer/`, `tools/meters_designer.py`, `tools/meters_library.py` | Meters Designer: PC-only page editor and the builder's Custom pages library ([docs/15](docs/15-meters-designer.md)). |
+| `meters/designer/`, `tools/meters_designer.py`, `tools/meters_library.py` | Meters Designer: page editor and the builder's Custom pages library ([docs/15](docs/15-meters-designer.md)). |
+| `meters/js/custom.js` | The car's ES5 port of the designer renderer for the CUSTOM group; pages come from the generated `custom-pages.js`. Keep it in step with `renderer.mjs` (a parity test checks). |
 | `vendor/` | Third-party releases, unmodified and checked by sha256. |
 | `docs/` | Research. [docs/ai/HANDOFF.md](docs/ai/HANDOFF.md) and [docs/12-handoff-aa-touch.md](docs/12-handoff-aa-touch.md) are the briefs. |
 
@@ -45,8 +46,10 @@ python tools/tests/test_check_dump.py
 python tools/tests/test_stickkit.py
 node meters-app/tests/test_meters_app.js
 python tools/tests/test_meters_library.py                                             # Meters Designer library and GUI tab
-node --test meters/tests/v3/*.test.mjs                                                # Meters Designer model
-(cd meters/tests/v3 && npm ci && npx playwright test)                                 # Meters Designer in Chromium; see its README
+python tools/tests/test_custom_pages_build.py                                         # custom pages in the Meters payload
+node --test meters/tests/v3/*.test.mjs                                                # Meters Designer model, ES5 guard for meters/js
+(cd meters/tests/v3 && npm ci && npx playwright test)                                 # Designer, car app and renderer parity in Chromium; see its README
+#   set METERS_DESIGNER_URL=http://127.0.0.1:<port> and MIATOFF_METERS_LIBRARY=<temp file> when a designer server of yours runs on 8890
 python aa-touch-stick/tests/test_aa_touch_stick.py                                   # uses the real dump if present, ~10 min
 MO_SYNTHETIC=1 MO_DOCKER_IMAGE=busybox:1.25 python aa-touch-stick/tests/test_aa_touch_stick.py   # BusyBox + Meters scenarios
 ```

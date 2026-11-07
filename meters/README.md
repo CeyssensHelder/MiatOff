@@ -4,7 +4,7 @@ Gauge pages for the Mazda Connect screen (800×480), as in [docs/13](../docs/13-
 ES5 JavaScript, because the CMU shows pages in an old Opera. There are no libraries and no build step.
 Not yet tested on the car.
 
-**Menu.** First a list of styles (street, track, cyberpunk, 2077), each with a live preview. Open one and you get
+**Menu.** First a list of styles (street, track, cyberpunk, 2077 and, when there are any, custom), each with a live preview. Open one and you get
 live previews of its pages. Pick one and the gauge fills the screen. **Back** goes up one level each time, and at
 the style list it leaves the app. The app reopens on the last gauge, and starts in the style list the very first time.
 
@@ -16,7 +16,9 @@ the style list it leaves the app. The app reopens on the last gauge, and starts 
 | Touch | tap a style or preview; ‹ in the header = back | long-press = back (on a lap page with the timer running: stop the timer), other taps as below |
 | Keyboard (PC) | arrows, Enter, Esc / Backspace | same |
 
-`?set=street|track|cyber|y2077&page=N` opens a gauge directly, `?menu` opens the style list.
+`?set=street|track|cyber|y2077|custom&page=N` opens a gauge directly, `?menu` opens the style list.
+
+**Custom.** The pages designed in the Meters Designer (`js/custom-pages.js`, written by the stick builder; empty in a checkout, so the group is hidden) drawn by `js/custom.js`, an ES5 port of the designer's renderer. At most eight pages, night styling, live data from the same values as the built-in pages. The picker shows four columns when there are more than six pages. No rev ring on these pages. See [docs/15](../docs/15-meters-designer.md). Not yet tested on the car.
 
 **Street**
 | Page | What's on it |
