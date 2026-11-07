@@ -643,19 +643,9 @@ def validate_selection(bundle):
     return bundle
 
 
-def check_destination(path):
-    path = Path(path)
-    require(not path.is_symlink(), "Refusing to replace a linked custom meters archive")
-    if path.exists():
-        require(path.stat().st_size <= 64 * 1024 * 1024, "Existing custom meters archive is too large")
-        validate_selection(json.loads(path.read_text(encoding="utf-8")))
-
-
-def write_selection(path, bundle, protect_existing=False):
+def write_selection(path, bundle):
     validate_selection(bundle)
     path = Path(path)
-    if protect_existing:
-        check_destination(path)
     data = encode(bundle) + b"\n"
     temp = None
     try:

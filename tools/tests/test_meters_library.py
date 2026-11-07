@@ -136,17 +136,21 @@ class LibraryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ml.validate_selection(actual)
 
-    def test_unknown_archive_is_preserved_and_old_selection_can_be_cleared(self):
-        destination = self.path / ml.SELECTION_NAME
-        destination.write_bytes(b"unrelated user file")
+    def test_export_is_written_atomically_and_rejects_an_invalid_selection(self):
+        destination = self.path / "backup.json"
         self.library.save(self.setup)
-        with self.assertRaises(ValueError):
-            ml.write_selection(destination, self.library.selection(), protect_existing=True)
-        self.assertEqual(destination.read_bytes(), b"unrelated user file")
         ml.write_selection(destination, self.library.selection())
+        first = destination.read_bytes()
+        bad = self.library.selection()
+        bad["items"][0]["sha256"] = "0" * 64
+        with self.assertRaises(ValueError):
+            ml.write_selection(destination, bad)
+        self.assertEqual(destination.read_bytes(), first)
         self.library.select([])
-        ml.write_selection(destination, self.library.selection(), protect_existing=True)
+        ml.write_selection(destination, self.library.selection())
         self.assertEqual(json.loads(destination.read_text())["items"], [])
+        self.assertEqual(sorted(p.name for p in self.path.glob(".meters-*")), [])
+        self.assertFalse(hasattr(ml, "check_destination"))
 
     def test_corrupt_database_is_not_replaced(self):
         self.library.path.write_bytes(b"not a database")
@@ -463,12 +467,23 @@ class GuiTests(unittest.TestCase):
         button.invoke()
         self.assertEqual(app.tabs.select(), str(app.choose_tab))
 
-    def test_gui_library_checkboxes_and_build_archive(self):
+    def make_app(self):
         import miatoff_gui as gui
         with patch.dict("os.environ", {"MIATOFF_METERS_LIBRARY": str(self.library.path)}), patch.object(gui, "removable_drives", return_value=[]):
             app = gui.App()
         app.withdraw()
         self.addCleanup(app.destroy)
+        return gui, app
+
+    def run_action(self, gui, app, action, builder):
+        with patch.object(gui, "load_builder", return_value=builder), patch.object(gui.messagebox, "askyesno", return_value=True) as ask, \
+             patch.object(gui.messagebox, "showinfo") as info, patch.object(gui.messagebox, "showerror") as error, \
+             patch.object(gui.messagebox, "showwarning") as warn:
+            app.run(action)
+        return ask, info, error, warn
+
+    def test_gui_library_checkboxes_and_selection_goes_to_build_and_verify(self):
+        gui, app = self.make_app()
         project = deepcopy(self.fixtures["setups"][0])
         project["themes"].append(deepcopy(self.fixtures["setups"][1]["themes"][0]))
         app.meters_library.sync(project)
@@ -484,81 +499,83 @@ class GuiTests(unittest.TestCase):
         app.drive.set(str(self.path))
         builder = Mock()
         builder.check.return_value = True
-        with patch.object(gui, "load_builder", return_value=builder), patch.object(gui.messagebox, "askyesno", return_value=True), \
-             patch.object(gui.messagebox, "showinfo"), patch.object(gui.messagebox, "showerror") as error:
-            app.run("build")
-            error.assert_not_called()
-        bundle = json.loads((self.path / ml.SELECTION_NAME).read_text(encoding="utf-8"))
+        ask, info, error, _warn = self.run_action(gui, app, "build", builder)
+        error.assert_not_called()
+        bundle = builder.build.call_args.kwargs["custom"]
         self.assertEqual([item["id"] for item in bundle["items"]], [ids[0]])
+        self.assertIn("Applications > Meters > CUSTOM", ask.call_args[0][1])
+        self.assertIn("Custom pages: 1", ask.call_args[0][1])
         builder.stickkit.require_stick_root.assert_called_once_with(self.path)
         self.assertEqual((self.path / "miatoff-plan.txt").read_text().count("meters=install"), 1)
-        # A subsequent deselection clears the old archive instead of retaining stale themes.
+        self.assertFalse((self.path / ml.SELECTION_NAME).exists())  # no archive on the stick root
+        # Verify checks against the same selection.
+        _ask, info, error, _warn = self.run_action(gui, app, "verify", builder)
+        error.assert_not_called()
+        self.assertEqual(builder.check.call_args.kwargs["custom"]["items"], bundle["items"])
+        # A changed selection reaches the next build; no pages means no custom argument.
         app.select_custom_meters(False)
-        with patch.object(gui, "load_builder", return_value=builder), patch.object(gui.messagebox, "askyesno", return_value=True), \
-             patch.object(gui.messagebox, "showinfo"), patch.object(gui.messagebox, "showerror") as error:
-            app.run("build")
-            error.assert_not_called()
-        self.assertEqual(json.loads((self.path / ml.SELECTION_NAME).read_text())["items"], [])
+        self.run_action(gui, app, "build", builder)
+        self.assertIsNone(builder.build.call_args.kwargs["custom"])
 
-    def make_app(self):
-        import miatoff_gui as gui
-        with patch.dict("os.environ", {"MIATOFF_METERS_LIBRARY": str(self.library.path)}), patch.object(gui, "removable_drives", return_value=[]):
-            app = gui.App()
-        app.withdraw()
-        self.addCleanup(app.destroy)
-        return gui, app
-
-    def test_archive_is_used_only_when_meters_is_installed(self):
-        import miatoff_gui as gui
-        self.assertTrue(gui.uses_custom_archive({"meters": "install"}, False))
-        for choices, checking in (({"meters": "keep"}, False), ({"meters": "remove"}, False), ({}, False), ({"meters": "install"}, True)):
-            self.assertFalse(gui.uses_custom_archive(choices, checking))
-
-    def test_stick_without_meters_ignores_a_broken_library_and_keeps_the_archive(self):
+    def test_install_is_allowed_for_installed_meters_as_an_update(self):
         gui, app = self.make_app()
-        app.meters_library.sync(self.fixtures["setups"][0])
-        archive = self.path / ml.SELECTION_NAME
-        ml.write_selection(archive, app.meters_library.selection())
-        before = archive.read_bytes()
+        self.assertEqual(gui.allowed_options("installed"), {"install", "remove"})
+        self.assertEqual(gui.allowed_options("available"), {"install"})
+        verdict = {"components": {key: {"state": "available", "detail": ""} for key in gui.KEYS}}
+        verdict["components"]["meters"] = {"state": "installed", "detail": ""}
+        app.apply_verdict(verdict)
+        self.assertEqual(str(app.options["meters"]["install"].cget("state")), "normal")
+        self.assertEqual(app.options["meters"]["install"].cget("text"), "Update")
+        verdict["components"]["meters"]["state"] = "available"
+        app.apply_verdict(verdict)
+        self.assertEqual(app.options["meters"]["install"].cget("text"), "Install")
+
+    def test_broken_library_blocks_a_meters_build_but_not_another_stick(self):
+        gui, app = self.make_app()
         key = next(k for k in gui.KEYS if k != "meters")
         app.tabs.select(app.choose_tab)
         app.vars[key].set("install")
         app.vars["meters"].set("keep")
         app.drive.set(str(self.path))
         builder = Mock()
-        with patch.object(gui, "load_builder", return_value=builder), patch.object(gui.messagebox, "askyesno", return_value=True),              patch.object(gui.messagebox, "showinfo") as info, patch.object(gui.messagebox, "showerror") as error,              patch.object(app.meters_library, "selection", side_effect=RuntimeError("database is locked")) as selection:
-            app.run("build")
+        with patch.object(app.meters_library, "selection", side_effect=RuntimeError("database is locked")):
+            ask, info, error, _warn = self.run_action(gui, app, "build", builder)
             error.assert_not_called()
-            selection.assert_not_called()
             info.assert_called_once()
-        builder.build.assert_called_once()
-        self.assertEqual(archive.read_bytes(), before)
-        self.assertEqual((self.path / "miatoff-plan.txt").read_text().count("meters=keep"), 1)
+            self.assertIn("database is locked", ask.call_args[0][1])
+            builder.build.assert_called_once()
+            self.assertIsNone(builder.build.call_args.kwargs["custom"])
+            self.assertEqual((self.path / "miatoff-plan.txt").read_text().count("meters=keep"), 1)
+            # With Meters set to Install, the same failure stops the build.
+            builder.reset_mock()
+            app.vars["meters"].set("install")
+            _ask, _info, error, _warn = self.run_action(gui, app, "build", builder)
+            error.assert_called_once()
+            self.assertIn("database is locked", error.call_args[0][1])
+            builder.build.assert_not_called()
 
-    def test_archive_problems_are_warnings_after_a_correct_build_and_verify(self):
+    def test_stick_without_meters_still_carries_the_current_selection(self):
         gui, app = self.make_app()
+        app.meters_library.sync(self.fixtures["setups"][0])
+        key = next(k for k in gui.KEYS if k != "meters")
         app.tabs.select(app.choose_tab)
-        app.vars["meters"].set("install")
+        app.vars[key].set("install")
         app.drive.set(str(self.path))
-        archive = self.path / ml.SELECTION_NAME
         builder = Mock()
-        builder.check.return_value = True
-        ml.write_selection(archive, app.meters_library.selection())  # a valid empty archive exists, so a write is attempted
-        with patch.object(gui, "load_builder", return_value=builder), patch.object(gui.messagebox, "askyesno", return_value=True),              patch.object(gui.messagebox, "showinfo") as info, patch.object(gui.messagebox, "showwarning") as warn,              patch.object(gui.messagebox, "showerror") as error, patch.object(gui.meters_library, "write_selection", side_effect=OSError("disk full")):
-            app.run("build")
-            error.assert_not_called()
-            warn.assert_called_once()
-            self.assertIn("disk full", warn.call_args[0][1])
-        archive.write_bytes(b"unrelated user file")
-        with patch.object(gui, "load_builder", return_value=builder), patch.object(gui.messagebox, "showinfo") as info,              patch.object(gui.messagebox, "showerror") as error:
-            app.run("verify")
-            error.assert_not_called()
-            self.assertIn("Stick is correct.", info.call_args[0][1])
-            self.assertIn("Warning", info.call_args[0][1])
-            app.vars["meters"].set("keep")  # archive does not matter for this stick
-            app.run("verify")
-            self.assertNotIn("Warning", info.call_args[0][1])
-        self.assertEqual(archive.read_bytes(), b"unrelated user file")
+        ask, _info, error, _warn = self.run_action(gui, app, "build", builder)
+        error.assert_not_called()
+        self.assertEqual(len(builder.build.call_args.kwargs["custom"]["items"]), 2)
+        self.assertIn("not reported as outdated", ask.call_args[0][1])
+
+    def test_check_tab_builds_the_dump_stick_without_custom_pages(self):
+        gui, app = self.make_app()
+        app.tabs.select(app.check_tab)
+        app.drive.set(str(self.path))
+        builder = Mock()
+        with patch.object(app.meters_library, "selection", side_effect=AssertionError("not needed")):
+            _ask, _info, error, _warn = self.run_action(gui, app, "build", builder)
+        error.assert_not_called()
+        builder.build.assert_called_once_with(self.path)
 
     def test_removed_pages_section_restores_and_skipped_records_show_a_notice(self):
         gui, app = self.make_app()

@@ -89,11 +89,6 @@ def has_changes(choices: dict) -> bool:
     return any(choices.get(key, "keep") != "keep" for key in KEYS)
 
 
-def uses_custom_archive(choices: dict, checking: bool) -> bool:
-    """The custom meters library and archive matter only when this stick installs Meters."""
-    return not checking and choices.get("meters") == "install"
-
-
 def write_plan(target: Path, text: str) -> None:
     with open(target / PLAN_NAME, "w", encoding="ascii", newline="\n") as handle:
         handle.write(text)
@@ -102,8 +97,9 @@ def write_plan(target: Path, text: str) -> None:
 
 
 def allowed_options(state):
-    """Which of install/remove make sense for a checked state (None = not checked: both)."""
-    return {"available": {"install"}, "installed": {"remove"}, "partial": {"install", "remove"},
+    """Which of install/remove make sense for a checked state (None = not checked: both).
+    Install on an installed part is an update: the car sees a different stick and offers REPAIR."""
+    return {"available": {"install"}, "installed": {"install", "remove"}, "partial": {"install", "remove"},
             "blocked": set()}.get(state, {"install", "remove"})
 
 
@@ -401,7 +397,7 @@ class App(tk.Tk):
         tk.Label(self.meters_hint, bg=WARN_BG, fg=WARN_INK, anchor="w", justify="left", wraplength=470,
                  font=("Segoe UI", 9),
                  text="Meters is not set to Install. To put the selected pages on a stick, set Meters to Install "
-                      "on tab 2 (tick Override there if Install is greyed out) and build the stick on that tab."
+                      "(Update, once a check shows Meters installed) on tab 2 and build the stick on that tab."
                  ).pack(side="left", fill="x", expand=True, padx=10, pady=8)
         ttk.Button(self.meters_hint, text="Go to Install / remove", style="Small.TButton",
                    command=lambda: self.tabs.select(self.choose_tab)).pack(side="right", padx=10, pady=8)
@@ -422,10 +418,12 @@ class App(tk.Tk):
         self.removed_status.pack(fill="x", padx=16, pady=(0, 14))
         two = self.card(page, "Good to know")
         tk.Label(two, bg=CARD, fg=INK, justify="left", anchor="w", wraplength=660, font=("Segoe UI", 10),
-                 text="Selected pages are exported as a design archive and copied to a Meters install stick as "
-                      "miatoff-custom-meters.json. They are not activated on the car: v3 runtime integration is still "
-                      "pending. Browser drafts and this local library are separate; use Export > Back up entire "
-                      "project in the editor for a complete backup."
+                 text="Selected pages (at most eight) are built into the Meters install on the stick and show on the "
+                      "car under Applications > Meters > CUSTOM, with live data. To change them later, build a new "
+                      "stick with Meters set to Install (shown as Update once a check finds Meters installed) and "
+                      "press REPAIR in the car. Nothing has been tested in a real car yet. Export selected meters "
+                      "saves a design backup file that the car does not read. Browser drafts and this local library "
+                      "are separate; use Export > Back up entire project in the editor for a complete backup."
                  ).pack(anchor="w", padx=16, pady=(0, 14))
         self.refresh_custom_meters()
         self.after(1000, self._poll_custom_meters)
@@ -583,7 +581,7 @@ class App(tk.Tk):
                                               initialfile=meters_library.SELECTION_NAME, filetypes=[("Meters selection", "*.json")])
             if path:
                 meters_library.write_selection(Path(path), bundle)
-                self.custom_status.configure(text=f"Exported {len(bundle['items'])} selected pages. This design archive does not install them on the car.", fg="#166534")
+                self.custom_status.configure(text=f"Exported {len(bundle['items'])} selected pages as a backup file. The car does not read it.", fg="#166534")
         except Exception as error:
             messagebox.showerror("Custom meters export", str(error))
 
@@ -598,6 +596,8 @@ class App(tk.Tk):
             state = comp["state"]
             bg, fg = BADGE[state]
             self.badges[key].configure(text=state.upper(), bg=bg, fg=fg)
+            if key == "meters":
+                self.options[key]["install"].configure(text="Update" if state == "installed" else "Install")
             ok = {"install", "remove"} if self.override.get() else allowed_options(state)
             for value in ("install", "remove"):
                 self.options[key][value].configure(state="normal" if value in ok else "disabled",
@@ -648,44 +648,46 @@ class App(tk.Tk):
                     return
                 summary = "" if self.checking() else "\n\n" + "\n".join(
                     f"{key}: {value}" for key, value in choices.items() if value != "keep")
-                archive, bundle = target / meters_library.SELECTION_NAME, None
-                use_archive = uses_custom_archive(choices, self.checking())
-                if use_archive:  # every other build leaves the library and any archive on the stick alone
-                    bundle = self.meters_library.selection()
-                    if bundle["items"]:
-                        summary += f"\nCustom meters: {len(bundle['items'])} selected pages (archive only; not activated on car)"
-                    if archive.exists() or archive.is_symlink():
-                        meters_library.check_destination(archive)
+                custom, note = self.custom_selection(choices)
+                if custom:
+                    summary += (f"\nCustom pages: {len(custom['items'])} (shown under Applications > Meters > CUSTOM)"
+                                if choices.get("meters") == "install" else
+                                f"\nCustom pages: {len(custom['items'])} included, so a Meters already on the car "
+                                "is not reported as outdated")
+                summary += note
                 if not messagebox.askyesno("MiatOff", f"Write the stick files to {target}?{summary}"):
                     return
                 builder.stickkit.require_stick_root(target)
-                builder.build(target)
-                warning = ""
+                builder.build(target, **self.builder_args(custom))
                 if not self.checking():
                     write_plan(target, make_plan(choices))
-                    if use_archive and (bundle["items"] or archive.exists()):
-                        try:
-                            meters_library.write_selection(archive, bundle, protect_existing=True)
-                        except Exception as error:
-                            warning = ("\n\nThe custom meters archive was not written: "
-                                       f"{error}\nThe rest of the stick is correct.")
-                (messagebox.showwarning if warning else messagebox.showinfo)(
-                    "MiatOff", "Stick written and verified. Eject it safely before use." + warning)
+                messagebox.showinfo("MiatOff", "Stick written and verified. Eject it safely before use.")
             else:
-                ok = builder.check(target)
-                warning = ""
-                archive = target / meters_library.SELECTION_NAME
-                if uses_custom_archive(self.choices() if not self.checking() else {}, self.checking()) and (archive.exists() or archive.is_symlink()):
-                    try:
-                        meters_library.check_destination(archive)
-                    except Exception as error:
-                        warning = f"\n\nWarning: the custom meters archive on the stick cannot be used: {error}"
-                (messagebox.showinfo if ok else messagebox.showerror)(
-                    "MiatOff", ("Stick is correct." if ok else "Stick does not match this kit.") + warning)
+                custom, note = self.custom_selection(self.choices())
+                ok = builder.check(target, **self.builder_args(custom))
+                messagebox.showinfo("MiatOff", "Stick is correct.") if ok else messagebox.showerror(
+                    "MiatOff", "Stick does not match this kit." + note)
         except SystemExit as error:
             messagebox.showerror("MiatOff", str(error))
         except Exception as error:  # surfaced to the user, never silent
             messagebox.showerror("MiatOff", f"{type(error).__name__}: {error}")
+
+    def builder_args(self, custom) -> dict:
+        """Only the install builder knows about custom pages; the dump builder takes none."""
+        return {} if self.checking() else {"custom": custom}
+
+    def custom_selection(self, choices: dict):
+        """(selection bundle or None, note). A library that cannot be read blocks a Meters build, but not any
+        other stick: that one simply gets no custom pages."""
+        if self.checking():
+            return None, ""
+        try:
+            bundle = self.meters_library.selection()
+        except Exception as error:
+            if choices.get("meters") == "install":
+                raise
+            return None, f"\nCustom pages could not be read ({error}); this stick has none."
+        return (bundle if bundle["items"] else None), ""
 
     def build(self):
         self.run("build")
