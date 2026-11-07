@@ -975,10 +975,38 @@
             return null;
         }
 
+        // An error in a custom page must never stop the app: app.js schedules its next frame only after drawing.
+        // A page that fails is marked broken and shows a short notice instead; every other page keeps working.
+        function broken(c) {
+            c.fillStyle = '#080d16';
+            c.fillRect(150, 190, 500, 100);
+            c.fillStyle = AMBER;
+            c.font = 'bold 22px Arial';
+            c.textAlign = 'center';
+            c.textBaseline = 'middle';
+            c.fillText('This custom page could not be drawn.', 400, 225);
+            c.font = '18px Arial';
+            c.fillText('Check it in the Meters Designer and update Meters.', 400, 258);
+        }
         function wrap(setupItem) {
-            var page = makePage(setupItem);
+            var page = makePage(setupItem), drawStatic = page.drawStatic;
             page.api = A;
-            page.draw = function (c, now) { page.drawWith(c, live(now)); };
+            page.drawStatic = function (c) {
+                if (!page.failed) {
+                    c.save();
+                    try { drawStatic(c); } catch (e) { page.failed = true; }
+                    c.restore();
+                }
+                if (page.failed) broken(c);
+            };
+            page.draw = function (c, now) {
+                if (!page.failed) {
+                    c.save();
+                    try { page.drawWith(c, live(now)); } catch (e) { page.failed = true; page.flashing = false; }
+                    c.restore();
+                }
+                if (page.failed) broken(c);
+            };
             page.tap = function (x, y) {
                 if (hit(page, x, y, 'lap')) { A.sess.lap(Date.now()); return true; }
                 if (hit(page, x, y, 'gmeter')) { peakG = 0; hist.length = 0; return true; }
@@ -997,7 +1025,7 @@
                 need = Math.max(need, page.need);
             } catch (e) { /* a malformed page is skipped */ }
         }
-        pages.tick = sample;
+        pages.tick = function (now) { try { sample(now); } catch (e) { /* history only; drawing still works */ } };
         pages.flush = function () { fitCache = {}; fitCount = 0; };
         return pages;
     };
