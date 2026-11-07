@@ -498,11 +498,28 @@ class Car:
 SHIM = "data_persist/oem-aa-mod/libpatch-blmjciaapa.so"
 
 
-def fresh(base: Path, name: str) -> Car:
+def fresh(base: Path, name: str, custom=None) -> Car:
     car = Car(base / name)
     make_fixture(car.root)
-    bs.build(car.stick)
+    bs.build(car.stick, custom)
     return car
+
+
+def custom_bundle(count: int) -> dict:
+    """A selection of `count` designer pages (the starters, split into single pages) for a stick with custom pages."""
+    import json
+    sys.path.insert(0, str(HERE.parents[1] / "tools"))
+    import meters_library as ml
+    module = (HERE.parents[1] / "meters/designer/v3/model.mjs").as_uri()
+    source = f'import * as M from {json.dumps(module)}; ' + """
+      const out = M.names.map(name => { const s = M.defaults(); s.themes = [M.starter(name)]; s.initialTheme = s.themes[0].id; return s; });
+      console.log(JSON.stringify(out));
+    """
+    projects = json.loads(subprocess.check_output(["node", "--input-type=module", "-e", source], cwd=HERE.parents[1]))
+    setups = [page for project in projects for page in ml.split_pages(project)][:count]
+    items = [{"id": x["themes"][0]["id"], "sha256": sha(ml.encode(x)), "setup": x} for x in setups]
+    return {"version": 1, "kind": "MetersThemeSelection", "producer": "MiatOff builder", "purpose": "design-archive",
+            "items": items}
 
 
 def main():
@@ -1145,6 +1162,64 @@ def main():
                   "REPAIR installs the newer page")
             r = car.run("meters_off")
             check(r.returncode == 0 and car.digest() == stock_digest, "then REMOVE: byte-exact stock")
+
+            # Custom designer pages travel inside the Meters payload: install, change the selection (the car sees an
+            # older Meters, "partial"), REPAIR updates the pages, REMOVE gives byte-exact stock.
+            chosen = custom_bundle(3)
+            custom_payload = bs.payload(chosen)
+            check(custom_payload["miatoff-app/app/meters/js/custom-pages.js"] != payload["miatoff-app/app/meters/js/custom-pages.js"],
+                  "the custom stick carries generated pages")
+            car = fresh(base, "meters-custom", chosen)
+            stock_digest = car.digest()
+            r = car.run("meters_on")
+            pages_on_car = car.root / app_dir / "meters/js/custom-pages.js"
+            check(r.returncode == 0 and car.state("meters:") == "on" and
+                  pages_on_car.read_bytes() == custom_payload["miatoff-app/app/meters/js/custom-pages.js"],
+                  f"Meters with custom pages installs the generated pages ({r.returncode}, {car.state('meters:')})")
+            check(b"window.MeterCustomPages = [{" in pages_on_car.read_bytes(), "the pages file on the car holds the pages")
+            check((car.root / app_dir / "meters/js/custom.js").read_bytes() == payload["miatoff-app/app/meters/js/custom.js"] and
+                  (car.root / app_dir / "meters/fonts/Rajdhani-Bold.ttf").is_file() and
+                  (car.root / app_dir / "meters/fonts/RussoOne-Regular.ttf").is_file(),
+                  "the renderer and both extra fonts are on the car")
+            check(car.read(OPERA) == OPERA_PATCHED_BYTES and car.read(GAP2) == GAP2_PATCHED_BYTES,
+                  "custom pages: opera.ini and stage_gap2.sh are still exactly the patched files")
+            # A newer stick (another selection) in the same car.
+            shutil.rmtree(car.stick / "miatoff-app")
+            for name, data in bs.payload(custom_bundle(2)).items():
+                if name.startswith("miatoff-app/"):
+                    target = car.stick / name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(data)
+            car.run("cancel")
+            check(car.state("meters:") == "partial", f"a changed selection is recognised as partial ({car.state('meters:')})")
+            r = car.run("meters_on")
+            check(r.returncode == 0 and car.state("meters:") == "on" and
+                  pages_on_car.read_bytes() == bs.payload(custom_bundle(2))["miatoff-app/app/meters/js/custom-pages.js"],
+                  "REPAIR installs the changed pages")
+            r = car.run("meters_off")
+            check(r.returncode == 0 and car.digest() == stock_digest, "custom pages: REMOVE gives byte-exact stock")
+            # A stick with no pages replaces them too (empty selection).
+            car = fresh(base, "meters-custom-clear", chosen)
+            car.run("meters_on")
+            shutil.rmtree(car.stick / "miatoff-app")
+            for name, data in bs.payload().items():
+                if name.startswith("miatoff-app/"):
+                    target = car.stick / name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(data)
+            car.run("cancel")
+            r = car.run("meters_on")
+            check(r.returncode == 0 and car.state("meters:") == "on" and
+                  (car.root / app_dir / "meters/js/custom-pages.js").read_bytes().endswith(b"window.MeterCustomImages = {};\n") and
+                  b"MeterCustomPages = [];" in (car.root / app_dir / "meters/js/custom-pages.js").read_bytes(),
+                  "REPAIR with no pages removes the CUSTOM group")
+            # A custom pages file damaged on the stick is refused like any other Meters file.
+            car = fresh(base, "meters-custom-bad", chosen)
+            stock_digest = car.digest()
+            damaged = car.stick / "miatoff-app/app/meters/js/custom-pages.js"
+            damaged.write_bytes(damaged.read_bytes() + b" ")
+            r = car.run("meters_on")
+            check(r.returncode != 0 and car.digest() == stock_digest, "damaged custom pages file on the stick: refused")
 
             for point in ("rename-app", "rename-userjs", "stage-gap2", "rename-gap2", "stage-opera", "rename-opera"):
                 car = fresh(base, f"meters-kill-{point}")
