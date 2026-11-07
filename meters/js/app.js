@@ -1,6 +1,6 @@
 /* MiatOff Meters — pages, smoothing, render loop and navigation. ES5 only.
  *
- * URL options: ?src=sim|sim:<hz>|ws://...|poll:<url>  &set=street|track|cyber|y2077  &page=<0..n-1>
+ * URL options: ?src=sim|sim:<hz>|ws://...|poll:<url>  &set=street|track|cyber|y2077|custom  &page=<0..n-1>
  *              &gm=car (G-meter shows what the car does instead of what you feel)
  * Navigation: swipe, tap a page edge arrow, tap anywhere that is not a control, or arrow keys.
  * Menu: a style list, then live previews of its pages, then the gauge. Knob: turn = next/prev, press = select,
@@ -464,13 +464,16 @@
     // The cyberpunk sets (cyber.js, y2077.js) get the shared state through this object.
     var API = {
         v: v, num: num, fmt: fmt, G: G, RPM: RPM, sess: sess, pedal: pedal, gms: [dyn.gm],
-        felt: query().gm !== 'car', gear: derivedGear, gearText: gearText, fmtLap: fmtLap, fmtDelta: fmtDelta
+        felt: query().gm !== 'car', dyno: dyno, gear: derivedGear, gearText: gearText, fmtLap: fmtLap, fmtDelta: fmtDelta
     };
     function resetG() { for (var k = 0; k < API.gms.length; k++) API.gms[k].reset(); }
     (function () {
-        var names = ['cyber', 'y2077'], k;
+        var names = ['cyber', 'y2077', 'custom'], k, made;
         for (k = 0; k < names.length; k++) {
-            if (W.MeterSets && W.MeterSets[names[k]]) SETS[names[k]] = W.MeterSets[names[k]](API);
+            if (W.MeterSets && W.MeterSets[names[k]]) {
+                made = W.MeterSets[names[k]](API);
+                if (made && made.length) SETS[names[k]] = made;   // a set without pages leaves the menu
+            }
         }
     })();
     var FX = W.MeterFX, lastGear;
@@ -480,7 +483,8 @@
         ['street', 'STREET', 'Tachometer, G-meter, power, info', C.red],
         ['track', 'TRACK', 'Shift bar, lap timer, G-meter, power, session', C.amber],
         ['cyber', 'CYBERPUNK', 'Neon: drive, G-force, track', '#ff2bd6'],
-        ['y2077', '2077', 'Yellow: drive, G-force, track', '#fcee0a']
+        ['y2077', '2077', 'Yellow: drive, G-force, track', '#fcee0a'],
+        ['custom', 'CUSTOM', 'Your designer pages', '#38bdf8']
     ];
     (function () {
         for (var k = 0; k < STYLE_DEFS.length; k++) {
@@ -565,33 +569,43 @@
         forceDraw = true;
     }
 
-    var ROW_Y = 72, ROW_H = 84, ROW_GAP = 10;
+    // The style list fits from y 72 to the hint at 458. Up to four styles use the full 84 px rows; with more, the
+    // rows get shorter (five fit at 69 px) and the preview keeps its 5:3 shape.
+    var ROW_Y = 72, ROW_GAP = 10, ROWS_END = 452;
+    function rowHeight() { return Math.min(84, Math.floor((ROWS_END - ROW_Y - (STYLES.length - 1) * ROW_GAP) / STYLES.length)); }
     function drawStyleMenu(c, now) {
-        var i, st, y, on;
+        var i, st, y, on, rh = rowHeight(), small = rh < 84, tw = Math.round(rh * TW / TH);
         for (i = 0; i < STYLES.length; i++) {
-            st = STYLES[i]; y = ROW_Y + i * (ROW_H + ROW_GAP); on = i === styleSel;
-            if (on) { c.fillStyle = '#1b1b21'; c.fillRect(16, y, 768, ROW_H); }
-            c.globalAlpha = on ? 1 : 0.35; c.fillStyle = st.accent; c.fillRect(16, y, 6, ROW_H); c.globalAlpha = 1;
-            text(c, st.name, 40, y + 32, 34, on ? C.text : '#9a9aa3', 'left', true);
-            text(c, st.sub, 40, y + 64, 17, on ? C.dim : C.faint, 'left', false);
+            st = STYLES[i]; y = ROW_Y + i * (rh + ROW_GAP); on = i === styleSel;
+            if (on) { c.fillStyle = '#1b1b21'; c.fillRect(16, y, 768, rh); }
+            c.globalAlpha = on ? 1 : 0.35; c.fillStyle = st.accent; c.fillRect(16, y, 6, rh); c.globalAlpha = 1;
+            text(c, st.name, 40, y + (small ? 26 : 32), small ? 30 : 34, on ? C.text : '#9a9aa3', 'left', true);
+            text(c, st.sub, 40, y + (small ? 53 : 64), small ? 15 : 17, on ? C.dim : C.faint, 'left', false);
             c.globalAlpha = on ? 1 : 0.45;
-            c.drawImage(thumb(st.key, 0, now), 0, 0, TW, TH, 784 - 140, y, 140, ROW_H);
+            c.drawImage(thumb(st.key, 0, now), 0, 0, TW, TH, 784 - tw, y, tw, rh);
             c.globalAlpha = 1;
-            if (on) { c.strokeStyle = st.accent; c.lineWidth = 2; c.strokeRect(784 - 140 + 1, y + 1, 138, ROW_H - 2); }
+            if (on) { c.strokeStyle = st.accent; c.lineWidth = 2; c.strokeRect(784 - tw + 1, y + 1, tw - 2, rh - 2); }
         }
     }
+    // Page picker: three columns of 240x144 previews for up to six pages, four columns of 180x108 for more (up to 8).
+    function pickLayout(n) {
+        if (n > 6) return { cols: 4, w: 180, h: 108, gap: 16, top: 76, rowGap: 52, label: 16, chars: 16 };
+        return { cols: 3, w: TW, h: TH, gap: 24, top: n <= 3 ? 150 : 76, rowGap: 54, label: 20, chars: 22 };
+    }
     function pickPos(i, n) {
-        var col = i % 3, row = Math.floor(i / 3), top = n <= 3 ? 150 : 76;
-        return { x: 16 + col * (TW + 24), y: top + row * (TH + 54) };
+        var L = pickLayout(n);
+        return { x: 16 + (i % L.cols) * (L.w + L.gap), y: L.top + Math.floor(i / L.cols) * (L.h + L.rowGap) };
     }
     function drawPickMenu(c, now) {
-        var ps = SETS[pickSet], acc = STYLES[styleIndex(pickSet)].accent, i, p, on;
+        var ps = SETS[pickSet], acc = STYLES[styleIndex(pickSet)].accent, i, p, on, L = pickLayout(ps.length), nm;
         for (i = 0; i < ps.length; i++) {
             p = pickPos(i, ps.length); on = i === pickSel;
-            c.drawImage(thumb(pickSet, i, now), p.x, p.y);
+            c.drawImage(thumb(pickSet, i, now), 0, 0, TW, TH, p.x, p.y, L.w, L.h);
             c.lineWidth = on ? 4 : 1; c.strokeStyle = on ? acc : C.ring;
-            c.strokeRect(p.x - (on ? 3 : 0.5), p.y - (on ? 3 : 0.5), TW + (on ? 6 : 1), TH + (on ? 6 : 1));
-            text(c, ps[i].name, p.x + TW / 2, p.y + TH + 26, 20, on ? C.text : C.dim, 'center', true);
+            c.strokeRect(p.x - (on ? 3 : 0.5), p.y - (on ? 3 : 0.5), L.w + (on ? 6 : 1), L.h + (on ? 6 : 1));
+            nm = ps[i].name;
+            if (nm.length > L.chars) nm = nm.substr(0, L.chars - 1) + '..';
+            text(c, nm, p.x + L.w / 2, p.y + L.h + 26, L.label, on ? C.text : C.dim, 'center', true);
         }
     }
 
@@ -709,6 +723,7 @@
         sampleHistory(now);
         if (v.gLat !== undefined) { for (var gi = 0; gi < API.gms.length; gi++) API.gms[gi].push(v.gLat, num(v.gLong), now); }
         samplePedal(now);
+        if (SETS.custom && SETS.custom.tick) SETS.custom.tick(now);
         if (FX) {
             var g = derivedGear();
             if (g !== lastGear && g !== undefined && lastGear !== undefined) FX.kick(now, 220);   // glitch on a gear change
@@ -735,7 +750,7 @@
             return;
         }
         // Rev ring on every page of the track, cyber and 2077 sets; 2077 adds the damage glitch on top.
-        var rpm = num(v.rpm), ring = setName !== 'street', dmg = setName === 'y2077' ? W.MeterSets.y2077Damage : null,
+        var rpm = num(v.rpm), ring = setName !== 'street' && setName !== 'custom', dmg = setName === 'y2077' ? W.MeterSets.y2077Damage : null,
             flip = ring && rpm >= RPM.shift && flashOn(now) !== lastFlash;   // redraw only when the flash toggles
         lastFlash = flashOn(now);
         var toast = now < sess.msgUntil;
@@ -764,19 +779,21 @@
     function start(p) { p.t = Date.now(); down = p; }
     function end(p) {
         if (!down) return;
-        var dx = p.x - down.x, dy = p.y - down.y, held = Date.now() - down.t, i, q2;
+        var dx = p.x - down.x, dy = p.y - down.y, held = Date.now() - down.t, i, q2, rh, pl;
         down = null;
         if (mode !== 'gauge') {
             if (Math.abs(dx) > 20 || Math.abs(dy) > 20) return;
             if (mode === 'pick' && p.y < 60 && p.x < 200) { back(); return; }
             if (mode === 'style') {
+                rh = rowHeight();
                 for (i = 0; i < STYLES.length; i++) {
-                    if (p.y >= ROW_Y + i * (ROW_H + ROW_GAP) && p.y < ROW_Y + i * (ROW_H + ROW_GAP) + ROW_H) { styleSel = i; select(); return; }
+                    if (p.y >= ROW_Y + i * (rh + ROW_GAP) && p.y < ROW_Y + i * (rh + ROW_GAP) + rh) { styleSel = i; select(); return; }
                 }
             } else {
+                pl = pickLayout(SETS[pickSet].length);
                 for (i = 0; i < SETS[pickSet].length; i++) {
                     q2 = pickPos(i, SETS[pickSet].length);
-                    if (p.x >= q2.x && p.x < q2.x + TW && p.y >= q2.y && p.y < q2.y + TH + 40) { pickSel = i; select(); return; }
+                    if (p.x >= q2.x && p.x < q2.x + pl.w && p.y >= q2.y && p.y < q2.y + pl.h + 40) { pickSel = i; select(); return; }
                 }
             }
             return;
@@ -839,9 +856,12 @@
     })();
     // Bundled fonts load after the first paint: redraw the static layers once they are likely in.
     function refreshStatic() {
+        if (SETS.custom && SETS.custom.flush) SETS.custom.flush();   // text sizes measured before the fonts came in
         staleThumbs();
         if (mode === 'gauge') show(cur); else if (mode === 'style') openStyle(); else openPick(pickSet, pickSel);
     }
+    // A background image of a custom page finished loading: draw the static layers again.
+    if (W.MeterCustom) W.MeterCustom.onImage = refreshStatic;
     setTimeout(refreshStatic, 700);
     setTimeout(refreshStatic, 2500);
     frame();
