@@ -11,6 +11,7 @@ CY, MG, YE = '#00f0ff', '#ff2bd6', '#fcee0a'
 OFF_FILL, OFF_LINE = '#140d26', '#2e2052'
 SANS = "Bahnschrift, 'Segoe UI', sans-serif"
 MONO = "Consolas, 'Courier New', monospace"
+BAR_LO = 1000   # rpm where the TRACK shift bars start (meters/js/app.js RPM.low)
 
 _id = [0]
 def uid(p):
@@ -102,7 +103,7 @@ def neon_drive():
     # header
     o += f'<path d="M16,34 H300 L312,22 H784" stroke="{CY}" stroke-width="1.5" fill="none" opacity="0.6"/>\n'
     o += t(20, 24, 'MIATOFF//OS', 14, MG, fam=MONO, weight=700, ls=2)
-    o += t(784, 16, 'NODE ND1-P5 &#9656; LINK OK', 12, CY, 'end', MONO, ls=1, extra='opacity="0.8"')
+    o += t(784, 16, 'NODE MX-5 ND &#9656; LINK OK', 12, CY, 'end', MONO, ls=1, extra='opacity="0.8"')
     # segmented tach
     N, gap = 48, 1.3
     step = SPAN / N
@@ -232,7 +233,7 @@ def neon_track():
     step = (784 - x0) / N
     off, on = '', ''
     for i in range(N):
-        r_hi = 3000 + (i + 1) * 4500 / N
+        r_hi = BAR_LO + (i + 1) * (7500 - BAR_LO) / N
         h = 26 + 74 * (i / (N - 1)) ** 1.4
         x = x0 + i * step
         pts = '%.1f,%.1f %.1f,%.1f %.1f,%.1f %.1f,%.1f' % (x + 6, 120 - h, x + 6 + w - 6, 120 - h, x + w - 6, 120, x, 120)
@@ -241,8 +242,8 @@ def neon_track():
         else:
             off += f'<polygon points="{pts}" fill="{OFF_FILL}" stroke="{OFF_LINE}"/>'
     o += off + '\n' + f'<g filter="url(#glow)">{on}</g>\n'
-    for k in range(3, 8):
-        x = x0 + (k * 1000 - 3000) / 4500 * (784 - x0)
+    for k in range(BAR_LO // 1000, 8):
+        x = x0 + (k * 1000 - BAR_LO) / (7500 - BAR_LO) * (784 - x0)
         o += t(round(x, 1), 140, str(k), 14, MG if k >= 7 else DIM, 'middle', MONO, 700)
     # giant gear
     o += glitch(400, 382, '3', 280, TXT, slices=((0.58, 0.66, 14), (0.22, 0.27, -10), (0.83, 0.86, 6)))
@@ -300,7 +301,7 @@ def ybar_h(x, y, n, step, w, h, lit, col=Y):
 def y_drive():
     rpm, speed, gear = 6300, 128, 4
     o = head(bg=K, grid='#3a3510')
-    o += yheader('MIATOFF', '// ND1 1.5 &#183; 74.00.324', 'SYS ONLINE')
+    o += yheader('MIATOFF', '// MX-5 ND &#183; 74.00.324', 'SYS ONLINE')
     # rev ramp: slanted bars that grow towards the redline, bottoms aligned
     N, x0, x1, base, skew = 32, 16, 508, 236, 12
     step = (x1 - x0) / N
@@ -393,13 +394,13 @@ def y_track():
     N, x0 = 24, 16
     step = (784 - x0) / N
     for i in range(N):
-        r_hi = 3000 + (i + 1) * 4500 / N
+        r_hi = BAR_LO + (i + 1) * (7500 - BAR_LO) / N
         x = x0 + i * step
         pts = [(x + 8, 18), (x + step - 7 + 8, 18), (x + step - 7, 118), (x, 118)]
         o += poly(pts, (RD if r_hi > 7000 else Y) if r_hi <= rpm else '#3a3a36')
     o += '\n'
-    for k in range(3, 8):
-        x = x0 + (k * 1000 - 3000) / 4500 * (784 - x0)
+    for k in range(BAR_LO // 1000, 8):
+        x = x0 + (k * 1000 - BAR_LO) / (7500 - BAR_LO) * (784 - x0)
         o += yt(round(x, 1), 144, str(k), 22, RD if k >= 7 else Y, 'middle')
     o += chamfer(296, 156, 208, 228, 30, fill=Y, stroke=Y, op=1)
     o += yt(400, 378, '3', 236, K, 'middle')
