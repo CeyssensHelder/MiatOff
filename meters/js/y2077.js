@@ -169,7 +169,7 @@
 
     // ================================================================== 2077 TRACK
     function track(A) {
-        var N = 24, X0 = 16, STEP = (784 - X0) / N, LO = A.RPM.low, HI = A.RPM.limit;
+        var N = 24, X0 = 16, STEP = (784 - X0) / N, LO = 3000, HI = A.RPM.limit;
         function bar(c, i) {
             var x = X0 + i * STEP;
             FX.poly(c, [[x + 8, 18], [x + STEP - 7 + 8, 18], [x + STEP - 7, 118], [x, 118]]);
@@ -181,7 +181,7 @@
                 FX.backdrop(c, K, GRID);
                 c.fillStyle = '#3a3a36';
                 for (i = 0; i < N; i++) { bar(c, i); c.fill(); }
-                for (k = LO / 1000; k <= 7; k++) {
+                for (k = 3; k <= 7; k++) {
                     x = X0 + (k * 1000 - LO) / (HI - LO) * (784 - X0);
                     FX.text(c, String(k), x, 144, 22, F, k >= 7 ? RD : Y, 'center');
                 }
