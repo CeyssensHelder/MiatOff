@@ -501,6 +501,7 @@
     // Open a gauge page.
     function useSet(name, page) {
         mode = 'gauge';
+        dropThumbs(null);
         setName = name;
         pages = SETS[name];
         stage.className = 'set-' + name;   // lets the CSS theme the dots and hide the corner arrows
@@ -519,10 +520,25 @@
     }
 
     // Live previews: each page is drawn full size into a scratch canvas twice a second and scaled down.
-    var TW = 240, TH = 144, thumbs = {}, scratch = doc.createElement('canvas');
-    scratch.width = 800; scratch.height = 480;
+    // They only exist while a menu shows them: every preview holds a full-size static canvas (1.5 MB), and the
+    // CMU's Opera drops the content of off-screen canvases under memory pressure (the cyber pages' lit layers
+    // went blank while driving). dropThumbs() frees the ones the next view does not show.
+    var TW = 240, TH = 144, thumbs = {}, scratch = null;
+    function freeCanvas(c) { if (c) { c.width = 0; c.height = 0; } }   // releases the pixels at once
+    function dropThumbs(keep) {
+        var k, i, t;
+        for (k in thumbs) {
+            if (!thumbs.hasOwnProperty(k)) continue;
+            for (i = 0; i < thumbs[k].length; i++) {
+                t = thumbs[k][i];
+                if (t && !(keep && keep(k, i))) { freeCanvas(t.stat); freeCanvas(t.small); thumbs[k][i] = null; }
+            }
+        }
+        if (!keep) { freeCanvas(scratch); scratch = null; }
+    }
     function thumb(key, i, now) {
         var t = (thumbs[key] || (thumbs[key] = []))[i], sc;
+        if (!scratch) { scratch = doc.createElement('canvas'); scratch.width = 800; scratch.height = 480; }
         if (!t) {
             t = thumbs[key][i] = { stat: doc.createElement('canvas'), small: doc.createElement('canvas'), at: 0 };
             t.stat.width = 800; t.stat.height = 480; t.small.width = TW; t.small.height = TH;
@@ -552,6 +568,7 @@
     }
     function openStyle() {
         mode = 'style';
+        dropThumbs(function (k, i) { return i === 0; });     // the style list previews page 0 of each style
         styleSel = styleIndex(setName);
         stage.className = 'mode-menu';
         menuStatic('Choose a style', false, 'Turn: choose  ·  Press: open  ·  Back: leave');
@@ -559,6 +576,7 @@
     }
     function openPick(key, sel) {
         mode = 'pick';
+        dropThumbs(function (k) { return k === key; });
         pickSet = key; pickSel = sel || 0;
         stage.className = 'mode-menu';
         menuStatic(STYLES[styleIndex(key)].name, true, 'Turn: choose  ·  Press: open  ·  Back: styles');
@@ -651,8 +669,11 @@
     // Both are drawn over the page whenever it is redrawn; they never force a redraw themselves, except the
     // shift flash (no extra canvas layer: on the car every layer costs a full-screen blend per repaint).
     // depth: how far it fades in (px); solid: width of the full-colour edge; peak: opacity where the fade starts.
+    // Only the edges are kept: rendered on a full-screen canvas once, then copied into two small ones (top and
+    // bottom strip stacked in hz, left and right strip side by side in vt) and the big one freed.
     function makeRing(col, depth, solid, peak) {
-        var c = doc.createElement('canvas'), x, i;
+        var c = doc.createElement('canvas'), hz = doc.createElement('canvas'), vt = doc.createElement('canvas'),
+            x, i, R = depth, H = 480 - 2 * depth;
         c.width = 800; c.height = 480;
         x = c.getContext('2d');
         x.strokeStyle = col; x.lineWidth = 1;
@@ -660,7 +681,14 @@
             x.globalAlpha = i < solid ? 1 : peak * Math.pow(1 - (i - solid) / (depth - solid), 2);
             x.strokeRect(i + 0.5, i + 0.5, 800 - 2 * i - 1, 480 - 2 * i - 1);
         }
-        return { img: c, depth: depth };
+        hz.width = 800; hz.height = 2 * R;
+        hz.getContext('2d').drawImage(c, 0, 0, 800, R, 0, 0, 800, R);
+        hz.getContext('2d').drawImage(c, 0, 480 - R, 800, R, 0, R, 800, R);
+        vt.width = 2 * R; vt.height = H;
+        vt.getContext('2d').drawImage(c, 0, R, R, H, 0, 0, R, H);
+        vt.getContext('2d').drawImage(c, 800 - R, R, R, H, R, 0, R, H);
+        c.width = 0; c.height = 0;
+        return { hz: hz, vt: vt, depth: depth };
     }
     var rings = {
         amber: makeRing(C.amber, 26, 4, 0.55),
@@ -693,10 +721,10 @@
         }
         R = ring.depth; H = 480 - 2 * R;
         ctx.globalAlpha = a;
-        ctx.drawImage(ring.img, 0, 0, 800, R, 0, 0, 800, R);
-        ctx.drawImage(ring.img, 0, 480 - R, 800, R, 0, 480 - R, 800, R);
-        ctx.drawImage(ring.img, 0, R, R, H, 0, R, R, H);
-        ctx.drawImage(ring.img, 800 - R, R, R, H, 800 - R, R, R, H);
+        ctx.drawImage(ring.hz, 0, 0, 800, R, 0, 0, 800, R);
+        ctx.drawImage(ring.hz, 0, R, 800, R, 0, 480 - R, 800, R);
+        ctx.drawImage(ring.vt, 0, 0, R, H, 0, R, R, H);
+        ctx.drawImage(ring.vt, R, 0, R, H, 800 - R, R, R, H);
         ctx.globalAlpha = 1;
     }
 

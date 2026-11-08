@@ -73,20 +73,31 @@
         FX.poly(ctx, [[x + skew, y], [x + skew + w, y], [x + w, y + h], [x, y + h]]);
     };
 
-    FX.layer = function (draw) {
-        var c = doc.createElement('canvas');
-        c.width = 800; c.height = 480;
-        draw(c.getContext('2d'));
+    // A pre-rendered layer covering only the box x, y, w, h of the screen (not the full 800x480: each full-screen
+    // canvas costs 1.5 MB, and the CMU's Opera drops the content of off-screen canvases under memory pressure).
+    // draw() works in screen coordinates; the layer remembers where it sits (ox, oy).
+    FX.layer = function (x, y, w, h, draw) {
+        var c = doc.createElement('canvas'), ctx;
+        x = Math.floor(x); y = Math.floor(y);
+        c.width = Math.ceil(w); c.height = Math.ceil(h); c.ox = x; c.oy = y;
+        ctx = c.getContext('2d');
+        ctx.translate(-x, -y);
+        draw(ctx);
         return c;
     };
+    // Draw a whole layer at its place on the screen.
+    FX.put = function (ctx, layer) { ctx.drawImage(layer, layer.ox, layer.oy); };
 
     FX.glow = function (ctx, color, blur) { ctx.shadowColor = color; ctx.shadowBlur = blur; };
     FX.noGlow = function (ctx) { ctx.shadowBlur = 0; ctx.shadowColor = 'rgba(0,0,0,0)'; };
 
-    // Copy a rectangle of a lit layer onto the screen.
+    // Copy a rectangle (screen coordinates) of a lit layer onto the screen. The part outside the layer is skipped:
+    // a source rectangle outside the canvas makes some browsers throw.
     FX.blit = function (ctx, layer, x, y, w, h) {
-        if (w <= 0 || h <= 0) return;
-        ctx.drawImage(layer, x, y, w, h, x, y, w, h);
+        var x0 = Math.max(x, layer.ox), y0 = Math.max(y, layer.oy),
+            x1 = Math.min(x + w, layer.ox + layer.width), y1 = Math.min(y + h, layer.oy + layer.height);
+        if (x1 <= x0 || y1 <= y0) return;
+        ctx.drawImage(layer, x0 - layer.ox, y0 - layer.oy, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
     };
 
     // Background shared by both styles: flat colour, 40 px grid, scanlines and a vignette (static canvas only).
