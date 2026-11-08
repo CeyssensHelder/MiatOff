@@ -4,7 +4,7 @@ Gauge pages for the Mazda Connect screen (800×480), as in [docs/13](../docs/13-
 ES5 JavaScript, because the CMU shows pages in an old Opera. There are no libraries and no build step.
 Experimental: installed and used on our own car (see the support status in the [main README](../README.md#support-status)).
 
-**Menu.** First a list of styles (street, track, cyberpunk, 2077 and, when there are any, custom), each with a live preview. Open one and you get
+**Menu.** First a list of styles (street, track, cyberpunk, 2077, 2077 night and, when there are any, custom), each with a live preview. Open one and you get
 live previews of its pages. Pick one and the gauge fills the screen. **Back** goes up one level each time, and at
 the style list it leaves the app. The app reopens on the last gauge, and starts in the style list the very first time.
 
@@ -16,7 +16,7 @@ the style list it leaves the app. The app reopens on the last gauge, and starts 
 | Touch | tap a style or preview; ‹ in the header = back | long-press = back (on a lap page with the timer running: stop the timer), other taps as below |
 | Keyboard (PC) | arrows, Enter, Esc / Backspace | same |
 
-`?set=street|track|cyber|y2077|custom&page=N` opens a gauge directly, `?menu` opens the style list.
+`?set=street|track|cyber|y2077|y2077n|custom&page=N` opens a gauge directly, `?menu` opens the style list.
 
 **Custom.** The pages designed in the Meters Designer (`js/custom-pages.js`, written by the stick builder; empty in a checkout, so the group is hidden) drawn by `js/custom.js`, an ES5 port of the designer's renderer. At most eight pages, night styling, live data from the same values as the built-in pages. The picker shows four columns when there are more than six pages. No rev ring on these pages. Experimental: tried on our own car; see [docs/15](../docs/15-meters-designer.md) for the known issues.
 
@@ -51,7 +51,8 @@ in 1st and 2nd the revs rise too fast for the 10 updates per second.
 **Cyber** (neon cyan / magenta / yellow, designs in [design/cyberpunk/](design/cyberpunk/)) and **2077** (yellow,
 black-on-yellow, angular, designs in [design/cyberpunk2077/](design/cyberpunk2077/)) each have three pages: DRIVE,
 G-meter and TRACK. All their pages have the rev ring, like the track set; their TRACK pages also work as a lap timer (tap the page
-at the line). On 2077 the ring also gets "damage" glitches like in the game: amber LED-grid streaks from the
+at the line). **2077 night** is the same three pages in a calmer palette: muted cyan instead of yellow, at about
+40 % of its brightness, so the large fills do not draw the eye at night; red alerts stay red. On both 2077 sets the ring also gets "damage" glitches like in the game: amber LED-grid streaks from the
 left and right edges from 6200 rpm, red streaks reaching further in from 7000, and from 7200 red streaks flash
 across the whole screen. Kept light for the i.MX6: the small streak textures are made once when the page loads,
 each redraw copies 4–10 random bands of them (new bands at most every 120 ms), and the glitch never forces a

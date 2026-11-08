@@ -1,6 +1,6 @@
 /* MiatOff Meters — pages, smoothing, render loop and navigation. ES5 only.
  *
- * URL options: ?src=sim|sim:<hz>|ws://...|poll:<url>  &set=street|track|cyber|y2077|custom  &page=<0..n-1>
+ * URL options: ?src=sim|sim:<hz>|ws://...|poll:<url>  &set=street|track|cyber|y2077|y2077n|custom  &page=<0..n-1>
  *              &gm=car (G-meter shows what the car does instead of what you feel)
  * Navigation: swipe, tap a page edge arrow, tap anywhere that is not a control, or arrow keys.
  * Menu: a style list, then live previews of its pages, then the gauge. Knob: turn = next/prev, press = select,
@@ -468,7 +468,7 @@
     };
     function resetG() { for (var k = 0; k < API.gms.length; k++) API.gms[k].reset(); }
     (function () {
-        var names = ['cyber', 'y2077', 'custom'], k, made;
+        var names = ['cyber', 'y2077', 'y2077n', 'custom'], k, made;
         for (k = 0; k < names.length; k++) {
             if (W.MeterSets && W.MeterSets[names[k]]) {
                 made = W.MeterSets[names[k]](API);
@@ -484,6 +484,7 @@
         ['track', 'TRACK', 'Shift bar, lap timer, G-meter, power, session', C.amber],
         ['cyber', 'CYBERPUNK', 'Neon: drive, G-force, track', '#ff2bd6'],
         ['y2077', '2077', 'Yellow: drive, G-force, track', '#fcee0a'],
+        ['y2077n', '2077 NIGHT', 'Muted cyan: drive, G-force, track', '#35a9b5'],
         ['custom', 'CUSTOM', 'Your designer pages', '#38bdf8']
     ];
     (function () {
@@ -749,8 +750,8 @@
             setTimeout(frame, 33);
             return;
         }
-        // Rev ring on every page of the track, cyber and 2077 sets; 2077 adds the damage glitch on top.
-        var rpm = num(v.rpm), ring = setName !== 'street' && setName !== 'custom', dmg = setName === 'y2077' ? W.MeterSets.y2077Damage : null,
+        // Rev ring on every page of the track, cyber and 2077 sets; both 2077 sets add the damage glitch on top.
+        var rpm = num(v.rpm), ring = setName !== 'street' && setName !== 'custom', dmg = setName.indexOf('y2077') === 0 ? W.MeterSets.y2077Damage : null,
             flip = ring && rpm >= RPM.shift && flashOn(now) !== lastFlash;   // redraw only when the flash toggles
         lastFlash = flashOn(now);
         var toast = now < sess.msgUntil;
