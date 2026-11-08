@@ -60,7 +60,7 @@
                 c.beginPath(); c.moveTo(16, 34); c.lineTo(300, 34); c.lineTo(312, 22); c.lineTo(784, 22); c.stroke();
                 c.globalAlpha = 1;
                 header(c, 'CYBER-MIATA');
-                FX.text(c, 'NODE ND1-P5 ▸ LINK OK', 784, 16, 12, FX.MONO, CY, 'right', 0.8);
+                FX.text(c, 'NODE MX-5 ND ▸ LINK OK', 784, 16, 12, FX.MONO, CY, 'right', 0.8);
                 for (i = 0; i < N; i++) {
                     mid = (i + 0.5) * 8000 / N;
                     c.fillStyle = mid >= A.RPM.red ? '#2a0f2a' : OFF; c.strokeStyle = OFFL; c.lineWidth = 1;
@@ -211,7 +211,7 @@
 
     // ================================================================== CYBER TRACK
     function track(A) {
-        var N = 32, X0 = 18, W = 24, STEP = (784 - X0) / N, LO = 3000, HI = A.RPM.limit;
+        var N = 32, X0 = 18, W = 24, STEP = (784 - X0) / N, LO = A.RPM.low, HI = A.RPM.limit;
         function bar(c, i) {
             var h = 26 + 74 * Math.pow(i / (N - 1), 1.4), x = X0 + i * STEP;
             FX.poly(c, [[x + 6, 120 - h], [x + W, 120 - h], [x + W - 6, 120], [x, 120]]);
@@ -229,7 +229,7 @@
                 FX.backdrop(c, BG, GRID);
                 c.fillStyle = OFF; c.strokeStyle = OFFL; c.lineWidth = 1;
                 for (i = 0; i < N; i++) { bar(c, i); c.fill(); c.stroke(); }
-                for (k = 3; k <= 7; k++) {
+                for (k = LO / 1000; k <= 7; k++) {
                     x = X0 + (k * 1000 - LO) / (HI - LO) * (784 - X0);
                     FX.text(c, String(k), x, 140, 14, FX.MONO, k >= 7 ? MG : DIM, 'center');
                 }

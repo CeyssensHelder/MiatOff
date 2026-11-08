@@ -32,7 +32,7 @@ reaches further in, alternating with no ring.
 
 | Page | What's on it |
 |---|---|
-| TRACK | For reading from the corner of your eye: a full-width rpm bar 3000–7500 (green, amber from 6500, red from 7000, the whole bar flashes blue from 7200), a giant gear number, speed and rpm. Coolant only takes space when it is 105 °C or hotter (a red box) |
+| TRACK | For reading from the corner of your eye: a full-width rpm bar 1000–7500 (green, amber from 6500, red from 7000, the whole bar flashes blue from 7200), a giant gear number, speed and rpm. Coolant only takes space when it is 105 °C or hotter (a red box) |
 | LAP | Lap timer: tap the screen at the start/finish line (or `L`). Taps less than 5 s after the lap start are ignored and say TOO SOON. Long-press (1.2 s) stops the timer and drops the lap in progress (finished laps stay); with the timer stopped a long-press goes back as usual. Current lap time, the difference of the last lap to the best one (green faster, red slower), last, best and top speed of the last lap |
 | G-METER | The same G-meter page |
 | POWER | The same POWER page |
