@@ -102,7 +102,7 @@ def neon_drive():
     # header
     o += f'<path d="M16,34 H300 L312,22 H784" stroke="{CY}" stroke-width="1.5" fill="none" opacity="0.6"/>\n'
     o += t(20, 24, 'MIATOFF//OS', 14, MG, fam=MONO, weight=700, ls=2)
-    o += t(784, 16, 'NODE ND1-P5 &#9656; LINK OK', 12, CY, 'end', MONO, ls=1, extra='opacity="0.8"')
+    o += t(784, 16, 'NODE MX-5 ND &#9656; LINK OK', 12, CY, 'end', MONO, ls=1, extra='opacity="0.8"')
     # segmented tach
     N, gap = 48, 1.3
     step = SPAN / N
@@ -300,7 +300,7 @@ def ybar_h(x, y, n, step, w, h, lit, col=Y):
 def y_drive():
     rpm, speed, gear = 6300, 128, 4
     o = head(bg=K, grid='#3a3510')
-    o += yheader('MIATOFF', '// ND1 1.5 &#183; 74.00.324', 'SYS ONLINE')
+    o += yheader('MIATOFF', '// MX-5 ND &#183; 74.00.324', 'SYS ONLINE')
     # rev ramp: slanted bars that grow towards the redline, bottoms aligned
     N, x0, x1, base, skew = 32, 16, 508, 236, 12
     step = (x1 - x0) / N

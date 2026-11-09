@@ -40,7 +40,7 @@
             drawStatic: function (c) {
                 var i, k, r;
                 FX.backdrop(c, K, GRID);
-                header(c, 'CYBER-MIATA', '// ND1 1.5 · 74.00.324', 'SYS ONLINE');
+                header(c, 'CYBER-MIATA', '// MX-5 ND · 74.00.324', 'SYS ONLINE');
                 c.lineWidth = 1;
                 for (i = 0; i < N; i++) {
                     r = (i + 1) * 8000 / N;

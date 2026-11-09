@@ -60,7 +60,7 @@
                 c.beginPath(); c.moveTo(16, 34); c.lineTo(300, 34); c.lineTo(312, 22); c.lineTo(784, 22); c.stroke();
                 c.globalAlpha = 1;
                 header(c, 'CYBER-MIATA');
-                FX.text(c, 'NODE ND1-P5 ▸ LINK OK', 784, 16, 12, FX.MONO, CY, 'right', 0.8);
+                FX.text(c, 'NODE MX-5 ND ▸ LINK OK', 784, 16, 12, FX.MONO, CY, 'right', 0.8);
                 for (i = 0; i < N; i++) {
                     mid = (i + 0.5) * 8000 / N;
                     c.fillStyle = mid >= A.RPM.red ? '#2a0f2a' : OFF; c.strokeStyle = OFFL; c.lineWidth = 1;
