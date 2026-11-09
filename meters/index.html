@@ -5,11 +5,15 @@
 <title>Meters</title>
 <meta name="viewport" content="width=800, height=480, user-scalable=no">
 <style>
-/* Fonts for the cyberpunk sets (OFL); without the files the pages fall back to the system fonts. */
+/* Fonts for the cyberpunk sets and the custom pages (OFL); without the files the pages fall back to the system fonts. */
 @font-face { font-family: 'MO Chakra'; src: url(fonts/ChakraPetch-Bold.ttf); font-weight: bold; }
 @font-face { font-family: 'MO Mono'; src: url(fonts/ShareTechMono-Regular.ttf); font-weight: bold; }
+@font-face { font-family: 'MO Condensed'; src: url(fonts/Rajdhani-Bold.ttf); font-weight: bold; }
+@font-face { font-family: 'MO Sport'; src: url(fonts/RussoOne-Regular.ttf); font-weight: bold; }
 #fontload { position: absolute; left: -999px; top: 0; font: bold 10px 'MO Chakra'; }
 #fontload span { font-family: 'MO Mono'; }
+#fontload span + span { font-family: 'MO Condensed'; }
+#fontload span + span + span { font-family: 'MO Sport'; }
 html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
 #stage { position: relative; width: 800px; height: 480px; margin: 0 auto; background: #000; overflow: hidden;
          -webkit-user-select: none; -o-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -29,6 +33,9 @@ html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
 .mode-menu .nav, .mode-menu #dots, .mode-menu #src { display: none; }
 /* Cyberpunk sets: their bottom lines run where the arrows sit (the corners still work), themed dots. */
 .set-cyber .nav, .set-y2077 .nav, .set-cyber #src, .set-y2077 #src { display: none; }
+/* Custom pages use the whole screen too. */
+.set-custom .nav, .set-custom #src { display: none; }
+.set-custom #dots span.on { background: #38bdf8; }
 .set-cyber #dots span { background: #2e2052; }
 .set-cyber #dots span.on { background: #ff2bd6; }
 .set-y2077 #dots span { background: #3a3a36; }
@@ -44,7 +51,7 @@ html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
     <div id="dots"></div>
     <div id="src"></div>
     <div id="nodata">NO DATA</div>
-    <div id="fontload">x<span>x</span></div>
+    <div id="fontload">x<span>x</span><span>x</span><span>x</span></div>
 </div>
 <script src="js/gauges.js"></script>
 <script src="js/data.js"></script>
@@ -52,6 +59,8 @@ html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
 <script src="js/fx.js"></script>
 <script src="js/cyber.js"></script>
 <script src="js/y2077.js"></script>
+<script src="js/custom-pages.js"></script>
+<script src="js/custom.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

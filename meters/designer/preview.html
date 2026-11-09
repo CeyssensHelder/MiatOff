@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Custom meters preview · MiatOff</title>
+    <link rel="stylesheet" href="studio-v3.css" />
+    <link rel="stylesheet" href="preview.css" />
+  </head>
+  <body class="library-preview">
+    <header class="studio-header">
+      <div class="brand">
+        <div>
+          <strong id="preview-title">Custom meters preview</strong>
+          <p>Builder library · read-only</p>
+        </div>
+      </div>
+      <label
+        >Page
+        <select id="preview-page" disabled></select
+      ></label>
+      <label
+        >Theme mode
+        <select id="preview-mode">
+          <option value="night">Night</option>
+          <option value="day">Day</option>
+        </select></label
+      >
+      <a href="index.html">Open editor</a>
+    </header>
+    <p id="preview-status" role="status">Loading the saved theme…</p>
+    <main class="preview-workspace">
+      <div class="screen">
+        <canvas
+          id="canvas"
+          width="800"
+          height="480"
+          aria-label="Saved custom meter preview"
+        ></canvas>
+      </div>
+      <div class="simulation-strip">
+        <span id="preview-state">Simulated · Paused</span>
+        <button id="preview-play" disabled>Play simulation</button>
+        <label
+          >Scenario
+          <select id="preview-scenario">
+            <option>acceleration</option>
+            <option>idle</option>
+            <option>braking</option>
+            <option>high RPM</option>
+            <option>warnings</option>
+            <option>missing</option>
+          </select></label
+        >
+      </div>
+    </main>
+    <script type="module" src="v3/library-preview.mjs"></script>
+  </body>
+</html>

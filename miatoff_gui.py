@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """MiatOff stick builder: check the car, then choose what to install or remove.
 
-Two tabs:
+Three tabs:
   Check my car    build the read-only dump stick, then read the newest dump back
                   from the stick. The verdict is deterministic (tools/check_dump.py).
   Install/remove  per component: install, remove or leave it as it is. After a
                   check, options the car cannot take are greyed out.
+  Meters Designer start the local designer (tools/meters_designer.py) and open it
+                  in the browser. It builds no stick.
 
 The choice is written to the stick as miatoff-plan.txt. In the car the dialog
 offers the plan's steps one at a time (each is confirmed, and each restarts the
@@ -21,12 +23,13 @@ import importlib.util
 import os
 import sys
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "tools"))
 import check_dump  # noqa: E402
 import stickkit  # noqa: E402
+import meters_library  # noqa: E402
 
 DUMP_BUILDER = ROOT / "dump-stick" / "build_stick.py"
 INSTALL_BUILDER = ROOT / "aa-touch-stick" / "build_stick.py"
@@ -94,8 +97,9 @@ def write_plan(target: Path, text: str) -> None:
 
 
 def allowed_options(state):
-    """Which of install/remove make sense for a checked state (None = not checked: both)."""
-    return {"available": {"install"}, "installed": {"remove"}, "partial": {"install", "remove"},
+    """Which of install/remove make sense for a checked state (None = not checked: both).
+    Install on an installed part is an update: the car sees a different stick and offers REPAIR."""
+    return {"available": {"install"}, "installed": {"install", "remove"}, "partial": {"install", "remove"},
             "blocked": set()}.get(state, {"install", "remove"})
 
 
@@ -166,10 +170,13 @@ class App(tk.Tk):
         self.tabs.pack(fill="both", expand=True, padx=16, pady=(8, 0))
         self.check_tab = tk.Frame(self.tabs, bg=BG)
         self.choose_tab = tk.Frame(self.tabs, bg=BG)
+        self.designer_tab = tk.Frame(self.tabs, bg=BG)
         self.tabs.add(self.check_tab, text="1  Check my car")
         self.tabs.add(self.choose_tab, text="2  Install / remove")
+        self.tabs.add(self.designer_tab, text="3  Meters Designer")
         self._build_check_tab()
         self._build_choose_tab()
+        self._build_designer_tab()
         self.tabs.bind("<<NotebookTabChanged>>", lambda _e: self._tab_changed())
         self._tab_changed()
 
@@ -202,10 +209,15 @@ class App(tk.Tk):
         bar.pack(side="bottom", fill="x", padx=16, pady=12)
         self.build_button = ttk.Button(bar, text="Build stick", style="Accent.TButton", command=self.build)
         self.build_button.pack(side="left")
-        ttk.Button(bar, text="Verify stick", style="Plain.TButton", command=self.verify).pack(side="left", padx=8)
+        self.verify_button = ttk.Button(bar, text="Verify stick", style="Plain.TButton", command=self.verify)
+        self.verify_button.pack(side="left", padx=8)
 
     def _tab_changed(self):
-        self.build_button.configure(text="Build check stick" if self.checking() else "Build install stick")
+        # The stick buttons belong to tabs 1 and 2; the designer tab builds no stick.
+        state = "disabled" if self.designing() else "normal"
+        self.build_button.configure(state=state, text="Build check stick" if self.checking() else
+                                    "Build stick" if self.designing() else "Build install stick")
+        self.verify_button.configure(state=state)
 
     def card(self, parent, title=None):
         frame = tk.Frame(parent, bg=CARD, highlightbackground=LINE, highlightthickness=1)
@@ -337,6 +349,246 @@ class App(tk.Tk):
             option.configure(bg=OPTION_FILL[value] if on else CARD,
                              font=("Segoe UI", 9, "bold") if on else ("Segoe UI", 9))
 
+    # ---------------------------------------------------------------- designer tab
+    def _build_designer_tab(self):
+        import meters_designer
+        self.meters_library = meters_library.PageLibrary()
+        self.custom_vars, self.custom_rows = {}, {}
+        self._library_signature = None
+        self._removed_signature = None
+        self.removed_rows = []
+        self.designer_url = f"http://127.0.0.1:{meters_designer.DEFAULT_PORT}/designer/index.html"
+        scroller = Scrolled(self.designer_tab)
+        scroller.pack(fill="both", expand=True, pady=8)
+        page = scroller.inner
+        one = self.card(page, "Design your own gauge pages")
+        tk.Label(one, bg=CARD, fg=INK, justify="left", anchor="w", wraplength=660, font=("Segoe UI", 10),
+                 text="The designer opens in your web browser on this PC. It saves your work automatically in that "
+                      "browser, for the address below, so always open it from here. Keep this window open while you "
+                      "design: closing MiatOff stops the designer."
+                 ).pack(anchor="w", padx=16, pady=(0, 10))
+        row = tk.Frame(one, bg=CARD)
+        row.pack(anchor="w", padx=16, pady=(0, 8))
+        ttk.Button(row, text="Open designer", style="Accent.TButton", command=self.open_designer).pack(side="left")
+        ttk.Button(row, text="Copy address", style="Plain.TButton", command=self.copy_designer_url).pack(side="left", padx=8)
+        self.designer_status = tk.Label(one, text="Not started.", bg=CARD, fg=MUTED, anchor="w", font=("Segoe UI", 9))
+        self.designer_status.pack(anchor="w", padx=16, pady=(0, 14))
+        custom = self.card(page, "Custom pages")
+        tk.Label(custom, bg=CARD, fg=INK, justify="left", anchor="w", wraplength=650, font=("Segoe UI", 10),
+                 text="In the editor, press Send to builder to sync every page in Custom here. Choose up to eight pages "
+                      "to include in your export. Updates keep your include choices. There are no theme groups."
+                 ).pack(fill="x", padx=16, pady=(0, 10))
+        self.custom_list = tk.Frame(custom, bg=CARD)
+        self.custom_list.pack(fill="x", padx=16)
+        self.custom_empty = tk.Label(self.custom_list, text="No custom meters sent yet. Open the designer to get started.",
+                                     bg=CARD, fg=MUTED, anchor="w", wraplength=640)
+        self.custom_empty.pack(fill="x", pady=10)
+        actions = tk.Frame(custom, bg=CARD)
+        actions.pack(fill="x", padx=16, pady=10)
+        ttk.Button(actions, text="Select all", style="Small.TButton", command=lambda: self.select_custom_meters(True)).pack(side="left")
+        ttk.Button(actions, text="Select none", style="Small.TButton", command=lambda: self.select_custom_meters(False)).pack(side="left", padx=6)
+        ttk.Button(actions, text="Refresh list", style="Small.TButton", command=self.refresh_custom_meters).pack(side="left")
+        self.custom_export = ttk.Button(custom, text="Export selected meters…", style="Accent.TButton", command=self.export_custom_meters)
+        self.custom_export.pack(anchor="w", padx=16, pady=(0, 8))
+        self.custom_status = tk.Label(custom, bg=CARD, fg=MUTED, anchor="w", justify="left", wraplength=650, font=("Segoe UI", 9))
+        self.custom_status.pack(fill="x", padx=16, pady=(0, 14))
+        # Shown while Meters is not set to Install on tab 2: only then do the selected pages go on the stick.
+        self.meters_hint = tk.Frame(custom, bg=WARN_BG)
+        tk.Label(self.meters_hint, bg=WARN_BG, fg=WARN_INK, anchor="w", justify="left", wraplength=470,
+                 font=("Segoe UI", 9),
+                 text="Meters is not set to Install. To put the selected pages on a stick, set Meters to Install "
+                      "(Update, once a check shows Meters installed) on tab 2 and build the stick on that tab."
+                 ).pack(side="left", fill="x", expand=True, padx=10, pady=8)
+        ttk.Button(self.meters_hint, text="Go to Install / remove", style="Small.TButton",
+                   command=lambda: self.tabs.select(self.choose_tab)).pack(side="right", padx=10, pady=8)
+        self.vars["meters"].trace_add("write", lambda *_: self._update_meters_hint())
+        self._update_meters_hint()
+        self.custom_notice = tk.Label(custom, bg=CARD, fg="#92400e", anchor="w", justify="left", wraplength=650, font=("Segoe UI", 9))
+        removed = self.card(page, "Removed pages")
+        tk.Label(removed, bg=CARD, fg=INK, justify="left", anchor="w", wraplength=650, font=("Segoe UI", 10),
+                 text="When Send to builder is used from an editor draft that lacks some pages, the designer asks first "
+                      "and then moves those pages here. Restore puts a page back in the list above, not selected. A "
+                      "restored page that is not in the editor draft will be offered for removal again on the next Send."
+                 ).pack(fill="x", padx=16, pady=(0, 10))
+        self.removed_list = tk.Frame(removed, bg=CARD)
+        self.removed_list.pack(fill="x", padx=16, pady=(0, 6))
+        self.removed_empty = tk.Label(self.removed_list, text="No removed pages.", bg=CARD, fg=MUTED, anchor="w")
+        self.removed_empty.pack(fill="x", pady=4)
+        self.removed_status = tk.Label(removed, bg=CARD, fg=MUTED, anchor="w", justify="left", wraplength=650, font=("Segoe UI", 9))
+        self.removed_status.pack(fill="x", padx=16, pady=(0, 14))
+        two = self.card(page, "Good to know")
+        tk.Label(two, bg=CARD, fg=INK, justify="left", anchor="w", wraplength=660, font=("Segoe UI", 10),
+                 text="Selected pages (at most eight) are built into the Meters install on the stick and show on the "
+                      "car under Applications > Meters > CUSTOM, with live data. To change them later, build a new "
+                      "stick with Meters set to Install (shown as Update once a check finds Meters installed) and "
+                      "press REPAIR in the car. Nothing has been tested in a real car yet. Export selected meters "
+                      "saves a design backup file that the car does not read. Browser drafts and this local library "
+                      "are separate; use Export > Back up entire project in the editor for a complete backup."
+                 ).pack(anchor="w", padx=16, pady=(0, 14))
+        self.refresh_custom_meters()
+        self.after(1000, self._poll_custom_meters)
+
+    def _update_meters_hint(self):
+        if self.vars["meters"].get() == "install":
+            self.meters_hint.pack_forget()
+        elif not self.meters_hint.winfo_manager():
+            self.meters_hint.pack(fill="x", padx=16, pady=(0, 10), before=self.custom_export)
+
+    def _ensure_designer(self):
+        import meters_designer
+        if not hasattr(self, "designer_server"):
+            try:
+                self.designer_server = meters_designer.launch(open_browser=False)
+                self.designer_status.configure(text="Running at " + self.designer_url, fg="#166534")
+            except OSError:
+                # Port busy: reuse a designer server that is already running there.
+                import urllib.request
+                import json
+                import hashlib
+                try:
+                    with urllib.request.urlopen(self.designer_url.split("/designer/")[0] + "/api/builder/session", timeout=2) as response:
+                        connection = json.load(response)
+                    expected = hashlib.sha256(str(self.meters_library.path.resolve()).encode()).hexdigest()
+                    if connection.get("service") != "MiatOffDesigner" or connection.get("protocol") != 2 or connection.get("libraryId") != expected:
+                        raise ValueError("Different or older designer server")
+                except (OSError, ValueError):
+                    self.designer_status.configure(text="Could not start.", fg="#991b1b")
+                    messagebox.showerror("Meters Designer", f"Port {meters_designer.DEFAULT_PORT} is in use by "
+                                         "another program or by a designer started from a different MiatOff window or "
+                                         "folder. Close the old designer / MiatOff window, then reopen the designer "
+                                         "from this window, so the editor and builder use the same custom meters library.")
+                    return False
+                self.designer_status.configure(text="Using the designer already running at " + self.designer_url,
+                                               fg="#166534")
+        return True
+
+    def open_designer(self):
+        import webbrowser
+        if self._ensure_designer():
+            webbrowser.open(self.designer_url)
+
+    def preview_custom_meter(self, key):
+        import webbrowser
+        from urllib.parse import urlencode
+        if self._ensure_designer():
+            webbrowser.open(self.designer_url.replace("index.html", "preview.html") + "?" + urlencode({"theme": key}))
+
+    def refresh_custom_meters(self):
+        self.refresh_removed_pages()
+        try:
+            skipped = self.meters_library.skipped_migrations()
+            if skipped:
+                self.custom_notice.configure(text=f"{len(skipped)} older saved theme(s) could not be converted and were skipped; "
+                                                  "they are untouched in the library file.")
+                self.custom_notice.pack(fill="x", padx=16, pady=(0, 8), before=self.custom_status)
+            else:
+                self.custom_notice.pack_forget()
+            rows = self.meters_library.list()
+            signature = tuple((r["id"], r["sha256"], r["selected"]) for r in rows)
+            if signature == self._library_signature:
+                return
+            self._library_signature = signature
+            self.custom_empty.pack_forget()
+            known = {r["id"] for r in rows}
+            for key in list(self.custom_rows):
+                if key not in known:
+                    self.custom_rows.pop(key)[0].destroy()
+                    self.custom_vars.pop(key)
+            if not rows:
+                self.custom_empty.pack(fill="x", pady=10)
+            for row in rows:
+                key = row["id"]
+                if key not in self.custom_rows:
+                    frame = tk.Frame(self.custom_list, bg=CARD)
+                    frame.pack(fill="x", pady=5)
+                    var = tk.BooleanVar(self, value=bool(row["selected"]))
+                    check = tk.Checkbutton(frame, variable=var, bg=CARD, fg=INK, activebackground=CARD,
+                                           anchor="w", justify="left", wraplength=360,
+                                           command=lambda k=key: self._custom_meter_toggled(k))
+                    check.pack(side="left", fill="x", expand=True)
+                    ttk.Button(frame, text="Preview", style="Small.TButton", command=lambda k=key: self.preview_custom_meter(k)).pack(side="right", padx=(8, 0))
+                    self.custom_rows[key] = (frame, check)
+                    self.custom_vars[key] = var
+                self.custom_vars[key].set(bool(row["selected"]))
+                self.custom_rows[key][1].configure(text=f"{row['name']}\n{row['widgets']} instruments")
+            selected = sum(bool(row["selected"]) for row in rows)
+            self.custom_export.configure(state="normal" if selected else "disabled")
+            self.custom_status.configure(text=f"{selected} of {len(rows)} Custom pages selected. Selection is saved on this PC.", fg=MUTED)
+        except Exception as error:
+            self._library_signature = None
+            self.custom_export.configure(state="disabled")
+            self.custom_status.configure(text="Library could not be read; existing data was preserved. " + str(error), fg="#991b1b")
+
+    def refresh_removed_pages(self):
+        try:
+            signature = self.meters_library.retired_signature()
+            if signature == self._removed_signature:
+                return
+            rows = self.meters_library.list_retired()
+            self._removed_signature = signature
+            for frame in self.removed_rows:
+                frame.destroy()
+            self.removed_rows = []
+            self.removed_empty.pack_forget()
+            if not rows:
+                self.removed_empty.pack(fill="x", pady=4)
+            for row in rows:
+                frame = tk.Frame(self.removed_list, bg=CARD)
+                frame.pack(fill="x", pady=3)
+                tk.Label(frame, bg=CARD, fg=INK, anchor="w", justify="left", wraplength=420,
+                         text=f"{row['name']}\n{row['widgets']} instruments, removed {row['retired'][:16].replace('T', ' ')} UTC"
+                         ).pack(side="left", fill="x", expand=True)
+                ttk.Button(frame, text="Restore", style="Small.TButton",
+                           command=lambda r=row: self.restore_removed_page(r["id"], r["sha256"])).pack(side="right", padx=(8, 0))
+                self.removed_rows.append(frame)
+        except Exception as error:
+            self._removed_signature = None
+            self.removed_status.configure(text="Removed pages could not be read; nothing was changed. " + str(error), fg="#991b1b")
+
+    def restore_removed_page(self, key, digest):
+        try:
+            result = self.meters_library.restore_retired(key, digest)
+            self.removed_status.configure(text=f"Restored {result['name']}. It is in the list above, not selected.", fg="#166534")
+        except Exception as error:
+            self.removed_status.configure(text="Not restored: " + str(error), fg="#991b1b")
+        self.refresh_custom_meters()
+
+    def _poll_custom_meters(self):
+        self.refresh_custom_meters()
+        self.after(1000, self._poll_custom_meters)
+
+    def _custom_meter_toggled(self, key):
+        try:
+            self.meters_library.select([k for k, var in self.custom_vars.items() if var.get()])
+            self.refresh_custom_meters()
+        except Exception as error:
+            self.custom_vars[key].set(not self.custom_vars[key].get())
+            self.custom_status.configure(text=str(error), fg="#991b1b")
+
+    def select_custom_meters(self, include):
+        try:
+            self.meters_library.select(list(self.custom_vars) if include else [])
+            self.refresh_custom_meters()
+        except Exception as error:
+            self.custom_status.configure(text=str(error), fg="#991b1b")
+
+    def export_custom_meters(self):
+        try:
+            bundle = self.meters_library.selection()
+            if not bundle["items"]:
+                raise ValueError("Select at least one Custom page first.")
+            path = filedialog.asksaveasfilename(title="Export selected custom meters", defaultextension=".json",
+                                              initialfile=meters_library.SELECTION_NAME, filetypes=[("Meters selection", "*.json")])
+            if path:
+                meters_library.write_selection(Path(path), bundle)
+                self.custom_status.configure(text=f"Exported {len(bundle['items'])} selected pages as a backup file. The car does not read it.", fg="#166534")
+        except Exception as error:
+            messagebox.showerror("Custom meters export", str(error))
+
+    def copy_designer_url(self):
+        self.clipboard_clear()
+        self.clipboard_append(self.designer_url)
+
     def apply_verdict(self, verdict):
         """Badges from a check, and options the car cannot take greyed out."""
         for key in KEYS:
@@ -344,6 +596,8 @@ class App(tk.Tk):
             state = comp["state"]
             bg, fg = BADGE[state]
             self.badges[key].configure(text=state.upper(), bg=bg, fg=fg)
+            if key == "meters":
+                self.options[key]["install"].configure(text="Update" if state == "installed" else "Install")
             ok = {"install", "remove"} if self.override.get() else allowed_options(state)
             for value in ("install", "remove"):
                 self.options[key][value].configure(state="normal" if value in ok else "disabled",
@@ -366,6 +620,9 @@ class App(tk.Tk):
     def checking(self) -> bool:
         return self.tabs.index(self.tabs.select()) == 0
 
+    def designing(self) -> bool:
+        return self.tabs.index(self.tabs.select()) == 2
+
     def choices(self) -> dict:
         return {key: self.vars[key].get() for key in KEYS}
 
@@ -377,6 +634,8 @@ class App(tk.Tk):
         return Path(text)
 
     def run(self, action: str):
+        if self.designing():  # never treat the designer tab as "install"
+            return
         target = self.target()
         if target is None:
             return
@@ -389,21 +648,46 @@ class App(tk.Tk):
                     return
                 summary = "" if self.checking() else "\n\n" + "\n".join(
                     f"{key}: {value}" for key, value in choices.items() if value != "keep")
+                custom, note = self.custom_selection(choices)
+                if custom:
+                    summary += (f"\nCustom pages: {len(custom['items'])} (shown under Applications > Meters > CUSTOM)"
+                                if choices.get("meters") == "install" else
+                                f"\nCustom pages: {len(custom['items'])} included, so a Meters already on the car "
+                                "is not reported as outdated")
+                summary += note
                 if not messagebox.askyesno("MiatOff", f"Write the stick files to {target}?{summary}"):
                     return
                 builder.stickkit.require_stick_root(target)
-                builder.build(target)
+                builder.build(target, **self.builder_args(custom))
                 if not self.checking():
                     write_plan(target, make_plan(choices))
                 messagebox.showinfo("MiatOff", "Stick written and verified. Eject it safely before use.")
             else:
-                ok = builder.check(target)
-                (messagebox.showinfo if ok else messagebox.showerror)(
-                    "MiatOff", "Stick is correct." if ok else "Stick does not match this kit.")
+                custom, note = self.custom_selection(self.choices())
+                ok = builder.check(target, **self.builder_args(custom))
+                messagebox.showinfo("MiatOff", "Stick is correct.") if ok else messagebox.showerror(
+                    "MiatOff", "Stick does not match this kit." + note)
         except SystemExit as error:
             messagebox.showerror("MiatOff", str(error))
         except Exception as error:  # surfaced to the user, never silent
             messagebox.showerror("MiatOff", f"{type(error).__name__}: {error}")
+
+    def builder_args(self, custom) -> dict:
+        """Only the install builder knows about custom pages; the dump builder takes none."""
+        return {} if self.checking() else {"custom": custom}
+
+    def custom_selection(self, choices: dict):
+        """(selection bundle or None, note). A library that cannot be read blocks a Meters build, but not any
+        other stick: that one simply gets no custom pages."""
+        if self.checking():
+            return None, ""
+        try:
+            bundle = self.meters_library.selection()
+        except Exception as error:
+            if choices.get("meters") == "install":
+                raise
+            return None, f"\nCustom pages could not be read ({error}); this stick has none."
+        return (bundle if bundle["items"] else None), ""
 
     def build(self):
         self.run("build")
@@ -413,4 +697,12 @@ class App(tk.Tk):
 
 
 if __name__ == "__main__":
-    App().mainloop()
+    import argparse
+    parser = argparse.ArgumentParser(description="MiatOff desktop builder")
+    parser.add_argument("--designer", action="store_true", help="Open the Custom meters library tab")
+    args = parser.parse_args()
+    app = App()
+    if args.designer:
+        app.tabs.select(app.designer_tab)
+        app.title("MiatOff · Custom pages")
+    app.mainloop()

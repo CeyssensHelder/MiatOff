@@ -31,13 +31,14 @@
         ctx.textBaseline = 'middle';
         ctx.fillText(s, x, y);
     }
+    // Quarter circles: arcTo left steps in the corners on the car.
     function roundRect(ctx, x, y, w, h, r) {
         ctx.beginPath();
         ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
-        ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-        ctx.lineTo(x + r, y + h); ctx.arcTo(x, y + h, x, y + h - r, r);
-        ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r);
+        ctx.lineTo(x + w - r, y); ctx.arc(x + w - r, y + r, r, -Math.PI / 2, 0, false);
+        ctx.lineTo(x + w, y + h - r); ctx.arc(x + w - r, y + h - r, r, 0, Math.PI / 2, false);
+        ctx.lineTo(x + r, y + h); ctx.arc(x + r, y + h - r, r, Math.PI / 2, Math.PI, false);
+        ctx.lineTo(x, y + r); ctx.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5, false);
         ctx.closePath();
     }
 
