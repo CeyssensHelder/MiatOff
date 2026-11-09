@@ -53,7 +53,7 @@
     // Rev limits of the ND1 1.5 (P5): 131 PS at 7000 rpm, 150 Nm at 4800 rpm, Mazda's redline 7000 rpm, fuel cut
     // around 7500 (owner reports). Power stays near its peak to the limiter and the gears are close, so the
     // quickest upshift is late: SHIFT leaves ~0.25 s of reaction time before the cut in 2nd/3rd.
-    var RPM = { amber: 6500, red: 7000, shift: 7200, limit: 7500 };
+    var RPM = { low: 1000, amber: 6500, red: 7000, shift: 7200, limit: 7500 };   // low: start of the TRACK shift bars
     function rpmBand(r) { return r >= RPM.red ? C.red : (r >= RPM.amber ? C.amber : C.band); }
 
     // Readable on the 7" screen: few things per page, numbers at least ~50 px, labels ~20 px.
@@ -230,7 +230,7 @@
     // ------------------------------------------------------------------ TRACK: shift bar + giant gear
     // Made to be read from the corner of your eye: one full-width rpm bar, the gear, nothing else unless hot.
     function trackPage() {
-        var N = 30, X0 = 16, W = 768, Y = 16, H = 104, LO = 3000, HI = RPM.limit, sw = W / N;
+        var N = 30, X0 = 16, W = 768, Y = 16, H = 104, LO = RPM.low, HI = RPM.limit, sw = W / N;
         function segCol(i) {
             var r = LO + (i + 1) * (HI - LO) / N;
             return r > RPM.red ? C.red : (r > RPM.amber ? C.amber : C.green);
@@ -242,7 +242,7 @@
                 var i, r;
                 ctx.fillStyle = C.track;
                 for (i = 0; i < N; i++) seg(ctx, i);
-                for (r = 3000; r <= 7000; r += 1000) {
+                for (r = LO; r <= 7000; r += 1000) {
                     text(ctx, String(r / 1000), X0 + (r - LO) / (HI - LO) * W, Y + H + 20, 18, C.dim, 'center', true);
                 }
                 text(ctx, 'km/h', 130, 372, 22, C.dim, 'center', true);
