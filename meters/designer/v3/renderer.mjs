@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { measurement, rect, styleFor } from "./layout.mjs";
+import { crisp, measurement, pixel, rect, segmentBox, snapRect, styleFor } from "./layout.mjs";
 import {
   range,
   toUnit,
@@ -43,7 +43,7 @@ const layer = (w, h) => {
   c.height = Math.max(1, Math.ceil(h));
   return c;
 };
-// Rounded rectangle through arcTo: the car's old browser has no roundRect. Same clamp as before.
+// Rounded rectangle from quarter circles: the car's browser has no roundRect, and its arcTo left steps in the corners.
 export function roundedPath(c, x, y, w, h, radius) {
   const r = Math.max(0, Math.min(radius, w / 2, h / 2));
   c.beginPath();
@@ -53,13 +53,13 @@ export function roundedPath(c, x, y, w, h, radius) {
   }
   c.moveTo(x + r, y);
   c.lineTo(x + w - r, y);
-  c.arcTo(x + w, y, x + w, y + r, r);
+  c.arc(x + w - r, y + r, r, -Math.PI / 2, 0, false);
   c.lineTo(x + w, y + h - r);
-  c.arcTo(x + w, y + h, x + w - r, y + h, r);
+  c.arc(x + w - r, y + h - r, r, 0, Math.PI / 2, false);
   c.lineTo(x + r, y + h);
-  c.arcTo(x, y + h, x, y + h - r, r);
+  c.arc(x + r, y + h - r, r, Math.PI / 2, Math.PI, false);
   c.lineTo(x, y + r);
-  c.arcTo(x, y, x + r, y, r);
+  c.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5, false);
   c.closePath();
 }
 // A dashed circle drawn as short arcs (3 px on, 5 px off): the car has no setLineDash.
@@ -89,8 +89,8 @@ export function shapePath(c, r, kind = "rounded", radius = 14) {
   } else if (kind === "octagon") {
     for (let i = 0; i < 8; i++) {
       const a = ((i + 0.5) * Math.PI) / 4,
-        x = r.x + r.w / 2 + (Math.cos(a) * r.w) / 2,
-        y = r.y + r.h / 2 + (Math.sin(a) * r.h) / 2;
+        x = Math.round(r.x + r.w / 2 + (Math.cos(a) * r.w) / 2),
+        y = Math.round(r.y + r.h / 2 + (Math.sin(a) * r.h) / 2);
       i ? c.lineTo(x, y) : c.moveTo(x, y);
     }
     c.closePath();
@@ -139,14 +139,14 @@ export function drawBackground(c, b, assets, mode = "night") {
         if (b.kind === "grid") {
           for (let n = 0; n < 800; n += b.spacing) {
             x.beginPath();
-            x.moveTo(n, 0);
-            x.lineTo(n, 480);
+            x.moveTo(pixel(n, 1), 0);
+            x.lineTo(pixel(n, 1), 480);
             x.stroke();
           }
           for (let n = 0; n < 480; n += b.spacing) {
             x.beginPath();
-            x.moveTo(0, n);
-            x.lineTo(800, n);
+            x.moveTo(0, pixel(n, 1));
+            x.lineTo(800, pixel(n, 1));
             x.stroke();
           }
         } else
@@ -228,15 +228,18 @@ function panel(c, w, m) {
         g.addColorStop(0, m.effect === "inset" ? "#000000" : "#b8c8d2");
         g.addColorStop(1, m.effect === "inset" ? "#8c9eac" : "#000000");
         x.strokeStyle = g;
-        x.lineWidth = Math.max(1, s.bevel * s.intensity);
+        x.lineWidth = Math.max(1, Math.round(s.bevel * s.intensity));
         shapePath(
           x,
-          {
-            x: p.x + 2,
-            y: p.y + 2,
-            w: Math.max(0, p.w - 4),
-            h: Math.max(0, p.h - 4),
-          },
+          crisp(
+            {
+              x: p.x + 2,
+              y: p.y + 2,
+              w: Math.max(0, p.w - 4),
+              h: Math.max(0, p.h - 4),
+            },
+            x.lineWidth,
+          ),
           "rounded",
           Math.max(0, m.radius - 2),
         );
@@ -244,7 +247,7 @@ function panel(c, w, m) {
       }
       x.strokeStyle = m.effect === "neon" ? s.glowColor : s.borderColor;
       x.lineWidth = s.borderWidth;
-      shapePath(x, p, "rounded", m.radius);
+      shapePath(x, crisp(p, s.borderWidth), "rounded", m.radius);
       x.stroke();
       return out;
     },
@@ -350,10 +353,10 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
       c.strokeStyle = s.color;
       c.lineWidth = w.thickness;
       if (w.variant === "line") {
-        const box = shrink(plot, Math.min(10, Math.min(plot.w, plot.h) / 4));
+        const box = snapRect(shrink(plot, Math.min(10, Math.min(plot.w, plot.h) / 4)));
         let a, b;
         if (w.orientation === "vertical") {
-          a = { x: box.x + box.w / 2, y: box.y };
+          a = { x: pixel(box.x + box.w / 2, w.thickness), y: box.y };
           b = { x: a.x, y: box.y + box.h };
         } else if (w.orientation === "diagonal") {
           a = { x: box.x, y: box.y + box.h };
@@ -362,7 +365,7 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
           a = { x: box.x + box.w * w.startX, y: box.y + box.h * w.startY };
           b = { x: box.x + box.w * w.endX, y: box.y + box.h * w.endY };
         } else {
-          a = { x: box.x, y: box.y + box.h / 2 };
+          a = { x: box.x, y: pixel(box.y + box.h / 2, w.thickness) };
           b = { x: box.x + box.w, y: a.y };
         }
         c.beginPath();
@@ -410,18 +413,16 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
         { minimum: 24 },
       );
     } else {
-      const box =
-        w.sparkline && plot.h > 70
-          ? rect(plot.x, plot.y, plot.w, plot.h * 0.65)
-          : plot;
+      const spark = w.sparkline && plot.h > 70,
+        box = spark ? snapRect(rect(plot.x, plot.y, plot.w, plot.h * 0.65)) : plot;
       emit(value, box, w.size, { minimum: 32 });
-      if (w.sparkline && plot.h > 70)
+      if (spark)
         chart(
           c,
           w,
           m,
           state,
-          rect(plot.x, plot.y + plot.h * 0.75, plot.w, plot.h * 0.25),
+          snapRect(rect(plot.x, plot.y + plot.h * 0.75, plot.w, plot.h * 0.25)),
           w.signal,
           r,
           measureOnly,
@@ -430,7 +431,7 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
     }
   } else if (w.type === "radial") {
     const inside = w.valuePosition === "center",
-      g = inside ? plot : rect(plot.x, plot.y, plot.w, plot.h * 0.7),
+      g = inside ? plot : snapRect(rect(plot.x, plot.y, plot.w, plot.h * 0.7)),
       // Labels outside the arc need a ring of room, so the arc itself gets smaller.
       outer = w.tickLabels === "outside",
       radius = Math.max(0, Math.min(g.w, g.h) / 2 - 8 - (outer ? 40 : 0)),
@@ -439,11 +440,13 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
       start = Math.PI * (1.5 - w.sweep / 360),
       sweep = (w.sweep * Math.PI) / 180,
       // Inside the arc the value sits in the middle, or in the open bottom under a needle.
-      valueBox = !inside
-        ? rect(plot.x, plot.y + plot.h * 0.72, plot.w, plot.h * 0.28)
-        : w.variant === "needle"
-          ? rect(cx - radius * 0.4, cy + radius * 0.36, radius * 0.8, radius * 0.46)
-          : rect(cx - radius * 0.5, cy - radius * 0.3, radius * 1.0, radius * 0.6),
+      valueBox = snapRect(
+        !inside
+          ? rect(plot.x, plot.y + plot.h * 0.72, plot.w, plot.h * 0.28)
+          : w.variant === "needle"
+            ? rect(cx - radius * 0.4, cy + radius * 0.36, radius * 0.8, radius * 0.46)
+            : rect(cx - radius * 0.5, cy - radius * 0.3, radius * 1.0, radius * 0.6),
+      ),
       labelRadius = outer
         ? radius + Math.max(w.thickness, 8) / 2 + 18
         : radius - Math.max(w.thickness, 8) / 2 - 22,
@@ -464,41 +467,9 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
       }
       if (w.sweep === 360 && marks.length > 1) marks.pop();
     }
-    const tickRuns = [];
-    for (const v of marks) {
-      const a = start + (sweep * (v - r.min)) / span,
-        x = cx + Math.cos(a) * labelRadius,
-        y = cy + Math.sin(a) * labelRadius,
-        label =
-          w.signal === "rpm" && w.abbreviate
-            ? v === 0
-              ? "0"
-              : `${Number((v / 1000).toFixed(1))}k`
-            : String(Number(v.toFixed(w.decimals)));
-      const box = rect(x - 26, y - 11, 52, 22);
-      // A label that would run into the value inside the dial is left out; its tick stays.
-      if (containsRect(g, box) && !(inside && !outer && overlaps(box, valueBox))) {
-        const bounds = emit(label, box, 18, {
-          minimum: 14,
-          role: "scale",
-          align: "center",
-        });
-        if (bounds) tickRuns.push(bounds);
-      }
-      if (!measureOnly) {
-        c.lineWidth = 1;
-        c.strokeStyle = color;
-        c.beginPath();
-        c.moveTo(
-          cx + Math.cos(a) * (radius - 7),
-          cy + Math.sin(a) * (radius - 7),
-        );
-        c.lineTo(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius);
-        c.stroke();
-      }
-    }
     if (!measureOnly && radius > 0) {
       c.lineWidth = w.thickness;
+      c.strokeStyle = s.color;
       c.globalAlpha = 0.18;
       c.beginPath();
       c.arc(cx, cy, radius, start, start + sweep);
@@ -534,20 +505,12 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
           c.stroke();
         });
         c.globalAlpha = 1;
-        c.lineWidth = w.thickness;
-        c.strokeStyle = color;
       }
-      if (w.variant === "needle") {
-        c.beginPath();
-        c.moveTo(cx, cy);
-        c.lineTo(
-          cx + Math.cos(start + sweep * ratio) * (radius - 10),
-          cy + Math.sin(start + sweep * ratio) * (radius - 10),
-        );
-        c.stroke();
-      } else if (w.variant === "segmented") {
+      if (w.variant === "segmented") {
+        c.lineWidth = w.thickness;
+        c.strokeStyle = s.color;
+        c.globalAlpha = 0.15;
         for (let k = 0; k < w.segments; k++) {
-          c.globalAlpha = k / w.segments < ratio ? 1 : 0.15;
           c.beginPath();
           c.arc(
             cx,
@@ -559,12 +522,71 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
           c.stroke();
         }
         c.globalAlpha = 1;
+      }
+    }
+    // Track, bands, unlit segments, ticks and scale labels stay put: the car draws them once.
+    for (const v of marks) {
+      const a = start + (sweep * (v - r.min)) / span,
+        x = cx + Math.cos(a) * labelRadius,
+        y = cy + Math.sin(a) * labelRadius,
+        label =
+          w.signal === "rpm" && w.abbreviate
+            ? v === 0
+              ? "0"
+              : `${Number((v / 1000).toFixed(1))}k`
+            : String(Number(v.toFixed(w.decimals)));
+      if (!measureOnly) {
+        c.lineWidth = 2;
+        c.strokeStyle = s.color;
+        c.beginPath();
+        c.moveTo(
+          cx + Math.cos(a) * (radius - 7),
+          cy + Math.sin(a) * (radius - 7),
+        );
+        c.lineTo(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius);
+        c.stroke();
+      }
+      const box = rect(x - 26, y - 11, 52, 22);
+      // A label that would run into the value inside the dial is left out; its tick stays.
+      if (containsRect(g, box) && !(inside && !outer && overlaps(box, valueBox))) {
+        c.fillStyle = s.textColor;
+        emit(label, box, 18, {
+          minimum: 14,
+          role: "scale",
+          align: "center",
+        });
+      }
+    }
+    if (!measureOnly && radius > 0) {
+      c.lineWidth = w.thickness;
+      c.strokeStyle = color;
+      if (w.variant === "needle") {
+        c.beginPath();
+        c.moveTo(cx, cy);
+        c.lineTo(
+          cx + Math.cos(start + sweep * ratio) * (radius - 10),
+          cy + Math.sin(start + sweep * ratio) * (radius - 10),
+        );
+        c.stroke();
+      } else if (w.variant === "segmented") {
+        for (let k = 0; k < w.segments && k / w.segments < ratio; k++) {
+          c.beginPath();
+          c.arc(
+            cx,
+            cy,
+            radius,
+            start + (sweep * k) / w.segments,
+            start + (sweep * (k + 0.72)) / w.segments,
+          );
+          c.stroke();
+        }
       } else {
         c.beginPath();
         c.arc(cx, cy, radius, start, start + sweep * ratio);
         c.stroke();
       }
     }
+    c.fillStyle = textColor;
     emit(value, valueBox, w.size, { minimum: 32, align: "center" });
   } else if (w.type === "bar" || w.type === "shift") {
     if (!measureOnly) {
@@ -574,66 +596,62 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
         rpm = state.vehicle.rpm,
         // Shift lights start `shiftLead` rpm before the amber line and fill up to the shift point.
         first = Math.max(0, rpm.amber - (w.type === "shift" ? w.shiftLead : 0)),
-        span = Math.max(1, rpm.shift - first);
-      for (let i = 0; i < count; i++) {
-        const fraction =
-            w.type === "shift"
-              ? Math.max(0, Math.min(1, (state.rpm - first) / span))
-              : ratio,
-          active = i / count < fraction;
+        span = Math.max(1, rpm.shift - first),
+        fraction =
+          w.type === "shift"
+            ? Math.max(0, Math.min(1, (state.rpm - first) / span))
+            : ratio,
         // Each segment's own colour: a green, amber, red ramp for shift lights, colour zones for bars.
-        let segmentColor = color;
-        if (count > 1 && !alarm) {
-          if (w.type === "shift" && w.colorRamp) {
-            const at = first + (span * (i + 0.5)) / count;
-            segmentColor =
-              at >= rpm.red ? s.warningColor : at >= rpm.amber ? AMBER : GREEN;
-          } else if (w.type === "bar" && zoned)
-            segmentColor =
-              zoneColor(
-                zone,
-                fromUnit(r.min + ((r.max - r.min) * (i + 0.5)) / count, w.signal, r.unit),
-              ) ?? s.color;
+        tint = (i, base, alarmed) => {
+          if (count > 1 && !alarmed) {
+            if (w.type === "shift" && w.colorRamp) {
+              const at = first + (span * (i + 0.5)) / count;
+              return at >= rpm.red ? s.warningColor : at >= rpm.amber ? AMBER : GREEN;
+            }
+            if (w.type === "bar" && zoned)
+              return (
+                zoneColor(
+                  zone,
+                  fromUnit(r.min + ((r.max - r.min) * (i + 0.5)) / count, w.signal, r.unit),
+                ) ?? s.color
+              );
+          }
+          return base;
+        },
+        paint = (item) => {
+          if (w.variant === "dotted" || w.variant === "led") {
+            shapePath(c, item, "circle");
+            c.fill();
+          } else c.fillRect(item.x, item.y, item.w, item.h);
+        };
+      // Unlit segments never change (the car draws them once); lit ones go on top.
+      if (count > 1) {
+        c.globalAlpha = 0.12;
+        for (let i = 0; i < count; i++) {
+          c.fillStyle = tint(i, s.color, false);
+          paint(segmentBox(plot, i, count, w.gap, vertical));
         }
-        let item = vertical
-          ? rect(
-              plot.x,
-              plot.y + plot.h - ((i + 1) * plot.h) / count,
-              plot.w,
-              Math.max(1, plot.h / count - w.gap),
-            )
-          : rect(
-              plot.x + (i * plot.w) / count,
-              plot.y,
-              Math.max(1, plot.w / count - w.gap),
-              plot.h,
-            );
-        if (count === 1) {
-          if (vertical) {
-            item.y += item.h * (1 - fraction);
-            item.h *= fraction;
-          } else item.w *= fraction;
-        }
-        c.globalAlpha = active ? 1 : 0.12;
-        if (
-          w.type === "shift" &&
-          m.warning === "flash" &&
-          Math.floor(state.time * 10) % 2
-        )
-          c.globalAlpha = 0.12;
-        c.fillStyle = segmentColor;
-        if (w.variant === "dotted" || w.variant === "led") {
-          shapePath(c, item, "circle");
-          c.fill();
-        } else c.fillRect(item.x, item.y, item.w, item.h);
+        c.globalAlpha = 1;
       }
-      c.globalAlpha = 1;
+      if (!(w.type === "shift" && m.warning === "flash" && Math.floor(state.time * 10) % 2))
+        for (let i = 0; i < count && i / count < fraction; i++) {
+          const item = segmentBox(plot, i, count, w.gap, vertical);
+          if (count === 1) {
+            if (vertical) {
+              const size = Math.round(item.h * fraction);
+              item.y += item.h - size;
+              item.h = size;
+            } else item.w = Math.round(item.w * fraction);
+          }
+          c.fillStyle = tint(i, color, alarm);
+          paint(item);
+        }
     }
   } else if (w.type === "gmeter") {
     const size = Math.min(plot.w, plot.h),
       g = rect(
-        plot.x + (plot.w - size) / 2,
-        plot.y + (plot.h - size) / 2,
+        Math.floor(plot.x + (plot.w - size) / 2),
+        Math.floor(plot.y + (plot.h - size) / 2),
         size,
         size,
       ),
@@ -641,7 +659,7 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
       cy = g.y + size / 2,
       radius = Math.max(0, size / 2 - 8);
     if (!measureOnly) {
-      c.strokeStyle = color;
+      c.strokeStyle = s.color;
       c.lineWidth = 2;
       shapePath(
         c,
@@ -649,30 +667,43 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
         w.variant === "rounded" ? "rounded" : w.variant,
       );
       c.stroke();
-      c.save();
-      shapePath(
-        c,
-        shrink(g, 8),
-        w.variant === "rounded" ? "rounded" : w.variant,
-      );
-      c.clip();
       if (w.grid) {
+        c.save();
+        shapePath(
+          c,
+          shrink(g, 8),
+          w.variant === "rounded" ? "rounded" : w.variant,
+        );
+        c.clip();
         c.globalAlpha = 0.25;
         c.lineWidth = 1;
         c.beginPath();
-        c.moveTo(cx, g.y);
-        c.lineTo(cx, g.y + size);
-        c.moveTo(g.x, cy);
-        c.lineTo(g.x + size, cy);
+        c.moveTo(pixel(cx, 1), g.y);
+        c.lineTo(pixel(cx, 1), g.y + size);
+        c.moveTo(g.x, pixel(cy, 1));
+        c.lineTo(g.x + size, pixel(cy, 1));
         c.stroke();
         // Rings every 0.5 g (every 1 g above a 3 g range).
         const step = w.gRange > 3 ? 1 : 0.5;
         for (let ring = step; ring < w.gRange - 1e-9; ring += step)
           dashedCircle(c, cx, cy, ((radius - 5) * ring) / w.gRange, 3, 5);
-        c.globalAlpha = 1;
-        c.lineWidth = 2;
+        c.restore();
       }
-      const mark = (sample, alpha, peak = false) => {
+    }
+    if (w.grid && radius > 60) {
+      const step = w.gRange > 3 ? 1 : 0.5;
+      c.fillStyle = s.textColor;
+      for (let ring = step; ring < w.gRange - 1e-9; ring += step) {
+        const offset = ((radius - 5) * ring) / w.gRange;
+        if (offset < 28) continue;
+        emit(ring.toFixed(1), rect(cx + 3, cy - offset - 1, 34, 16), 14, {
+          minimum: 12,
+          role: "scale",
+        });
+      }
+    }
+    if (!measureOnly) {
+      const mark = (sample, alpha) => {
         if (!Number.isFinite(sample.gLat) || !Number.isFinite(sample.gLong))
           return;
         let x = sample.gLat / w.gRange,
@@ -689,27 +720,20 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
         c.arc(
           cx + x * (radius - 5),
           cy + y * (radius - 5),
-          peak ? 7 : alpha === 1 ? 5 : 2,
+          alpha === 1 ? 5 : 2,
           0,
           7,
         );
         c.fill();
       };
+      // Ten dots over the last three seconds.
       if (w.trail)
-        (state.history ?? []).slice(-30).forEach((p, i) => mark(p, i / 40));
+        (state.history ?? [])
+          .slice(-30)
+          .forEach((p, i) => i % 3 === 0 && mark(p, i / 40));
       mark(state, 1);
-      c.restore();
-    }
-    if (w.grid && radius > 60) {
-      const step = w.gRange > 3 ? 1 : 0.5;
-      for (let ring = step; ring < w.gRange - 1e-9; ring += step) {
-        const offset = ((radius - 5) * ring) / w.gRange;
-        if (offset < 28) continue;
-        emit(ring.toFixed(1), rect(cx + 3, cy - offset - 1, 34, 16), 14, {
-          minimum: 12,
-          role: "scale",
-        });
-      }
+      c.globalAlpha = 1;
+      c.fillStyle = s.textColor;
     }
     if (w.readout && size > 150) {
       const total = Math.hypot(state.gLat ?? 0, state.gLong ?? 0);
@@ -783,6 +807,7 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
       );
       c.restore();
     }
+    c.fillStyle = s.textColor;
     if (m.footer.h)
       emit(
         `${displayUnit("power", state.vehicle)} 0–${toUnit(w.powerMax, "power", displayUnit("power", state.vehicle)).toFixed(0)} / TORQUE ${displayUnit("torque", state.vehicle)} 0–${toUnit(w.torqueMax, "torque", displayUnit("torque", state.vehicle)).toFixed(0)}`,
@@ -816,20 +841,22 @@ export function renderWidget(c, w, m, state, { measureOnly = false } = {}) {
       n = Math.max(1, items.length),
       gap = 8;
     items.forEach(([name, figure, suffix], i) => {
-      const card = across
-        ? rect(plot.x + ((plot.w + gap) * i) / n, plot.y, (plot.w + gap) / n - gap, plot.h)
-        : rect(plot.x, plot.y + ((plot.h + gap) * i) / n, plot.w, (plot.h + gap) / n - gap);
+      const card = snapRect(
+        across
+          ? rect(plot.x + ((plot.w + gap) * i) / n, plot.y, (plot.w + gap) / n - gap, plot.h)
+          : rect(plot.x, plot.y + ((plot.h + gap) * i) / n, plot.w, (plot.h + gap) / n - gap),
+      );
       if (!measureOnly) {
         c.save();
         c.globalAlpha = 0.35;
         c.strokeStyle = s.borderColor;
         c.lineWidth = 1;
-        shapePath(c, card, "rounded", Math.min(10, m.radius));
+        shapePath(c, crisp(card, 1), "rounded", Math.min(10, m.radius));
         c.stroke();
         c.restore();
       }
       const inner = shrink(card, 8),
-        head = Math.min(22, inner.h * 0.34);
+        head = Math.round(Math.min(22, inner.h * 0.34));
       c.fillStyle = s.captionColor;
       emit(name, rect(inner.x, inner.y, inner.w, head), 16, {
         minimum: 14,
@@ -859,7 +886,7 @@ function containsRect(a, b) {
 function chart(c, w, m, state, box, signal, bounds, measureOnly, axes) {
   const dual = w.type === "power",
     // Axis labels get up to 48 px, less on small charts so they stay inside the instrument.
-    lw = Math.min(48, Math.max(20, box.w * 0.2)),
+    lw = Math.round(Math.min(48, Math.max(20, box.w * 0.2))),
     graph = axes
       ? rect(
           box.x + lw + 4,
@@ -869,8 +896,10 @@ function chart(c, w, m, state, box, signal, bounds, measureOnly, axes) {
         )
       : box;
   const right = dual && signal === "torque",
-    labelX = right ? graph.x + graph.w + 4 : box.x;
+    labelX = right ? graph.x + graph.w + 4 : box.x,
+    bottom = graph.y + graph.h;
   if (axes) {
+    c.fillStyle = m.style.textColor;
     m.text(bounds.max.toFixed(0), rect(labelX, box.y, lw, 20), 16, {
       minimum: 12,
       role: "axis",
@@ -891,29 +920,29 @@ function chart(c, w, m, state, box, signal, bounds, measureOnly, axes) {
       );
   }
   if (measureOnly) return;
-  c.save();
-  c.beginPath();
-  c.rect(graph.x, graph.y, graph.w, graph.h);
-  c.clip();
-  c.strokeStyle = right ? "#ffba55" : m.style.color;
   c.lineWidth = 2;
   if (w.grid && !right) {
+    c.strokeStyle = m.style.color;
     c.globalAlpha = 0.15;
     for (let i = 0; i <= 4; i++) {
+      const y = Math.round(graph.y + (graph.h * i) / 4);
       c.beginPath();
-      c.moveTo(graph.x, graph.y + (graph.h * i) / 4);
-      c.lineTo(graph.x + graph.w, graph.y + (graph.h * i) / 4);
+      c.moveTo(graph.x, y);
+      c.lineTo(graph.x + graph.w, y);
       c.stroke();
     }
     c.globalAlpha = 1;
   }
+  c.strokeStyle = right ? "#ffba55" : m.style.color;
   const samples = (state.history ?? []).filter(
       (s) => s.time >= state.time - w.window,
     ),
+    stride = Math.max(1, Math.ceil(samples.length / graph.w)), // never more than one point a pixel
     segments = [];
   let current = [];
-  for (const sample of samples) {
-    const n = toUnit(sample[signal], signal, bounds.unit);
+  for (let k = 0; k < samples.length; k += stride) {
+    const sample = samples[k],
+      n = toUnit(sample[signal], signal, bounds.unit);
     if (n === null) {
       if (current.length) segments.push(current);
       current = [];
@@ -923,10 +952,14 @@ function chart(c, w, m, state, box, signal, bounds, measureOnly, axes) {
       x:
         graph.x +
         ((sample.time - (state.time - w.window)) / w.window) * graph.w,
-      y:
-        graph.y +
-        graph.h -
-        ((n - bounds.min) / (bounds.max - bounds.min)) * graph.h,
+      // Held inside the graph, so the car needs no clip region.
+      y: Math.max(
+        graph.y,
+        Math.min(
+          bottom,
+          bottom - ((n - bounds.min) / (bounds.max - bounds.min)) * graph.h,
+        ),
+      ),
     });
   }
   if (current.length) segments.push(current);
@@ -935,8 +968,8 @@ function chart(c, w, m, state, box, signal, bounds, measureOnly, axes) {
     segment.forEach((p, i) => (i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)));
     c.stroke();
     if (w.variant === "area") {
-      c.lineTo(segment.at(-1).x, graph.y + graph.h);
-      c.lineTo(segment[0].x, graph.y + graph.h);
+      c.lineTo(segment.at(-1).x, bottom);
+      c.lineTo(segment[0].x, bottom);
       c.closePath();
       c.globalAlpha = 0.15;
       c.fillStyle = m.style.color;
@@ -944,7 +977,6 @@ function chart(c, w, m, state, box, signal, bounds, measureOnly, axes) {
       c.globalAlpha = 1;
     }
   }
-  c.restore();
 }
 export function render(
   c,

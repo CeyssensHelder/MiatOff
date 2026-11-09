@@ -4,8 +4,11 @@
  * This file is a hand port of the drawing code of meters/designer/v3 (renderer.mjs, layout.mjs, signals.mjs); keep
  * them in step. Differences on purpose: night styling only, no editor guides or diagnostics, and none of the canvas
  * features the car's old Opera lacks (roundRect, setLineDash, text bounding boxes, ellipse, filter, Path2D).
- *   - rounded rectangles go through arcTo, dashes are drawn as short arcs, text height is a fixed ratio of the size;
- *   - text sizes are whole pixels (the designer does the same).
+ *   - rounded rectangles are built from arc (arcTo left steps in the corners on the car), dashes are drawn as short
+ *     arcs, text height is a fixed ratio of the size;
+ *   - boxes, bars and text positions are whole pixels and thin lines are centred on a pixel (the designer does the same).
+ * Speed on the car's old browser: everything that does not depend on live data goes on the background canvas once, the
+ * per-frame path sets no clip regions, and an instrument is only redrawn when what it shows has changed.
  * Registers W.MeterSets.custom(api) -> pages (at most 8), and W.MeterCustom.render() for tests.
  */
 (function (W, doc) {
@@ -38,6 +41,27 @@
     // Math.floor(log10(x)) without Math.log10; the epsilon keeps exact powers of ten exact.
     function log10floor(x) { return Math.floor(Math.log(x) / Math.LN10 + 1e-9); }
     function fixed(n, d) { return n.toFixed(d); }
+    // Whole pixels, so edges stay sharp and even. Same helpers in layout.mjs.
+    function snap(r) {
+        var x = Math.round(r.x), y = Math.round(r.y);
+        return rect(x, y, Math.round(r.x + r.w) - x, Math.round(r.y + r.h) - y);
+    }
+    // Where a straight line of this width goes so it covers whole pixel rows: odd widths sit on a pixel's centre.
+    function pixel(n, lineWidth) { return Math.round(lineWidth) % 2 ? Math.floor(n) + 0.5 : Math.round(n); }
+    // The path to stroke along the inside of a whole-pixel box.
+    function crisp(r, lineWidth) { return Math.round(lineWidth) % 2 ? rect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1) : r; }
+    // One segment of a bar: edges on whole pixels and every gap exactly the same.
+    function segmentBox(plot, i, count, gap, vertical) {
+        var a, b;
+        if (vertical) {
+            a = Math.round(plot.y + plot.h - (i + 1) * plot.h / count);
+            b = Math.round(plot.y + plot.h - i * plot.h / count);
+            return rect(plot.x, a, plot.w, Math.max(1, b - a - gap));
+        }
+        a = Math.round(plot.x + i * plot.w / count);
+        b = Math.round(plot.x + (i + 1) * plot.w / count);
+        return rect(a, plot.y, Math.max(1, b - a - gap), plot.h);
+    }
 
     // ------------------------------------------------------------------ signals (signals.mjs)
     var SIGNALS = {
@@ -149,20 +173,20 @@
         units: { speed: 'km/h', distance: 'km', temperature: 'C', power: 'PS', torque: 'Nm', consumption: 'L/100km' } };
 
     // ------------------------------------------------------------------ canvas primitives
-    // Rounded rectangle through arcTo (the old Opera has no roundRect). Same clamp as the designer.
+    // Rounded rectangle from quarter circles: the old Opera has no roundRect, and its arcTo left steps in the corners.
     function roundedPath(c, x, y, w, h, r) {
         r = Math.max(0, Math.min(r, w / 2, h / 2));
         c.beginPath();
         if (!(r > 0)) { c.rect(x, y, w, h); return; }
         c.moveTo(x + r, y);
-        c.lineTo(x + w - r, y); c.arcTo(x + w, y, x + w, y + r, r);
-        c.lineTo(x + w, y + h - r); c.arcTo(x + w, y + h, x + w - r, y + h, r);
-        c.lineTo(x + r, y + h); c.arcTo(x, y + h, x, y + h - r, r);
-        c.lineTo(x, y + r); c.arcTo(x, y, x + r, y, r);
+        c.lineTo(x + w - r, y); c.arc(x + w - r, y + r, r, -Math.PI / 2, 0, false);
+        c.lineTo(x + w, y + h - r); c.arc(x + w - r, y + h - r, r, 0, Math.PI / 2, false);
+        c.lineTo(x + r, y + h); c.arc(x + r, y + h - r, r, Math.PI / 2, Math.PI, false);
+        c.lineTo(x, y + r); c.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5, false);
         c.closePath();
     }
     function shapePath(c, r, kind, radius) {
-        var i, a;
+        var i, a, x, y;
         if (kind === 'circle') {
             c.beginPath();
             c.arc(r.x + r.w / 2, r.y + r.h / 2, Math.max(0, Math.min(r.w, r.h) / 2), 0, TAU);
@@ -170,8 +194,9 @@
             c.beginPath();
             for (i = 0; i < 8; i++) {
                 a = (i + 0.5) * Math.PI / 4;
-                if (i) c.lineTo(r.x + r.w / 2 + Math.cos(a) * r.w / 2, r.y + r.h / 2 + Math.sin(a) * r.h / 2);
-                else c.moveTo(r.x + r.w / 2 + Math.cos(a) * r.w / 2, r.y + r.h / 2 + Math.sin(a) * r.h / 2);
+                x = Math.round(r.x + r.w / 2 + Math.cos(a) * r.w / 2);
+                y = Math.round(r.y + r.h / 2 + Math.sin(a) * r.h / 2);
+                if (i) c.lineTo(x, y); else c.moveTo(x, y);
             }
             c.closePath();
         } else if (kind === 'rounded' || kind === undefined) {
@@ -197,25 +222,45 @@
     // ------------------------------------------------------------------ text (layout.mjs)
     function fontString(weight, size, family) { return weight + ' ' + size + 'px "' + family + '"' + FALLBACK; }
     var fitCache = {}, fitCount = 0;
-    // Largest whole-pixel size up to `preferred` at which the text fits the box; 0 when it cannot be read at 8 px.
-    function fitSize(c, text, box, preferred, weight, family) {
-        var key = weight + '|' + family + '|' + preferred + '|' + box.w + '|' + box.h + '|' + text, hit = fitCache[key],
-            width, f, size, attempt, ratio = ASCENT + DESCENT;
+    // Setting a font is slow on the car, so a font already set is not set again. Reset at each draw and after c.restore().
+    var curFont = null;
+    function setFont(c, font) {
+        if (font !== curFont) { c.font = font; curFont = font; }
+    }
+    // Which digit is widest in this font; the first of equals. Same in layout.mjs.
+    var digitCache = {};
+    function widestDigit(c, weight, family) {
+        var key = weight + '|' + family, hit = digitCache[key], best = -1, i, w;
         if (hit !== undefined) return hit;
-        c.font = fontString(weight, preferred, family);
-        width = c.measureText(text).width;
+        setFont(c, fontString(weight, 100, family));
+        for (i = 0; i < 10; i++) {
+            w = c.measureText(String(i)).width;
+            if (w > best + 1e-6) { best = w; hit = String(i); }
+        }
+        digitCache[key] = hit;
+        return hit;
+    }
+    // Largest whole-pixel size up to `preferred` at which the text fits the box; 0 when it cannot be read at 8 px.
+    // Measured with every digit as the font's widest one: a changing number keeps one size and is not measured again
+    // for each new value.
+    function fitSize(c, text, box, preferred, weight, family) {
+        var probe = text.replace(/[0-9]/g, widestDigit(c, weight, family)), key = weight + '|' + family + '|' + preferred + '|' + box.w + '|' + box.h + '|' + probe,
+            hit = fitCache[key], width, f, size, attempt, ratio = ASCENT + DESCENT;
+        if (hit !== undefined) return hit;
+        setFont(c, fontString(weight, preferred, family));
+        width = c.measureText(probe).width;
         f = Math.min(preferred, preferred * box.w / Math.max(1, width), preferred * box.h / Math.max(1, ratio * preferred + 3));
         if (f < 8) {
             size = 0;
         } else {
             size = Math.max(8, Math.floor(f));
-            c.font = fontString(weight, size, family);
-            width = c.measureText(text).width;
+            setFont(c, fontString(weight, size, family));
+            width = c.measureText(probe).width;
             for (attempt = 0; attempt < 10 && (ratio * size > box.h || width > box.w); attempt++) {
                 size -= 1;
                 if (size < 8) { size = 0; break; }
-                c.font = fontString(weight, size, family);
-                width = c.measureText(text).width;
+                setFont(c, fontString(weight, size, family));
+                width = c.measureText(probe).width;
             }
         }
         if (fitCount++ > 600) { fitCache = {}; fitCount = 0; }
@@ -228,9 +273,9 @@
         text = String(text);
         size = fitSize(c, text, box, preferred, weight, family);
         if (!size) return;
-        x = align === 'center' ? box.x + box.w / 2 : (align === 'right' ? box.x + box.w : box.x);
-        y = box.y + (box.h - ASCENT * size - DESCENT * size) / 2 + ASCENT * size;
-        c.font = fontString(weight, size, family);
+        x = Math.round(align === 'center' ? box.x + box.w / 2 : (align === 'right' ? box.x + box.w : box.x));
+        y = Math.round(box.y + (box.h - ASCENT * size - DESCENT * size) / 2 + ASCENT * size);
+        setFont(c, fontString(weight, size, family));
         c.textAlign = align;
         c.textBaseline = 'alphabetic';
         c.fillText(text, x, y);
@@ -263,8 +308,8 @@
         x.globalAlpha = b.textureOpacity;
         x.lineWidth = 1;
         if (b.kind === 'grid') {
-            for (n = 0; n < 800; n += b.spacing) { x.beginPath(); x.moveTo(n, 0); x.lineTo(n, 480); x.stroke(); }
-            for (n = 0; n < 480; n += b.spacing) { x.beginPath(); x.moveTo(0, n); x.lineTo(800, n); x.stroke(); }
+            for (n = 0; n < 800; n += b.spacing) { x.beginPath(); x.moveTo(pixel(n, 1), 0); x.lineTo(pixel(n, 1), 480); x.stroke(); }
+            for (n = 0; n < 480; n += b.spacing) { x.beginPath(); x.moveTo(0, pixel(n, 1)); x.lineTo(800, pixel(n, 1)); x.stroke(); }
         } else {
             for (y = 0; y < 480; y += 8) {
                 for (a = 0; a < 800; a += 8) {
@@ -333,19 +378,23 @@
         effect = w.variant === 'inset' ? 'inset' : (s.effect === 'flat' && w.variant === 'framed' ? 'framed' : s.effect);
         extent = effect === 'neon' ? s.glow * s.intensity
             : (effect === 'raised' ? s.shadowBlur * s.intensity + Math.max(Math.abs(s.shadowX), Math.abs(s.shadowY)) : 2);
-        margin = Math.min(Math.max(2, extent), w.w / 6, w.h / 6);
-        panel = rect(w.x + margin, w.y + margin, w.w - 2 * margin, w.h - 2 * margin);
+        margin = Math.round(Math.min(Math.max(2, extent), w.w / 6, w.h / 6));
+        panel = snap(rect(w.x + margin, w.y + margin, w.w - 2 * margin, w.h - 2 * margin));
         radius = Math.min(s.radius, panel.w / 3, panel.h / 3);
-        padding = Math.min(panel.w / 2, panel.h / 2, Math.max(10, s.borderWidth + s.bevel + (1 - Math.SQRT1_2) * radius + 6));
+        padding = Math.round(Math.min(panel.w / 2, panel.h / 2, Math.max(10, s.borderWidth + s.bevel + (1 - Math.SQRT1_2) * radius + 6)));
         content = rect(panel.x + padding, panel.y + padding, panel.w - 2 * padding, panel.h - 2 * padding);
-        capH = w.labelPosition === 'hidden' || w.type === 'shape' ? 0 : Math.min(s.captionSize + 8, content.h * 0.3);
+        capH = w.labelPosition === 'hidden' || w.type === 'shape' ? 0 : Math.round(Math.min(s.captionSize + 8, content.h * 0.3));
         footH = ((w.type === 'lap' && w.variant === 'full') || (w.type === 'gmeter' && w.peaks) || w.type === 'power') &&
             content.h > 110 ? 26 : 0;
-        unitH = w.unitPosition === 'separate' ? Math.min(s.unitSize + 6, content.h * 0.2) : 0;
+        unitH = w.unitPosition === 'separate' ? Math.round(Math.min(s.unitSize + 6, content.h * 0.2)) : 0;
         plot = rect(content.x, content.y + (w.labelPosition === 'top' ? capH : 0), content.w, content.h - capH - footH - unitH);
         o = {
-            w: w, s: s, effect: effect, radius: radius, panel: panel,
+            w: w, s: s, effect: effect, radius: radius, panel: panel, vehicle: vehicle,
             outer: rect(w.x, w.y, w.w, w.h), content: content, plot: plot,
+            // A whole-pixel box that covers the instrument, wiped before it is redrawn on its own.
+            wipe: rect(Math.floor(w.x), Math.floor(w.y), Math.ceil(w.x + w.w) - Math.floor(w.x), Math.ceil(w.y + w.h) - Math.floor(w.y)),
+            // Only a very thick dial can draw past its own box.
+            needsClip: w.type === 'radial' && w.thickness > 30,
             caption: rect(content.x, w.labelPosition === 'bottom' ? content.y + content.h - capH : content.y, content.w, capH),
             footer: rect(content.x, content.y + content.h - footH - (w.labelPosition === 'bottom' ? capH : 0), content.w, footH),
             unit: rect(content.x, plot.y + plot.h, content.w, unitH)
@@ -362,6 +411,14 @@
         }
         o.captionText = caption;
         if (w.type === 'radial') prepareRadial(o, vehicle);
+        if (w.type === 'number' && w.sparkline && plot.h > 70) {
+            o.valueBox = snap(rect(plot.x, plot.y, plot.w, plot.h * 0.65));
+            o.sparkBox = snap(rect(plot.x, plot.y + plot.h * 0.75, plot.w, plot.h * 0.25));
+        }
+        if (w.type === 'power') {
+            o.powerBounds = { min: 0, max: toUnit(w.powerMax, 'power', displayUnit('power', vehicle)), unit: displayUnit('power', vehicle) };
+            o.torqueBounds = { min: 0, max: toUnit(w.torqueMax, 'torque', displayUnit('torque', vehicle)), unit: displayUnit('torque', vehicle) };
+        }
         // Label and shape instruments never change with the data.
         o.isStatic = w.type === 'label' || w.type === 'shape';
         return o;
@@ -369,13 +426,13 @@
 
     function prepareRadial(o, vehicle) {
         var w = o.w, plot = o.plot, r = o.range, inside = w.valuePosition === 'center',
-            g = inside ? plot : rect(plot.x, plot.y, plot.w, plot.h * 0.7), outer = w.tickLabels === 'outside',
+            g = inside ? plot : snap(rect(plot.x, plot.y, plot.w, plot.h * 0.7)), outer = w.tickLabels === 'outside',
             radius = Math.max(0, Math.min(g.w, g.h) / 2 - 8 - (outer ? 40 : 0)), cx = g.x + g.w / 2, cy = g.y + g.h / 2,
             start = Math.PI * (1.5 - w.sweep / 360), sweep = w.sweep * Math.PI / 180, span = r.max - r.min, valueBox, labelRadius,
             marks = [], count, v, k, a, box, label, ticks = [], edges = [], at, e, list, n;
-        if (!inside) valueBox = rect(plot.x, plot.y + plot.h * 0.72, plot.w, plot.h * 0.28);
-        else if (w.variant === 'needle') valueBox = rect(cx - radius * 0.4, cy + radius * 0.36, radius * 0.8, radius * 0.46);
-        else valueBox = rect(cx - radius * 0.5, cy - radius * 0.3, radius * 1.0, radius * 0.6);
+        if (!inside) valueBox = snap(rect(plot.x, plot.y + plot.h * 0.72, plot.w, plot.h * 0.28));
+        else if (w.variant === 'needle') valueBox = snap(rect(cx - radius * 0.4, cy + radius * 0.36, radius * 0.8, radius * 0.46));
+        else valueBox = snap(rect(cx - radius * 0.5, cy - radius * 0.3, radius * 1.0, radius * 0.6));
         labelRadius = outer ? radius + Math.max(w.thickness, 8) / 2 + 18 : radius - Math.max(w.thickness, 8) / 2 - 22;
         if (plot.w >= 160 && plot.h >= 140 && span > 0) {
             if (w.tickStep > 0 && span / w.tickStep <= 24) {
@@ -429,13 +486,13 @@
             g.addColorStop(0, o.effect === 'inset' ? '#000000' : '#b8c8d2');
             g.addColorStop(1, o.effect === 'inset' ? '#8c9eac' : '#000000');
             x.strokeStyle = g;
-            x.lineWidth = Math.max(1, s.bevel * s.intensity);
-            shapePath(x, rect(p.x + 2, p.y + 2, p.w - 4, p.h - 4), 'rounded', Math.max(0, o.radius - 2));
+            x.lineWidth = Math.max(1, Math.round(s.bevel * s.intensity));
+            shapePath(x, crisp(rect(p.x + 2, p.y + 2, p.w - 4, p.h - 4), x.lineWidth), 'rounded', Math.max(0, o.radius - 2));
             x.stroke();
         }
         x.strokeStyle = o.effect === 'neon' ? s.glowColor : s.borderColor;
         x.lineWidth = s.borderWidth;
-        shapePath(x, p, 'rounded', o.radius);
+        shapePath(x, crisp(p, s.borderWidth), 'rounded', o.radius);
         x.stroke();
     }
     // Panel finishes (shadow, glow, bevel) are drawn once. In 'all' mode they come from a per-instrument layer.
@@ -453,34 +510,42 @@
         c.drawImage(o.layer, w.x, w.y);
     }
 
-    function drawChart(c, o, state, box, signal, bounds, axes) {
-        var w = o.w, s = o.s, dual = w.type === 'power', lw = Math.min(48, Math.max(20, box.w * 0.2)),
-            graph = axes ? rect(box.x + lw + 4, box.y + 10, Math.max(1, box.w - (dual ? 2 * lw + 8 : lw + 4)), Math.max(1, box.h - 38)) : box,
-            right = dual && signal === 'torque', labelX = right ? graph.x + graph.w + 4 : box.x,
-            hist = state.history || [], samples = [], segments = [], current = [], i, n, sample, seg, stride, last, p, first;
+    // ------------------------------------------------------------------ charts: axes and grid are fixed, only the line moves
+    function chartGeometry(o, box, signal, axes) {
+        var dual = o.w.type === 'power', lw = Math.round(Math.min(48, Math.max(20, box.w * 0.2))),
+            graph = axes ? rect(box.x + lw + 4, box.y + 10, Math.max(1, box.w - (dual ? 2 * lw + 8 : lw + 4)), Math.max(1, box.h - 38)) : box;
+        return { graph: graph, lw: lw, right: dual && signal === 'torque' };
+    }
+    function chartStatic(c, o, box, signal, bounds, axes) {
+        var w = o.w, s = o.s, q = chartGeometry(o, box, signal, axes), graph = q.graph, lw = q.lw,
+            labelX = q.right ? graph.x + graph.w + 4 : box.x, i, y;
         if (axes) {
+            c.fillStyle = s.textColor;
             drawText(c, bounds.max.toFixed(0), rect(labelX, box.y, lw, 20), 16, s.font, s.weight, s.align);
             drawText(c, bounds.min.toFixed(0), rect(labelX, graph.y + graph.h - 18, lw, 20), 16, s.font, s.weight, s.align);
-            if (!right) drawText(c, w.window + 's · ' + bounds.unit, rect(graph.x, box.y + box.h - 22, graph.w, 22), 16, s.font, s.weight, s.align);
+            if (!q.right) drawText(c, w.window + 's · ' + bounds.unit, rect(graph.x, box.y + box.h - 22, graph.w, 22), 16, s.font, s.weight, s.align);
         }
-        c.save();
-        c.beginPath();
-        c.rect(graph.x, graph.y, graph.w, graph.h);
-        c.clip();
-        c.strokeStyle = right ? AMBER : s.color;
-        c.lineWidth = 2;
-        if (w.grid && !right) {
+        if (w.grid && !q.right) {
+            c.strokeStyle = s.color;
+            c.lineWidth = 2;
             c.globalAlpha = 0.15;
             for (i = 0; i <= 4; i++) {
+                y = Math.round(graph.y + graph.h * i / 4);
                 c.beginPath();
-                c.moveTo(graph.x, graph.y + graph.h * i / 4);
-                c.lineTo(graph.x + graph.w, graph.y + graph.h * i / 4);
+                c.moveTo(graph.x, y);
+                c.lineTo(graph.x + graph.w, y);
                 c.stroke();
             }
             c.globalAlpha = 1;
         }
+    }
+    function chartLine(c, o, state, box, signal, bounds, axes) {
+        var w = o.w, s = o.s, q = chartGeometry(o, box, signal, axes), graph = q.graph, bottom = graph.y + graph.h,
+            hist = state.history || [], samples = [], segments = [], current = [], i, n, sample, seg, stride, last, p, first;
+        c.strokeStyle = q.right ? AMBER : s.color;
+        c.lineWidth = 2;
         for (i = 0; i < hist.length; i++) if (hist[i].time >= state.time - w.window) samples.push(hist[i]);
-        stride = Math.max(1, Math.ceil(samples.length / (graph.w * 4)));   // car only: never more than 4 points a pixel
+        stride = Math.max(1, Math.ceil(samples.length / graph.w));   // never more than one point a pixel
         for (i = 0; i < samples.length; i += stride) {
             sample = samples[i];
             n = toUnit(sample[signal], signal, bounds.unit);
@@ -491,7 +556,8 @@
             }
             current.push({
                 x: graph.x + (sample.time - (state.time - w.window)) / w.window * graph.w,
-                y: graph.y + graph.h - (n - bounds.min) / (bounds.max - bounds.min) * graph.h
+                // Held inside the graph, so no clip region is needed.
+                y: clamp(bottom - (n - bounds.min) / (bounds.max - bounds.min) * graph.h, graph.y, bottom)
             });
         }
         if (current.length) segments.push(current);
@@ -505,8 +571,8 @@
             c.stroke();
             if (w.variant === 'area') {
                 last = seg[seg.length - 1]; first = seg[0];
-                c.lineTo(last.x, graph.y + graph.h);
-                c.lineTo(first.x, graph.y + graph.h);
+                c.lineTo(last.x, bottom);
+                c.lineTo(first.x, bottom);
                 c.closePath();
                 c.globalAlpha = 0.15;
                 c.fillStyle = s.color;
@@ -514,217 +580,311 @@
                 c.globalAlpha = 1;
             }
         }
-        c.restore();
     }
 
     function ringStep(w) { return w.gRange > 3 ? 1 : 0.5; }
 
-    // phase: 'static' | 'dynamic' | 'all'
-    function drawWidget(c, o, state, phase) {
-        var w = o.w, s = o.s, plot = o.plot, v = state ? state.vehicle : null, doStatic = phase !== 'dynamic', doDyn = phase !== 'static',
-            cachedPanel = phase === 'all', caption, value, textColor, color, current, alarm, warn, sigVal, r, n, ratio, text,
-            box, i, k, e, rd, tk, t, count, vertical, rpm, first, span, fraction, active, segmentColor, at, item, items, across,
-            gap, card, inner, head, unitName;
-        if (w.hidden) return;
-        c.save();
-        c.beginPath();
-        c.rect(o.outer.x, o.outer.y, o.outer.w, o.outer.h);
-        c.clip();
-        if (doStatic) drawPanel(c, o, cachedPanel);
-        warn = doDyn ? warning(w, state, v) : 'normal';
-        sigVal = doDyn ? state[w.type === 'shift' ? 'rpm' : w.signal] : null;
-        current = doDyn ? zoneColor(o.zone, sigVal) : null;
-        alarm = warn === 'danger' || warn === 'flash';
+    // ------------------------------------------------------------------ dials
+    // Track, zone bands, unlit segments, ticks and scale labels never change, so they are drawn once.
+    function radialStatic(c, o) {
+        var w = o.w, s = o.s, rd = o.radial, i, k, e, at, t, tk;
+        if (rd.radius > 0) {
+            c.lineWidth = w.thickness;
+            c.strokeStyle = s.color;
+            c.globalAlpha = 0.18;
+            c.beginPath();
+            c.arc(rd.cx, rd.cy, rd.radius, rd.start, rd.start + rd.sweep);
+            c.stroke();
+            c.globalAlpha = 1;
+            if (o.zoned) {
+                t = Math.max(3, w.thickness * 0.45);
+                c.lineWidth = t;
+                for (i = 0; i < rd.edges.length; i++) {
+                    e = rd.edges[i];
+                    at = i + 1 < rd.edges.length ? rd.edges[i + 1].from : 1;
+                    if (!e.color || at <= e.from) continue;
+                    c.strokeStyle = e.color;
+                    c.globalAlpha = 0.85;
+                    c.beginPath();
+                    c.arc(rd.cx, rd.cy, Math.max(1, rd.radius - w.thickness / 2 - t / 2 - 2), rd.start + rd.sweep * e.from, rd.start + rd.sweep * at);
+                    c.stroke();
+                }
+                c.globalAlpha = 1;
+            }
+            if (w.variant === 'segmented') {
+                c.lineWidth = w.thickness;
+                c.strokeStyle = s.color;
+                c.globalAlpha = 0.15;
+                for (k = 0; k < w.segments; k++) {
+                    c.beginPath();
+                    c.arc(rd.cx, rd.cy, rd.radius, rd.start + rd.sweep * k / w.segments, rd.start + rd.sweep * (k + 0.72) / w.segments);
+                    c.stroke();
+                }
+                c.globalAlpha = 1;
+            }
+        }
+        c.lineWidth = 2;
+        c.strokeStyle = s.color;
+        for (i = 0; i < rd.ticks.length; i++) {
+            tk = rd.ticks[i];
+            c.beginPath();
+            c.moveTo(rd.cx + Math.cos(tk.a) * (rd.radius - 7), rd.cy + Math.sin(tk.a) * (rd.radius - 7));
+            c.lineTo(rd.cx + Math.cos(tk.a) * rd.radius, rd.cy + Math.sin(tk.a) * rd.radius);
+            c.stroke();
+            if (tk.box) {
+                c.fillStyle = s.textColor;
+                drawText(c, tk.label, tk.box, 18, s.font, s.weight, 'center');
+            }
+        }
+    }
+    function radialDynamic(c, o, res) {
+        var w = o.w, s = o.s, rd = o.radial, ratio = res.ratio, k;
+        if (rd.radius > 0) {
+            c.lineWidth = w.thickness;
+            c.strokeStyle = res.color;
+            if (w.variant === 'needle') {
+                c.beginPath();
+                c.moveTo(rd.cx, rd.cy);
+                c.lineTo(rd.cx + Math.cos(rd.start + rd.sweep * ratio) * (rd.radius - 10), rd.cy + Math.sin(rd.start + rd.sweep * ratio) * (rd.radius - 10));
+                c.stroke();
+            } else if (w.variant === 'segmented') {
+                for (k = 0; k < w.segments && k / w.segments < ratio; k++) {
+                    c.beginPath();
+                    c.arc(rd.cx, rd.cy, rd.radius, rd.start + rd.sweep * k / w.segments, rd.start + rd.sweep * (k + 0.72) / w.segments);
+                    c.stroke();
+                }
+            } else {
+                c.beginPath();
+                c.arc(rd.cx, rd.cy, rd.radius, rd.start, rd.start + rd.sweep * ratio);
+                c.stroke();
+            }
+        }
+        c.fillStyle = res.textColor;
+        drawText(c, res.value, rd.valueBox, w.size, s.font, s.weight, 'center');
+    }
+
+    // ------------------------------------------------------------------ bars and shift lights
+    function segmentCount(w) { return w.type === 'bar' && w.variant === 'continuous' ? 1 : w.segments; }
+    function rpmSpan(o) {
+        var first = Math.max(0, o.vehicle.rpm.amber - (o.w.type === 'shift' ? o.w.shiftLead : 0));
+        return { first: first, span: Math.max(1, o.vehicle.rpm.shift - first) };
+    }
+    function barFraction(o, state, ratio) {
+        var q;
+        if (o.w.type !== 'shift') return ratio;
+        q = rpmSpan(o);
+        return clamp((state.rpm - q.first) / q.span, 0, 1);
+    }
+    function segmentTint(o, i, count, color, alarm) {
+        var w = o.w, s = o.s, r = o.range, rpm = o.vehicle.rpm, q, at, t;
+        if (count > 1 && !alarm) {
+            if (w.type === 'shift' && w.colorRamp) {
+                q = rpmSpan(o);
+                at = q.first + q.span * (i + 0.5) / count;
+                return at >= rpm.red ? s.warningColor : (at >= rpm.amber ? AMBER : GREEN);
+            }
+            if (w.type === 'bar' && o.zoned) {
+                t = zoneColor(o.zone, fromUnit(r.min + (r.max - r.min) * (i + 0.5) / count, w.signal, r.unit));
+                return t !== null && t !== undefined ? t : s.color;
+            }
+        }
+        return color;
+    }
+    function paintSegment(c, w, item) {
+        if (w.variant === 'dotted' || w.variant === 'led') {
+            shapePath(c, item, 'circle');
+            c.fill();
+        } else c.fillRect(item.x, item.y, item.w, item.h);
+    }
+    function barStatic(c, o) {
+        var w = o.w, count = segmentCount(w), i;
+        if (count < 2) return;
+        c.globalAlpha = 0.12;
+        for (i = 0; i < count; i++) {
+            c.fillStyle = segmentTint(o, i, count, o.s.color, false);
+            paintSegment(c, w, segmentBox(o.plot, i, count, w.gap, w.orientation === 'vertical'));
+        }
+        c.globalAlpha = 1;
+    }
+    function barDynamic(c, o, state, res) {
+        var w = o.w, count = segmentCount(w), vertical = w.orientation === 'vertical', fraction = barFraction(o, state, res.ratio), i, item, size;
+        if (w.type === 'shift' && res.warn === 'flash' && Math.floor(state.time * 10) % 2) return;
+        for (i = 0; i < count && i / count < fraction; i++) {
+            item = segmentBox(o.plot, i, count, w.gap, vertical);
+            if (count === 1) {
+                if (vertical) { size = Math.round(item.h * fraction); item.y += item.h - size; item.h = size; }
+                else item.w = Math.round(item.w * fraction);
+            }
+            c.fillStyle = segmentTint(o, i, count, res.color, res.alarm);
+            paintSegment(c, w, item);
+        }
+    }
+
+    // ------------------------------------------------------------------ session cards: frames and names are fixed
+    function sessionCards(o) {
+        var w = o.w, plot = o.plot, names = [], across, count, gap = 8, i, card, inner, head;
+        if (o.cards) return o.cards;
+        if (w.showSpeed) names.push(['speed', 'TOP SPEED']);
+        if (w.showRpm) names.push(['rpm', 'MAX RPM']);
+        if (w.showLaps) names.push(['laps', 'LAPS']);
+        across = plot.w >= plot.h * 1.4;
+        count = Math.max(1, names.length);
+        o.cards = [];
+        for (i = 0; i < names.length; i++) {
+            card = snap(across ? rect(plot.x + (plot.w + gap) * i / count, plot.y, (plot.w + gap) / count - gap, plot.h)
+                : rect(plot.x, plot.y + (plot.h + gap) * i / count, plot.w, (plot.h + gap) / count - gap));
+            inner = shrink(card, 8);
+            head = Math.round(Math.min(22, inner.h * 0.34));
+            o.cards.push({ key: names[i][0], name: names[i][1], card: card, head: rect(inner.x, inner.y, inner.w, head),
+                body: rect(inner.x, inner.y + head, inner.w, inner.h - head) });
+        }
+        return o.cards;
+    }
+    function sessionStatic(c, o) {
+        var s = o.s, cards = sessionCards(o), i;
+        for (i = 0; i < cards.length; i++) {
+            c.globalAlpha = 0.35;
+            c.strokeStyle = s.borderColor;
+            c.lineWidth = 1;
+            shapePath(c, crisp(cards[i].card, 1), 'rounded', Math.min(10, o.radius));
+            c.stroke();
+            c.globalAlpha = 1;
+            c.fillStyle = s.captionColor;
+            drawText(c, cards[i].name, cards[i].head, 16, s.font, s.captionWeight, s.align);
+        }
+    }
+    function sessionFigure(o, state, key) {
+        var unit = displayUnit('speed', o.vehicle);
+        if (key === 'speed') return toUnit(state.maxSpeed || 0, 'speed', unit).toFixed(0) + ' ' + unit;
+        return key === 'rpm' ? String(Math.round(state.maxRpm || 0)) : String(state.laps || 0);
+    }
+    function sessionDynamic(c, o, state) {
+        var s = o.s, cards = sessionCards(o), i;
+        c.fillStyle = s.textColor;
+        for (i = 0; i < cards.length; i++) {
+            drawText(c, sessionFigure(o, state, cards[i].key), cards[i].body, Math.min(o.w.size, 48), s.font, s.weight, s.align);
+        }
+    }
+
+    // ------------------------------------------------------------------ one instrument: live values
+    // What an instrument shows for this state. Worked out before drawing, so an unchanged instrument can be skipped.
+    function resolve(o, state) {
+        var w = o.w, s = o.s, r = o.range, v = o.vehicle, warn = warning(w, state, v), n = toUnit(state[w.signal], w.signal, r.unit),
+            current = zoneColor(o.zone, state[w.type === 'shift' ? 'rpm' : w.signal]), zoned = current !== null && current !== undefined,
+            alarm = warn === 'danger' || warn === 'flash', color, value, textColor;
         color = alarm ? (warn === 'flash' && Math.floor(state.time * 6) % 2 ? s.color : s.warningColor)
-            : (current !== null && current !== undefined ? current : (warn === 'amber' ? AMBER : s.color));
-        if (doStatic && w.labelPosition !== 'hidden' && w.type !== 'shape' && w.type !== 'label') {
+            : (zoned ? current : (warn === 'amber' ? AMBER : s.color));
+        if (n === null) value = '—';
+        else if (w.signal === 'gear') value = Math.round(n) === 0 ? 'N' : (Math.round(n) < 0 ? 'R' : String(Math.round(n)));
+        else value = n.toFixed(w.decimals);
+        value += w.unitPosition === 'value' && o.unitLabel ? ' ' + o.unitLabel : '';
+        textColor = state[w.signal] === null ? s.borderColor
+            : (alarm || zoned ? color : (warn !== 'off' && warn !== 'normal' ? color : s.textColor));
+        return { warn: warn, alarm: alarm, color: color, value: value, textColor: textColor,
+            ratio: n === null ? 0 : clamp((n - r.min) / (r.max - r.min), 0, 1) };
+    }
+    function gmeterTrail(hist) {
+        var start = Math.max(0, hist.length - 30), i, list = [];
+        for (i = start; i < hist.length; i += 3) list.push({ sample: hist[i], alpha: (i - start) / 40 });
+        return list;
+    }
+    // A short text that changes exactly when the instrument would look different.
+    function signature(o, state, res) {
+        var w = o.w, t = w.type, base = res.color + '|' + res.textColor + '|' + res.value, rd = o.radial, count, fraction, sum, list, i;
+        if (t === 'radial') {
+            return base + '|' + (w.variant === 'segmented' ? Math.ceil(res.ratio * w.segments) : Math.round(res.ratio * rd.radius * rd.sweep));
+        }
+        if (t === 'bar' || t === 'shift') {
+            count = segmentCount(w);
+            fraction = barFraction(o, state, res.ratio);
+            return base + '|' + res.alarm + '|' + (t === 'shift' && res.warn === 'flash' ? Math.floor(state.time * 10) % 2 : '') + '|' +
+                (count === 1 ? Math.round(fraction * (w.orientation === 'vertical' ? o.plot.h : o.plot.w)) : Math.ceil(fraction * count));
+        }
+        if (t === 'number') return base + (o.sparkBox ? '|' + Math.floor(state.time * 4) : '');
+        if (t === 'warning') return res.warn;
+        if (t === 'history' || t === 'power') return String(Math.floor(state.time * 4));
+        if (t === 'lap') return [state.lap, state.lastLap, state.bestLap, state.delta].join('|');
+        if (t === 'session') return [sessionFigure(o, state, 'speed'), sessionFigure(o, state, 'rpm'), sessionFigure(o, state, 'laps')].join('|');
+        if (t === 'gmeter') {
+            sum = 0;
+            if (w.trail) {
+                list = gmeterTrail(state.history || []);
+                for (i = 0; i < list.length; i++) sum += Math.abs(list[i].sample.gLat || 0) + Math.abs(list[i].sample.gLong || 0);
+            }
+            return [res.color, (state.gLat || 0).toFixed(2), (state.gLong || 0).toFixed(2), sum.toFixed(2), (state.maxG || 0).toFixed(2)].join('|');
+        }
+        return base;
+    }
+
+    // phase: 'static' | 'dynamic' | 'all'. 'dynamic' runs every frame and sets no clip region (costly on the car) unless
+    // an instrument's own drawing could leave its box.
+    function drawWidget(c, o, state, phase, res) {
+        var w = o.w, s = o.s, doStatic = phase !== 'dynamic', doDyn = phase !== 'static', guarded = doStatic || o.needsClip;
+        if (w.hidden) return;
+        if (guarded) {
+            c.save();
+            c.beginPath();
+            c.rect(o.outer.x, o.outer.y, o.outer.w, o.outer.h);
+            c.clip();
+        }
+        if (doStatic) widgetStatic(c, o);
+        if (doDyn) widgetDynamic(c, o, state, res);
+        if (guarded) { c.restore(); curFont = null; }
+    }
+    function widgetStatic(c, o) {
+        var w = o.w, s = o.s, t = w.type, v = o.vehicle, powerUnit, torqueUnit;
+        drawPanel(c, o, !o.split);
+        if (w.labelPosition !== 'hidden' && t !== 'shape' && t !== 'label') {
             c.fillStyle = s.captionColor;
             drawText(c, o.captionText, o.caption, s.captionSize, s.font, s.captionWeight, s.captionAlign);
         }
-        if (doStatic && w.unitPosition === 'separate') {
+        if (w.unitPosition === 'separate') {
             c.fillStyle = s.unitColor;
             drawText(c, o.unitLabel, o.unit, s.unitSize, s.font, s.unitWeight, s.unitAlign);
         }
-        r = o.range;
-        if (doDyn) {
-            n = toUnit(state[w.signal], w.signal, r.unit);
-            ratio = n === null ? 0 : clamp((n - r.min) / (r.max - r.min), 0, 1);
-            if (n === null) value = '—';
-            else if (w.signal === 'gear') value = Math.round(n) === 0 ? 'N' : (Math.round(n) < 0 ? 'R' : String(Math.round(n)));
-            else value = n.toFixed(w.decimals);
-            value += w.unitPosition === 'value' && o.unitLabel ? ' ' + o.unitLabel : '';
-            textColor = state[w.signal] === null ? s.borderColor
-                : (alarm || (current !== null && current !== undefined) ? color
-                    : (warn !== 'off' && warn !== 'normal' ? color : s.textColor));
-            c.fillStyle = textColor;
-        }
-        if (w.type === 'label') {
-            if (doStatic) { c.fillStyle = s.textColor; drawText(c, w.label, o.content, w.size, s.font, s.weight, s.align); }
-        } else if (w.type === 'shape') {
-            if (doStatic) shapeDraw(c, o);
-        } else if (!doDyn) {
-            if (w.type === 'gmeter') gmeterStatic(c, o);
-        } else if (w.type === 'number' || w.type === 'warning') {
-            if (w.type === 'warning') {
-                c.fillStyle = warn === 'normal' ? s.borderColor : s.warningColor;
-                drawText(c, (w.variant === 'icon' ? '⚠ ' : '') + (warn === 'normal' ? 'OK' : w.label), plot, w.size, s.font, s.weight, s.align);
-            } else {
-                box = w.sparkline && plot.h > 70 ? rect(plot.x, plot.y, plot.w, plot.h * 0.65) : plot;
-                drawText(c, value, box, w.size, s.font, s.weight, s.align);
-                if (w.sparkline && plot.h > 70) {
-                    drawChart(c, o, state, rect(plot.x, plot.y + plot.h * 0.75, plot.w, plot.h * 0.25), w.signal, r, false);
-                }
-            }
-        } else if (w.type === 'radial') {
-            rd = o.radial;
-            c.strokeStyle = color;
-            c.lineWidth = w.thickness;
-            for (i = 0; i < rd.ticks.length; i++) {
-                tk = rd.ticks[i];
-                if (tk.box) {
-                    c.fillStyle = textColor;
-                    drawText(c, tk.label, tk.box, 18, s.font, s.weight, 'center');
-                }
-                c.lineWidth = 1;
-                c.strokeStyle = color;
-                c.beginPath();
-                c.moveTo(rd.cx + Math.cos(tk.a) * (rd.radius - 7), rd.cy + Math.sin(tk.a) * (rd.radius - 7));
-                c.lineTo(rd.cx + Math.cos(tk.a) * rd.radius, rd.cy + Math.sin(tk.a) * rd.radius);
-                c.stroke();
-            }
-            if (rd.radius > 0) {
-                c.lineWidth = w.thickness;
-                c.strokeStyle = color;
-                c.globalAlpha = 0.18;
-                c.beginPath();
-                c.arc(rd.cx, rd.cy, rd.radius, rd.start, rd.start + rd.sweep);
-                c.stroke();
-                c.globalAlpha = 1;
-                if (o.zoned) {
-                    t = Math.max(3, w.thickness * 0.45);
-                    c.lineWidth = t;
-                    for (i = 0; i < rd.edges.length; i++) {
-                        e = rd.edges[i];
-                        at = i + 1 < rd.edges.length ? rd.edges[i + 1].from : 1;
-                        if (!e.color || at <= e.from) continue;
-                        c.strokeStyle = e.color;
-                        c.globalAlpha = 0.85;
-                        c.beginPath();
-                        c.arc(rd.cx, rd.cy, Math.max(1, rd.radius - w.thickness / 2 - t / 2 - 2), rd.start + rd.sweep * e.from, rd.start + rd.sweep * at);
-                        c.stroke();
-                    }
-                    c.globalAlpha = 1;
-                    c.lineWidth = w.thickness;
-                    c.strokeStyle = color;
-                }
-                if (w.variant === 'needle') {
-                    c.beginPath();
-                    c.moveTo(rd.cx, rd.cy);
-                    c.lineTo(rd.cx + Math.cos(rd.start + rd.sweep * ratio) * (rd.radius - 10), rd.cy + Math.sin(rd.start + rd.sweep * ratio) * (rd.radius - 10));
-                    c.stroke();
-                } else if (w.variant === 'segmented') {
-                    for (k = 0; k < w.segments; k++) {
-                        c.globalAlpha = k / w.segments < ratio ? 1 : 0.15;
-                        c.beginPath();
-                        c.arc(rd.cx, rd.cy, rd.radius, rd.start + rd.sweep * k / w.segments, rd.start + rd.sweep * (k + 0.72) / w.segments);
-                        c.stroke();
-                    }
-                    c.globalAlpha = 1;
-                } else {
-                    c.beginPath();
-                    c.arc(rd.cx, rd.cy, rd.radius, rd.start, rd.start + rd.sweep * ratio);
-                    c.stroke();
-                }
-            }
-            c.fillStyle = textColor;
-            drawText(c, value, rd.valueBox, w.size, s.font, s.weight, 'center');
-        } else if (w.type === 'bar' || w.type === 'shift') {
-            count = w.type === 'bar' && w.variant === 'continuous' ? 1 : w.segments;
-            vertical = w.orientation === 'vertical';
-            rpm = v.rpm;
-            // Shift lights start `shiftLead` rpm before the amber line and fill up to the shift point.
-            first = Math.max(0, rpm.amber - (w.type === 'shift' ? w.shiftLead : 0));
-            span = Math.max(1, rpm.shift - first);
-            for (i = 0; i < count; i++) {
-                fraction = w.type === 'shift' ? clamp((state.rpm - first) / span, 0, 1) : ratio;
-                active = i / count < fraction;
-                segmentColor = color;
-                if (count > 1 && !alarm) {
-                    if (w.type === 'shift' && w.colorRamp) {
-                        at = first + span * (i + 0.5) / count;
-                        segmentColor = at >= rpm.red ? s.warningColor : (at >= rpm.amber ? AMBER : GREEN);
-                    } else if (w.type === 'bar' && o.zoned) {
-                        t = zoneColor(o.zone, fromUnit(r.min + (r.max - r.min) * (i + 0.5) / count, w.signal, r.unit));
-                        segmentColor = t !== null && t !== undefined ? t : s.color;
-                    }
-                }
-                item = vertical
-                    ? rect(plot.x, plot.y + plot.h - (i + 1) * plot.h / count, plot.w, Math.max(1, plot.h / count - w.gap))
-                    : rect(plot.x + i * plot.w / count, plot.y, Math.max(1, plot.w / count - w.gap), plot.h);
-                if (count === 1) {
-                    if (vertical) { item.y += item.h * (1 - fraction); item.h *= fraction; } else item.w *= fraction;
-                }
-                c.globalAlpha = active ? 1 : 0.12;
-                if (w.type === 'shift' && warn === 'flash' && Math.floor(state.time * 10) % 2) c.globalAlpha = 0.12;
-                c.fillStyle = segmentColor;
-                if (w.variant === 'dotted' || w.variant === 'led') {
-                    shapePath(c, item, 'circle');
-                    c.fill();
-                } else c.fillRect(item.x, item.y, item.w, item.h);
-            }
-            c.globalAlpha = 1;
-        } else if (w.type === 'gmeter') {
-            gmeterDynamic(c, o, state, color, phase === 'all');
-        } else if (w.type === 'history') {
-            drawChart(c, o, state, plot, w.signal, r, true);
-        } else if (w.type === 'power') {
-            e = { min: 0, max: toUnit(w.powerMax, 'power', displayUnit('power', v)), unit: displayUnit('power', v) };
-            drawChart(c, o, state, plot, 'power', e, true);
-            c.save();
-            c.strokeStyle = AMBER;
-            drawChart(c, o, state, plot, 'torque',
-                { min: 0, max: toUnit(w.torqueMax, 'torque', displayUnit('torque', v)), unit: displayUnit('torque', v) }, true);
-            c.restore();
+        if (t === 'label') { c.fillStyle = s.textColor; drawText(c, w.label, o.content, w.size, s.font, s.weight, s.align); }
+        else if (t === 'shape') shapeDraw(c, o);
+        else if (t === 'gmeter') gmeterStatic(c, o);
+        else if (t === 'radial') radialStatic(c, o);
+        else if (t === 'bar' || t === 'shift') barStatic(c, o);
+        else if (t === 'session') sessionStatic(c, o);
+        else if (t === 'history') chartStatic(c, o, o.plot, w.signal, o.range, true);
+        else if (t === 'number' && o.sparkBox) chartStatic(c, o, o.sparkBox, w.signal, o.range, false);
+        else if (t === 'power') {
+            powerUnit = displayUnit('power', v);
+            torqueUnit = displayUnit('torque', v);
+            chartStatic(c, o, o.plot, 'power', o.powerBounds, true);
+            chartStatic(c, o, o.plot, 'torque', o.torqueBounds, true);
             if (o.footer.h) {
-                drawText(c, displayUnit('power', v) + ' 0–' + toUnit(w.powerMax, 'power', displayUnit('power', v)).toFixed(0) +
-                    ' / TORQUE ' + displayUnit('torque', v) + ' 0–' + toUnit(w.torqueMax, 'torque', displayUnit('torque', v)).toFixed(0),
+                c.fillStyle = s.textColor;
+                drawText(c, powerUnit + ' 0–' + o.powerBounds.max.toFixed(0) + ' / TORQUE ' + torqueUnit + ' 0–' + o.torqueBounds.max.toFixed(0),
                     o.footer, 14, s.font, s.weight, s.align);
             }
-        } else if (w.type === 'lap') {
-            drawText(c, state.lap !== null && state.lap !== undefined ? state.lap : '—', plot, w.size, s.font, s.weight, s.align);
+        }
+    }
+    function widgetDynamic(c, o, state, res) {
+        var w = o.w, s = o.s, t = w.type;
+        c.fillStyle = res.textColor;
+        if (t === 'warning') {
+            c.fillStyle = res.warn === 'normal' ? s.borderColor : s.warningColor;
+            drawText(c, (w.variant === 'icon' ? '⚠ ' : '') + (res.warn === 'normal' ? 'OK' : w.label), o.plot, w.size, s.font, s.weight, s.align);
+        } else if (t === 'number') {
+            drawText(c, res.value, o.sparkBox ? o.valueBox : o.plot, w.size, s.font, s.weight, s.align);
+            if (o.sparkBox) chartLine(c, o, state, o.sparkBox, w.signal, o.range, false);
+        } else if (t === 'radial') radialDynamic(c, o, res);
+        else if (t === 'bar' || t === 'shift') barDynamic(c, o, state, res);
+        else if (t === 'gmeter') gmeterDynamic(c, o, state, res.color);
+        else if (t === 'history') chartLine(c, o, state, o.plot, w.signal, o.range, true);
+        else if (t === 'power') {
+            chartLine(c, o, state, o.plot, 'power', o.powerBounds, true);
+            chartLine(c, o, state, o.plot, 'torque', o.torqueBounds, true);
+        } else if (t === 'lap') {
+            drawText(c, state.lap !== null && state.lap !== undefined ? state.lap : '—', o.plot, w.size, s.font, s.weight, s.align);
             if (o.footer.h) {
                 drawText(c, 'LAST ' + nz(state.lastLap) + ' · BEST ' + nz(state.bestLap) + ' · Δ ' + nz(state.delta),
                     o.footer, 14, s.font, s.weight, s.align);
             }
-        } else if (w.type === 'session') {
-            unitName = displayUnit('speed', v);
-            items = [];
-            if (w.showSpeed) items.push(['TOP SPEED', toUnit(state.maxSpeed || 0, 'speed', unitName).toFixed(0), unitName]);
-            if (w.showRpm) items.push(['MAX RPM', String(Math.round(state.maxRpm || 0)), '']);
-            if (w.showLaps) items.push(['LAPS', String(state.laps || 0), '']);
-            across = plot.w >= plot.h * 1.4;
-            count = Math.max(1, items.length);
-            gap = 8;
-            for (i = 0; i < items.length; i++) {
-                card = across ? rect(plot.x + (plot.w + gap) * i / count, plot.y, (plot.w + gap) / count - gap, plot.h)
-                    : rect(plot.x, plot.y + (plot.h + gap) * i / count, plot.w, (plot.h + gap) / count - gap);
-                c.save();
-                c.globalAlpha = 0.35;
-                c.strokeStyle = s.borderColor;
-                c.lineWidth = 1;
-                shapePath(c, card, 'rounded', Math.min(10, o.radius));
-                c.stroke();
-                c.restore();
-                inner = shrink(card, 8);
-                head = Math.min(22, inner.h * 0.34);
-                c.fillStyle = s.captionColor;
-                drawText(c, items[i][0], rect(inner.x, inner.y, inner.w, head), 16, s.font, s.captionWeight, s.align);
-                c.fillStyle = s.textColor;
-                drawText(c, items[i][1] + (items[i][2] ? ' ' + items[i][2] : ''), rect(inner.x, inner.y + head, inner.w, inner.h - head),
-                    Math.min(w.size, 48), s.font, s.weight, s.align);
-            }
-        }
-        c.restore();
+        } else if (t === 'session') sessionDynamic(c, o, state);
     }
     function nz(x) { return x !== null && x !== undefined ? x : '—'; }
 
@@ -734,13 +894,13 @@
         c.strokeStyle = s.color;
         c.lineWidth = w.thickness;
         if (w.variant === 'line') {
-            box = shrink(plot, Math.min(10, Math.min(plot.w, plot.h) / 4));
-            if (w.orientation === 'vertical') { a = { x: box.x + box.w / 2, y: box.y }; b = { x: a.x, y: box.y + box.h }; }
+            box = snap(shrink(plot, Math.min(10, Math.min(plot.w, plot.h) / 4)));
+            if (w.orientation === 'vertical') { a = { x: pixel(box.x + box.w / 2, w.thickness), y: box.y }; b = { x: a.x, y: box.y + box.h }; }
             else if (w.orientation === 'diagonal') { a = { x: box.x, y: box.y + box.h }; b = { x: box.x + box.w, y: box.y }; }
             else if (w.orientation === 'custom') {
                 a = { x: box.x + box.w * w.startX, y: box.y + box.h * w.startY };
                 b = { x: box.x + box.w * w.endX, y: box.y + box.h * w.endY };
-            } else { a = { x: box.x, y: box.y + box.h / 2 }; b = { x: box.x + box.w, y: a.y }; }
+            } else { a = { x: box.x, y: pixel(box.y + box.h / 2, w.thickness) }; b = { x: box.x + box.w, y: a.y }; }
             c.beginPath();
             c.moveTo(a.x, a.y);
             c.lineTo(b.x, b.y);
@@ -772,7 +932,8 @@
 
     // G-meter geometry shared by its static and dynamic halves.
     function gmeterGeometry(o) {
-        var plot = o.plot, size = Math.min(plot.w, plot.h), g = rect(plot.x + (plot.w - size) / 2, plot.y + (plot.h - size) / 2, size, size);
+        var plot = o.plot, size = Math.min(plot.w, plot.h),
+            g = rect(Math.floor(plot.x + (plot.w - size) / 2), Math.floor(plot.y + (plot.h - size) / 2), size, size);
         return { size: size, g: g, cx: g.x + size / 2, cy: g.y + size / 2, radius: Math.max(0, size / 2 - 8) };
     }
     function gmeterShape(w) { return w.variant === 'rounded' ? 'rounded' : w.variant; }
@@ -790,10 +951,10 @@
             c.globalAlpha = 0.25;
             c.lineWidth = 1;
             c.beginPath();
-            c.moveTo(q.cx, q.g.y);
-            c.lineTo(q.cx, q.g.y + q.size);
-            c.moveTo(q.g.x, q.cy);
-            c.lineTo(q.g.x + q.size, q.cy);
+            c.moveTo(pixel(q.cx, 1), q.g.y);
+            c.lineTo(pixel(q.cx, 1), q.g.y + q.size);
+            c.moveTo(q.g.x, pixel(q.cy, 1));
+            c.lineTo(q.g.x + q.size, pixel(q.cy, 1));
             c.stroke();
             step = ringStep(w);
             for (ring = step; ring < w.gRange - 1e-9; ring += step) dashedCircle(c, q.cx, q.cy, (q.radius - 5) * ring / w.gRange, 3, 5);
@@ -809,9 +970,9 @@
             }
         }
     }
-    function gmeterDynamic(c, o, state, color, all) {
-        var w = o.w, s = o.s, plot = o.plot, q = gmeterGeometry(o), hist = state.history || [], i, total, over, peak, x, y;
-        function mark(sample, alpha, isPeak) {
+    function gmeterDynamic(c, o, state, color) {
+        var w = o.w, s = o.s, plot = o.plot, q = gmeterGeometry(o), hist = state.history || [], i, total, peak, x, y, list;
+        function mark(sample, alpha) {
             var mx, my, norm;
             if (!finite(sample.gLat) || !finite(sample.gLong)) return;
             mx = sample.gLat / w.gRange;
@@ -821,16 +982,14 @@
             c.globalAlpha = alpha;
             c.fillStyle = color;
             c.beginPath();
-            c.arc(q.cx + mx * (q.radius - 5), q.cy + my * (q.radius - 5), isPeak ? 7 : (alpha === 1 ? 5 : 2), 0, 7);
+            c.arc(q.cx + mx * (q.radius - 5), q.cy + my * (q.radius - 5), alpha === 1 ? 5 : 2, 0, 7);
             c.fill();
         }
-        if (all) gmeterStatic(c, o);
-        c.save();
-        shapePath(c, shrink(q.g, 8), gmeterShape(w));
-        c.clip();
-        if (w.trail) for (i = Math.max(0, hist.length - 30); i < hist.length; i++) mark(hist[i], (i - Math.max(0, hist.length - 30)) / 40);
+        if (w.trail) {
+            list = gmeterTrail(hist);
+            for (i = 0; i < list.length; i++) mark(list[i].sample, list[i].alpha);
+        }
         mark(state, 1);
-        c.restore();
         c.globalAlpha = 1;
         total = Math.sqrt((state.gLat || 0) * (state.gLat || 0) + (state.gLong || 0) * (state.gLong || 0));
         if (w.readout && q.size > 150) {
@@ -876,10 +1035,12 @@
         }
         for (i = 0; i < list.length; i++) {
             o = list[i];
+            o.split = split;
             if (o.w.type === 'history' || o.w.type === 'power' || (o.w.type === 'number' && o.w.sparkline)) need = Math.max(need, o.w.window);
             if (o.w.type === 'gmeter') { hasG = true; need = Math.max(need, 3); }
             if (o.w.type === 'lap') hasLap = true;
         }
+        function noData(state) { return state.speed === null && state.rpm === null; }
         page = {
             name: String(setup.name || 'PAGE').toUpperCase().substr(0, 40),
             vehicle: vehicle,
@@ -889,29 +1050,57 @@
             hasLap: hasLap,
             hasG: hasG,
             flashing: false,
-            staticDone: false,
+            noData: false,
             // Background, and in the usual case the instruments' static parts.
             drawStatic: function (c) {
                 var k;
+                curFont = null;
                 drawBackground(c, bg, setup.images);
                 if (split) for (k = 0; k < list.length; k++) drawWidget(c, list[k], null, 'static');
             },
-            // Draw with an explicit state (tests, and the live draw below).
+            // Draw everything with an explicit state (tests, and the live draw below).
             drawWith: function (c, state) {
-                var k, flashing = false, w;
-                state.vehicle = vehicle;
+                var k, item, res, flashing = false;
+                curFont = null;
                 for (k = 0; k < list.length; k++) {
-                    drawWidget(c, list[k], state, split ? 'dynamic' : 'all');
-                    w = list[k].w;
-                    if (w.type !== 'label' && w.type !== 'shape' && warning(w, state, vehicle) === 'flash') flashing = true;
+                    item = list[k];
+                    if (split && item.isStatic) continue;
+                    res = resolve(item, state);
+                    drawWidget(c, item, state, split ? 'dynamic' : 'all', res);
+                    item.sig = signature(item, state, res);
+                    if (!item.isStatic && res.warn === 'flash') flashing = true;
                 }
-                if (state.speed === null && state.rpm === null) {
+                page.noData = noData(state);
+                if (page.noData) {
                     c.fillStyle = '#080d16';
                     c.fillRect(250, 205, 300, 70);
                     c.fillStyle = AMBER;
                     c.font = 'bold 24px Arial';
                     c.textAlign = 'center';
                     c.fillText('NO DATA', 400, 248);
+                    curFont = null;
+                }
+                page.flashing = flashing;
+            },
+            // Only with separate layers: wipe and redraw just the instruments whose reading changed since the last draw.
+            changedWith: function (c, state) {
+                var k, item, res, sig, flashing = false;
+                if (page.noData || noData(state)) {
+                    c.clearRect(0, 0, 800, 480);
+                    page.drawWith(c, state);
+                    return;
+                }
+                curFont = null;
+                for (k = 0; k < list.length; k++) {
+                    item = list[k];
+                    if (item.isStatic) continue;
+                    res = resolve(item, state);
+                    if (res.warn === 'flash') flashing = true;
+                    sig = signature(item, state, res);
+                    if (sig === item.sig) continue;
+                    item.sig = sig;
+                    c.clearRect(item.wipe.x, item.wipe.y, item.wipe.w, item.wipe.h);
+                    drawWidget(c, item, state, 'dynamic', res);
                 }
                 page.flashing = flashing;
             },
@@ -987,6 +1176,7 @@
             c.fillText('This custom page could not be drawn.', 400, 225);
             c.font = '18px Arial';
             c.fillText('Check it in the Meters Designer and update Meters.', 400, 258);
+            curFont = null;
         }
         function wrap(setupItem) {
             var page = makePage(setupItem), drawStatic = page.drawStatic;
@@ -1003,6 +1193,15 @@
                 if (!page.failed) {
                     c.save();
                     try { page.drawWith(c, live(now)); } catch (e) { page.failed = true; page.flashing = false; }
+                    c.restore();
+                }
+                if (page.failed) broken(c);
+            };
+            // Asked for by app.js instead of a full redraw. Without separate layers every frame stays a full redraw.
+            page.drawChanged = !page.split ? null : function (c, now) {
+                if (!page.failed) {
+                    c.save();
+                    try { page.changedWith(c, live(now)); } catch (e) { page.failed = true; page.flashing = false; }
                     c.restore();
                 }
                 if (page.failed) broken(c);
@@ -1026,7 +1225,7 @@
             } catch (e) { /* a malformed page is skipped */ }
         }
         pages.tick = function (now) { try { sample(now); } catch (e) { /* history only; drawing still works */ } };
-        pages.flush = function () { fitCache = {}; fitCount = 0; };
+        pages.flush = function () { fitCache = {}; fitCount = 0; digitCache = {}; };
         return pages;
     };
 
@@ -1038,7 +1237,7 @@
             page.drawWith(c, state);
             return page;
         },
-        flush: function () { fitCache = {}; fitCount = 0; },
+        flush: function () { fitCache = {}; fitCount = 0; digitCache = {}; },
         onImage: null,
         log10floor: log10floor,
         niceCount: niceCount

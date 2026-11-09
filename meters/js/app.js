@@ -756,10 +756,16 @@
         var toast = now < sess.msgUntil;
         if (forceDraw || moving || fresh || flip || toast || pages[cur].animating() || now - lastDraw > 1000 ||
                 (lastToast && !toast)) {
+            // Custom pages can redraw just the instruments that changed; anything painted over the whole page needs a full redraw.
+            var partial = pages[cur].drawChanged && !forceDraw && !toast && !lastToast;
             forceDraw = false;
             lastDraw = now;
-            fctx.clearRect(0, 0, 800, 480);
-            pages[cur].draw(fctx, now);
+            if (partial) {
+                pages[cur].drawChanged(fctx, now);
+            } else {
+                fctx.clearRect(0, 0, 800, 480);
+                pages[cur].draw(fctx, now);
+            }
             if (ring) drawRing(fctx, rpm, now);
             if (dmg) dmg.draw(fctx, rpm, now, RPM, flashOn(now));
             if (toast) drawToast(fctx);

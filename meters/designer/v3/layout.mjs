@@ -12,6 +12,8 @@ import {
 // text is a fixed share of its size, and sizes are whole pixels. Keep these in step with meters/js/custom.js.
 export const TEXT_ASCENT = 0.72,
   TEXT_DESCENT = 0.04,
+  // Text is placed on whole pixels, which can move it by up to half a pixel past the box it was fitted to.
+  TEXT_ROUNDING = 0.6,
   FONT_FALLBACK = ', Arial, Helvetica, "DejaVu Sans", sans-serif';
 export const fontString = (weight, size, family) =>
   `${weight} ${size}px "${family}"${FONT_FALLBACK}`;
@@ -21,6 +23,49 @@ export const rect = (x, y, w, h) => ({
   w: Math.max(0, w),
   h: Math.max(0, h),
 });
+// Which digit is widest in this font; the first of equals. Remembered per font once that font has loaded.
+const digits = new Map();
+function widestDigit(ctx, weight, family) {
+  const font = fontString(weight, 100, family),
+    loaded = globalThis.document?.fonts?.check(font) ?? true,
+    hit = loaded ? digits.get(font) : undefined;
+  if (hit !== undefined) return hit;
+  ctx.font = font;
+  let best = -1,
+    widest = "8";
+  for (let i = 0; i < 10; i++) {
+    const width = ctx.measureText(String(i)).width;
+    if (width > best + 1e-6) {
+      best = width;
+      widest = String(i);
+    }
+  }
+  if (loaded) digits.set(font, widest);
+  return widest;
+}
+// Whole pixels keep edges sharp and even on the car. Same helpers in meters/js/custom.js.
+export const snapRect = (r) => {
+  const x = Math.round(r.x),
+    y = Math.round(r.y);
+  return rect(x, y, Math.round(r.x + r.w) - x, Math.round(r.y + r.h) - y);
+};
+// Where a straight line of this width goes so it covers whole pixel rows: odd widths sit on a pixel's centre.
+export const pixel = (n, lineWidth) =>
+  Math.round(lineWidth) % 2 ? Math.floor(n) + 0.5 : Math.round(n);
+// The path to stroke along the inside of a whole-pixel box.
+export const crisp = (r, lineWidth) =>
+  Math.round(lineWidth) % 2 ? rect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1) : r;
+// One segment of a bar: edges on whole pixels and every gap exactly the same.
+export function segmentBox(plot, i, count, gap, vertical) {
+  if (vertical) {
+    const a = Math.round(plot.y + plot.h - ((i + 1) * plot.h) / count),
+      b = Math.round(plot.y + plot.h - (i * plot.h) / count);
+    return rect(plot.x, a, plot.w, Math.max(1, b - a - gap));
+  }
+  const a = Math.round(plot.x + (i * plot.w) / count),
+    b = Math.round(plot.x + ((i + 1) * plot.w) / count);
+  return rect(a, plot.y, Math.max(1, b - a - gap), plot.h);
+}
 export const contains = (outer, inner, tolerance = 0.1) =>
   inner.x >= outer.x - tolerance &&
   inner.y >= outer.y - tolerance &&
@@ -49,18 +94,17 @@ export function measurement(ctx, w, theme, state, mode = "night") {
           ? s.shadowBlur * s.intensity +
             Math.max(Math.abs(s.shadowX), Math.abs(s.shadowY))
           : 2;
-  const margin = Math.min(Math.max(2, extent), w.w / 6, w.h / 6),
-    panel = rect(
-      w.x + margin,
-      w.y + margin,
-      w.w - 2 * margin,
-      w.h - 2 * margin,
+  const margin = Math.round(Math.min(Math.max(2, extent), w.w / 6, w.h / 6)),
+    panel = snapRect(
+      rect(w.x + margin, w.y + margin, w.w - 2 * margin, w.h - 2 * margin),
     ),
     radius = Math.min(s.radius, panel.w / 3, panel.h / 3),
-    padding = Math.min(
-      panel.w / 2,
-      panel.h / 2,
-      Math.max(10, s.borderWidth + s.bevel + (1 - Math.SQRT1_2) * radius + 6),
+    padding = Math.round(
+      Math.min(
+        panel.w / 2,
+        panel.h / 2,
+        Math.max(10, s.borderWidth + s.bevel + (1 - Math.SQRT1_2) * radius + 6),
+      ),
     ),
     content = rect(
       panel.x + padding,
@@ -73,7 +117,7 @@ export function measurement(ctx, w, theme, state, mode = "night") {
   const capH =
       w.labelPosition === "hidden" || w.type === "shape"
         ? 0
-        : Math.min(s.captionSize + 8, content.h * 0.3),
+        : Math.round(Math.min(s.captionSize + 8, content.h * 0.3)),
     footH =
       ((w.type === "lap" && w.variant === "full") ||
         (w.type === "gmeter" && w.peaks) ||
@@ -83,7 +127,7 @@ export function measurement(ctx, w, theme, state, mode = "night") {
         : 0,
     unitH =
       w.unitPosition === "separate"
-        ? Math.min(s.unitSize + 6, content.h * 0.2)
+        ? Math.round(Math.min(s.unitSize + 6, content.h * 0.2))
         : 0;
   const caption = rect(
       content.x,
@@ -134,9 +178,11 @@ export function measurement(ctx, w, theme, state, mode = "night") {
     } = {},
   ) => {
     text = String(text);
-    const ratio = TEXT_ASCENT + TEXT_DESCENT;
+    // Sized with every digit as the font's widest, so a changing number keeps one size (the car measures it only once).
+    const ratio = TEXT_ASCENT + TEXT_DESCENT,
+      probe = text.replace(/[0-9]/g, widestDigit(ctx, weight, s.font));
     ctx.font = fontString(weight, preferred, s.font);
-    const first = ctx.measureText(text).width,
+    const first = ctx.measureText(probe).width,
       fit = Math.min(
         preferred,
         (preferred * box.w) / Math.max(1, first),
@@ -152,7 +198,7 @@ export function measurement(ctx, w, theme, state, mode = "night") {
     }
     let size = Math.max(8, Math.floor(fit));
     ctx.font = fontString(weight, size, s.font);
-    let width = ctx.measureText(text).width;
+    let width = ctx.measureText(probe).width;
     for (
       let attempt = 0;
       attempt < 10 && (ratio * size > box.h || width > box.w);
@@ -168,17 +214,19 @@ export function measurement(ctx, w, theme, state, mode = "night") {
         return null;
       }
       ctx.font = fontString(weight, size, s.font);
-      width = ctx.measureText(text).width;
+      width = ctx.measureText(probe).width;
     }
+    width = ctx.measureText(text).width;
     const ascent = TEXT_ASCENT * size,
       descent = TEXT_DESCENT * size,
-      x =
+      x = Math.round(
         align === "center"
           ? box.x + box.w / 2
           : align === "right"
             ? box.x + box.w
             : box.x,
-      y = box.y + (box.h - ascent - descent) / 2 + ascent;
+      ),
+      y = Math.round(box.y + (box.h - ascent - descent) / 2 + ascent);
     const left =
         align === "center"
           ? x - width / 2
@@ -192,7 +240,7 @@ export function measurement(ctx, w, theme, state, mode = "night") {
         message: `${role} is ${size.toFixed(0)} px; target ${minimum} px`,
         widgetIds: [w.id],
       });
-    if (!contains(content, bounds))
+    if (!contains(content, bounds, TEXT_ROUNDING))
       diagnostics.push({
         kind: "text-clipping",
         message: `${role} exceeds safe content`,

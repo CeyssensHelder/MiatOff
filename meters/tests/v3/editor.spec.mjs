@@ -82,7 +82,7 @@ test("shared measurement: every variant, font, effect, units and unavailable dat
                   R.renderWidget(ctx, w, m, state, { measureOnly: true });
                   for (const run of m.textRuns)
                     if (
-                      !L.contains(run.box, run.bounds) ||
+                      !L.contains(run.box, run.bounds, L.TEXT_ROUNDING) ||
                       !L.contains(m.outer, run.bounds)
                     )
                       failed.push({
@@ -873,7 +873,7 @@ test("minimum/default/maximum/negative/large/missing readings and UK/US units re
               for (const text of m.textRuns)
                 if (
                   text.size < 8 ||
-                  !L.contains(text.box, text.bounds) ||
+                  !L.contains(text.box, text.bounds, L.TEXT_ROUNDING) ||
                   !L.contains(m.outer, text.bounds)
                 )
                   failed.push({ type, variant, level, size, text });
