@@ -21,6 +21,17 @@ jobs:
       - run: python tools/tests/test_check_dump.py
       - run: python tools/tests/test_stickkit.py
       - run: node meters-app/tests/test_meters_app.js
+      # Meters Designer and custom pages. The PNG-baseline browser specs stay local: font rendering differs on Linux.
+      - run: npm ci
+        working-directory: meters/tests/v3
+      - run: node --test meters/tests/v3/*.test.mjs
+      - run: python tools/tests/test_custom_pages_build.py
+      - run: sudo apt-get install -y xvfb
+      - run: xvfb-run -a python tools/tests/test_meters_library.py
+      - run: npx playwright install --with-deps chromium
+        working-directory: meters/tests/v3
+      - run: npx playwright test car-parity car-app
+        working-directory: meters/tests/v3
       - name: Pull the BusyBox image the AA-touch suite runs in
         run: docker pull busybox:1.25
       # The AA-touch suite includes the Meters scenarios, which need real symlinks and BusyBox.
