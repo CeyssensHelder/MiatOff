@@ -47,7 +47,7 @@ Run `python miatoff_gui.py --designer` to open the list directly. The loopback b
 
 ## On the car
 
-**Nothing here has been tested in a real car.** It is tested in Chromium on a PC (below). Opera Presto speed and memory with eight pages and background images are unknown, and so is the scale of the consumption reading (`Drv1AvlFuelE`, shown under "CONSUMPTION"). Try one simple page first.
+**Tried on one car so far** (our 2017 EU ND1, three pages without background images): the pages install and update through REPAIR, appear under CUSTOM and show live values. The automated tests run in Chromium on a PC (below). Speed and memory with eight pages and background images are unknown, so try one simple page first. See [Known issues](#known-issues).
 
 - **Where it shows.** Applications > Meters > **CUSTOM**, the fifth style next to Street, Track, Cyberpunk and 2077. It lists the pages you selected (at most eight, in the order of the builder list) with live previews. With no pages the group does not appear. The style list has five 69 px rows; the picker has three columns up to six pages and four smaller columns for seven or eight.
 - **How it gets there.** The stick builder (`aa-touch-stick/build_stick.py`) writes the selected pages into the Meters payload as `miatoff-app/app/meters/js/custom-pages.js` (generated, ASCII, same pages give the same bytes, at most 6 MiB; fewer pages or smaller background images if it is too big). `custom.js`, the generated file and the two extra fonts (Rajdhani Bold, Russo One, with their OFL texts) are listed in `miatoff-app/MANIFEST` like every other Meters file, so the car's existing hash-guarded flow installs them. In the GUI, set Meters to Install on tab 2 and build; the selection is read at that moment. A stick built without Meters also carries the current selection, so a Meters already on the car is not reported as outdated. On the command line: `python aa-touch-stick/build_stick.py --custom-pages selection.json E:\` (and the same flag with `--check`).
@@ -66,8 +66,16 @@ Run `python miatoff_gui.py --designer` to open the list directly. The loopback b
 | chart history | the app's own 10 Hz ring buffer, as long as the longest chart window of the selected pages (at most 120 s) |
 
 A missing value shows an em dash. Units and RPM thresholds come from each page's own vehicle settings, as in the designer.
-- **Same picture on both.** The designer and the car draw with the same primitives (rounded rectangles through `arcTo`, G-meter rings as short arcs, text height as a fixed share of the font size, whole-pixel text sizes), and a pixel-parity test holds `renderer.mjs` and `custom.js` together: all starter pages and about 150 instrument cases, each in four states, differ by no more than ten pixels per page. Where an instrument's colour depends on live data (rings, ticks, bars) it is drawn per frame; panels, captions and G-meter frames are drawn once. When instruments overlap the page is drawn in one pass in painter's order instead.
+- **Same picture on both.** The designer and the car draw with the same primitives (rounded rectangles from `arc` quarter circles, G-meter rings as short arcs, text height as a fixed share of the font size, whole-pixel text sizes, boxes and bar segments on whole pixels, thin lines centred on a pixel), and a pixel-parity test holds `renderer.mjs` and `custom.js` together: all starter pages and about 150 instrument cases, each in four states, differ by no more than ten pixels per page. Panels, captions, dial tracks, ticks and scale labels, unlit segments, chart axes and G-meter frames are drawn once, in their normal colour; a warning colours the value, not the scale. An instrument's live part is redrawn only when what it shows changes. When instruments overlap the page is drawn in one pass in painter's order instead.
 - **Known differences.** Bold text in the two older MO fonts (Chakra, Mono) is faux-bold in Chromium on the PC (the editor declares those faces without a weight) but the real face on the car, whose stylesheet declares them bold; how Opera renders it is not known.
+
+### Known issues
+
+Seen on our car, cause not yet confirmed. Reports help: use the *Meters feedback* issue template.
+
+- **Delay when stationary.** With the car standing still, gauges followed the engine up to about a second late. The built-in pages do this too; custom pages felt slightly slower.
+- **One unexplained RPM jump.** While driving at steady revs, the RPM number once jumped from about 1,900 to about 3,000. Seen once and not reproduced.
+- **Consumption scale is unverified.** `Drv1AvlFuelE`, shown under "CONSUMPTION", has not been compared with the car's own figure.
 
 ## Simulated telemetry
 
@@ -108,7 +116,7 @@ Legacy reciprocal consumption scales used a 0-80 fallback when an endpoint was u
 | `persistence.mjs` | Atomic saves, revision checks, checkpoints, asset hashes/decoding/collection |
 | `signals.mjs` | Canonical signal catalog, units, scales, precision and warnings |
 | `layout.mjs` | Shared panel/text measurements (fixed text-height ratios, whole-pixel sizes), diagnostics, clamping, guides and arrangement |
-| `renderer.mjs` | Canvas painting (arcTo rounded rectangles, arc dashes) and bounded background/effect/image caches |
+| `renderer.mjs` | Canvas painting (rounded rectangles from `arc`, arc dashes) and bounded background/effect/image caches |
 | `simulation.mjs` | Controlled clock, scenarios, gaps, track state and recording/replay |
 | `exports.mjs` | Referenced-asset JSON documents and guide-free PNGs |
 | `pages.mjs` | Flat Custom-page navigation, readable legacy labels, independent page creation/style and snapshots |
