@@ -7,6 +7,7 @@
     var FX = W.MeterFX;
     var BG = '#07060d', GRID = '#24154a', DIM = '#8b7bb5', TXT = '#eafcff';
     var CY = '#00f0ff', MG = '#ff2bd6', YE = '#fcee0a', OFF = '#140d26', OFFL = '#2e2052';
+    var GM = 16;   // room around a lit layer's shapes for their glow (shadowBlur 8-9)
 
     function rpmCol(r, A) { return r >= A.RPM.red ? YE : (r >= A.RPM.amber ? MG : CY); }
     function fringe(bg) { return { left: MG, right: CY, shift: 4, bg: bg || BG, fam: FX.SANS }; }
@@ -15,7 +16,7 @@
     function SkewBar(x, y, n, step, w, h, skew, color) {
         this.x = x; this.y = y; this.n = n; this.step = step; this.w = w; this.h = h; this.skew = skew;
         var self = this;
-        this.lit = FX.layer(function (c) {
+        this.lit = FX.layer(x - GM, y - GM, (n - 1) * step + w + skew + 2 * GM, h + 2 * GM, function (c) {
             FX.glow(c, color, 8); c.fillStyle = color;
             for (var i = 0; i < n; i++) { FX.skew(c, x + i * step, y, w, h, skew); c.fill(); }
         });
@@ -42,7 +43,8 @@
     function drive(A) {
         var cx = 290, cy = 286, r0 = 172, r1 = 208, A0 = 150, SPAN = 240, N = 48, step = SPAN / N;
         function ang(r) { return A0 + SPAN * Math.max(0, Math.min(8000, r)) / 8000; }
-        var tachLit = FX.layer(function (c) {
+        // The arc runs from 150° to 390°, so its lowest points are the two ends (sin 30° = 0.5 below the centre).
+        var tachLit = FX.layer(cx - r1 - GM, cy - r1 - GM, 2 * (r1 + GM), r1 * 1.5 + 2 * GM, function (c) {
             for (var i = 0; i < N; i++) {
                 c.fillStyle = rpmCol((i + 0.5) * 8000 / N, A);
                 FX.glow(c, c.fillStyle, 9);
@@ -92,7 +94,7 @@
                 if (rpm > 0) {
                     c.save();
                     c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, r1 + 20, (A0 - 2) * Math.PI / 180, a, false); c.closePath(); c.clip();
-                    c.drawImage(tachLit, 0, 0);
+                    FX.put(c, tachLit);
                     c.restore();
                 }
                 c.strokeStyle = '#fff'; c.lineCap = 'round';
@@ -216,7 +218,7 @@
             var h = 26 + 74 * Math.pow(i / (N - 1), 1.4), x = X0 + i * STEP;
             FX.poly(c, [[x + 6, 120 - h], [x + W, 120 - h], [x + W - 6, 120], [x, 120]]);
         }
-        var lit = FX.layer(function (c) {
+        var lit = FX.layer(0, 0, 800, 120 + GM + 4, function (c) {
             for (var i = 0; i < N; i++) {
                 c.fillStyle = rpmCol(LO + (i + 1) * (HI - LO) / N, A);
                 FX.glow(c, c.fillStyle, 9); bar(c, i); c.fill();
