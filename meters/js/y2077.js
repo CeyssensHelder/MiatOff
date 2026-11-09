@@ -1,35 +1,53 @@
 /* MiatOff Meters — 2077 page set: yellow, black-on-yellow, red/cyan accents, all angular
- * (design: meters/design/cyberpunk2077/). ES5 only. Registers W.MeterSets.y2077(api) -> pages.
+ * (design: meters/design/cyberpunk2077/). ES5 only. Registers W.MeterSets.y2077(api) -> pages, and the same pages
+ * in a calmer palette as W.MeterSets.y2077n ("2077 NIGHT": muted cyan instead of yellow).
  */
 (function (W) {
     'use strict';
 
     var FX = W.MeterFX;
-    var Y = '#fcee0a', K = '#0b0b0c', RD = '#ff003c', CN = '#02d7f2', WH = '#f2f2f2';
-    var OFF = '#1c1c1a', OFFL = '#3a3a32', DIM = '#8c8550', GRID = '#3a3510';
     var F = FX.COND;
 
-    function fringe(bg) { return { left: RD, right: CN, shift: 3, alpha: 0.55, bg: bg || K, fam: F }; }
+    // Palettes. Y is the main colour (fills, numbers), K the ink on it and the background, RD alerts and the red
+    // zone, CN the second accent (faster delta, ACCEL, colour fringe), the rest are unlit / dim / grid tones.
+    // RD stays the same in every palette: the damage glitch textures are shared.
+    var PAL = {
+        yellow: { Y: '#fcee0a', K: '#0b0b0c', RD: '#ff003c', CN: '#02d7f2', WH: '#f2f2f2',
+            OFF: '#1c1c1a', OFFL: '#3a3a32', DIM: '#8c8550', GRID: '#3a3510',
+            BAR: '#3a3a36', PANEL: '#121210', MINOR: '#5a5410', REDOFF: '#2a0a10', REDOFFL: '#5a1020' },
+        // Night: same layout, about 40 % of the yellow's brightness, so the big fills no longer glare.
+        night: { Y: '#35a9b5', K: '#0b0b0c', RD: '#ff003c', CN: '#d8f3f6', WH: '#d9e2e3',
+            OFF: '#121a1b', OFFL: '#243234', DIM: '#5f8a8f', GRID: '#0f2a2d',
+            BAR: '#263234', PANEL: '#0e1415', MINOR: '#1d4a50', REDOFF: '#2a0a10', REDOFFL: '#5a1020' }
+    };
 
-    function header(c, title, sub, right) {
-        c.fillStyle = Y; FX.poly(c, [[0, 0], [800, 0], [800, 30], [784, 44], [0, 44]]); c.fill();
-        var end = FX.spaced(c, title, 16, 36, 34, F, K, 2);
-        if (sub) FX.text(c, sub, end + 16, 30, 13, FX.MONO, K, 'left');
-        FX.hazard(c, 600, 8, 70, 26, K, Y);
-        if (right) FX.text(c, right, 784, 30, 13, FX.MONO, K, 'right');
+    // Adds the drawing helpers to a palette, bound to its colours.
+    function kit(P) {
+        var Y = P.Y, K = P.K, OFF = P.OFF, OFFL = P.OFFL;
+        P.fringe = function (bg) { return { left: P.RD, right: P.CN, shift: 3, alpha: 0.55, bg: bg || K, fam: F }; };
+        P.header = function (c, title, sub, right) {
+            c.fillStyle = Y; FX.poly(c, [[0, 0], [800, 0], [800, 30], [784, 44], [0, 44]]); c.fill();
+            var end = FX.spaced(c, title, 16, 36, 34, F, K, 2);
+            if (sub) FX.text(c, sub, end + 16, 30, 13, FX.MONO, K, 'left');
+            FX.hazard(c, 600, 8, 70, 26, K, Y);
+            if (right) FX.text(c, right, 784, 30, 13, FX.MONO, K, 'right');
+        };
+        // Slanted blocks, lit from the left.
+        P.blocks = function (c, x, y, n, step, w, h, k, col) {
+            for (var i = 0; i < n; i++) {
+                FX.skew(c, x + i * step, y, w, h, 3);
+                if (i < k) { c.fillStyle = col; c.fill(); } else if (k < 0) { c.fillStyle = OFF; c.strokeStyle = OFFL; c.fill(); c.stroke(); }
+            }
+        };
+        P.blocksOff = function (c, x, y, n, step, w, h) { P.blocks(c, x, y, n, step, w, h, -1); };
+        return P;
     }
-
-    // Slanted blocks, lit from the left.
-    function blocks(c, x, y, n, step, w, h, k, col) {
-        for (var i = 0; i < n; i++) {
-            FX.skew(c, x + i * step, y, w, h, 3);
-            if (i < k) { c.fillStyle = col; c.fill(); } else if (k < 0) { c.fillStyle = OFF; c.strokeStyle = OFFL; c.fill(); c.stroke(); }
-        }
-    }
-    function blocksOff(c, x, y, n, step, w, h) { blocks(c, x, y, n, step, w, h, -1); }
+    kit(PAL.yellow); kit(PAL.night);
 
     // ================================================================== 2077 DRIVE
-    function drive(A) {
+    function drive(A, P) {
+        var Y = P.Y, K = P.K, RD = P.RD, OFF = P.OFF, OFFL = P.OFFL, GRID = P.GRID,
+            fringe = P.fringe, header = P.header, blocks = P.blocks, blocksOff = P.blocksOff;
         var N = 32, X0 = 16, X1 = 508, BASE = 236, SK = 12, STEP = (X1 - X0) / N;
         function ramp(c, i) {
             var h = 34 + 136 * Math.pow(i / (N - 1), 1.25), x = X0 + i * STEP;
@@ -44,7 +62,7 @@
                 c.lineWidth = 1;
                 for (i = 0; i < N; i++) {
                     r = (i + 1) * 8000 / N;
-                    c.fillStyle = r > A.RPM.red ? '#2a0a10' : OFF; c.strokeStyle = r > A.RPM.red ? '#5a1020' : OFFL;
+                    c.fillStyle = r > A.RPM.red ? P.REDOFF : OFF; c.strokeStyle = r > A.RPM.red ? P.REDOFFL : OFFL;
                     ramp(c, i); c.fill(); c.stroke();
                 }
                 for (k = 0; k <= 8; k++) FX.text(c, String(k), X0 + k / 8 * (X1 - X0), 262, 22, F, k >= 7 ? RD : Y, 'left');
@@ -85,7 +103,8 @@
     }
 
     // ================================================================== 2077 G-FORCE
-    function gforce(A) {
+    function gforce(A, P) {
+        var Y = P.Y, K = P.K, RD = P.RD, CN = P.CN, DIM = P.DIM, GRID = P.GRID;
         var cx = 236, cy = 258, R = 188, MAX = 1.25, CUT = 34;
         var gm = new A.G.GMeter({ cx: cx, cy: cy, r: R, max: MAX, felt: A.felt });
         A.gms.push(gm);
@@ -103,10 +122,10 @@
                 c.fillStyle = Y; FX.poly(c, [[0, 0], [300, 0], [280, 40], [0, 40]]); c.fill();
                 FX.spaced(c, 'G-FORCE', 16, 34, 34, F, K, 2);
                 c.strokeStyle = Y; c.lineWidth = 2; c.beginPath(); c.moveTo(300, 1); c.lineTo(800, 1); c.stroke();
-                c.fillStyle = '#121210'; c.lineWidth = 3; box(c, R, CUT); c.fill(); c.stroke();
+                c.fillStyle = P.PANEL; c.lineWidth = 3; box(c, R, CUT); c.fill(); c.stroke();
                 for (g = 0.25; g <= 1.0001; g += 0.25) {
                     r = R * g / MAX; major = Math.abs(g - 0.5) < 1e-6 || Math.abs(g - 1) < 1e-6;
-                    c.strokeStyle = major ? Y : '#5a5410'; c.globalAlpha = major ? 0.7 : 1; c.lineWidth = 1.5;
+                    c.strokeStyle = major ? Y : P.MINOR; c.globalAlpha = major ? 0.7 : 1; c.lineWidth = 1.5;
                     box(c, r, CUT * r / R); c.stroke(); c.globalAlpha = 1;
                     if (major) FX.text(c, g.toFixed(1), cx + r - 30, cy - r + 16, 14, FX.MONO, Y, 'left');
                 }
@@ -150,7 +169,7 @@
                 for (i = 0; i < rows.length; i++) FX.text(c, A.fmt(gm.peak[rows[i][1]], 2), 784, 64 + i * 56 + 44, 58, F, rows[i][2], 'right');
                 for (i = 0; i < 14; i++) {
                     x = 470 + i * (bw + gap);
-                    c.fillStyle = '#3a3a36'; c.fillRect(x, top, bw, base - top);
+                    c.fillStyle = P.BAR; c.fillRect(x, top, bw, base - top);
                     val = h[h.length - 14 + i];
                     if (val === undefined) continue;
                     hh = Math.min(100, Math.abs(val)) / 100 * (base - top);
@@ -168,7 +187,8 @@
     }
 
     // ================================================================== 2077 TRACK
-    function track(A) {
+    function track(A, P) {
+        var Y = P.Y, K = P.K, RD = P.RD, CN = P.CN, WH = P.WH, GRID = P.GRID, fringe = P.fringe;
         var N = 24, X0 = 16, STEP = (784 - X0) / N, LO = A.RPM.low, HI = A.RPM.limit;
         function bar(c, i) {
             var x = X0 + i * STEP;
@@ -179,7 +199,7 @@
             drawStatic: function (c) {
                 var i, k, x;
                 FX.backdrop(c, K, GRID);
-                c.fillStyle = '#3a3a36';
+                c.fillStyle = P.BAR;
                 for (i = 0; i < N; i++) { bar(c, i); c.fill(); }
                 for (k = LO / 1000; k <= 7; k++) {
                     x = X0 + (k * 1000 - LO) / (HI - LO) * (784 - X0);
@@ -277,8 +297,8 @@
         }
         return {
             build: function () {
-                if (!tex) tex = { amber: streakTex('#ff9418', '#ffe6a8', false), red: streakTex(RD, '#ffd2dc', false),
-                    full: streakTex(RD, '#ffd2dc', true) };
+                if (!tex) tex = { amber: streakTex('#ff9418', '#ffe6a8', false), red: streakTex(PAL.yellow.RD, '#ffd2dc', false),
+                    full: streakTex(PAL.yellow.RD, '#ffd2dc', true) };
             },
             draw: function (c, rpm, now, R, flashOn) {
                 var lv = level(rpm, R), t = heat(rpm, R), f = Math.floor(now / 120), i, b, img, w;
@@ -311,6 +331,8 @@
     })();
 
     W.MeterSets = W.MeterSets || {};
-    W.MeterSets.y2077 = function (A) { Damage.build(); return [drive(A), gforce(A), track(A)]; };
+    function pages(A, P) { Damage.build(); return [drive(A, P), gforce(A, P), track(A, P)]; }
+    W.MeterSets.y2077 = function (A) { return pages(A, PAL.yellow); };
+    W.MeterSets.y2077n = function (A) { return pages(A, PAL.night); };
     W.MeterSets.y2077Damage = Damage;
 })(window);

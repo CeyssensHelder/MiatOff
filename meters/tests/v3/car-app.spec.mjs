@@ -1,4 +1,4 @@
-// The car's Meters page (meters/index.html) in Chromium with generated custom pages: the CUSTOM group is the fifth
+// The car's Meters page (meters/index.html) in Chromium with generated custom pages: the CUSTOM group is the sixth
 // row of the style menu, the picker shows at most eight pages and every page draws. Screenshots go to
 // test-results/car for review. This is not a test on the car: Opera Presto and the CMU are not involved.
 import { test, expect } from "@playwright/test";
@@ -26,11 +26,11 @@ async function open(page, query) {
 }
 const mode = (page) => page.locator("#stage").getAttribute("class");
 
-test("CUSTOM is the fifth style row and the picker offers eight pages", async ({ page }) => {
+test("CUSTOM is the sixth style row and the picker offers eight pages", async ({ page }) => {
   const errors = await open(page, "menu");
   await page.screenshot({ path: "test-results/car/style-menu.png" });
-  for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter"); // open the fifth style
+  for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter"); // open the sixth style
   await page.waitForTimeout(700);
   await page.screenshot({ path: "test-results/car/picker-eight.png" });
   for (let i = 0; i < 20; i++) await page.keyboard.press("ArrowRight"); // past the end: stays on the last page
@@ -43,16 +43,16 @@ test("CUSTOM is the fifth style row and the picker offers eight pages", async ({
   expect(errors).toEqual([]);
 });
 
-test("touch hits the fifth row and the eighth thumbnail", async ({ page }) => {
+test("touch hits the sixth row and the eighth thumbnail", async ({ page }) => {
   const errors = await open(page, "menu");
-  await page.mouse.click(400, 420); // fifth row (rows are 68 px high with five styles)
+  await page.mouse.click(400, 420); // sixth row (rows are 55 px high with six styles)
   await page.waitForTimeout(700);
   expect(await mode(page)).toBe("mode-menu");
   await page.mouse.click(650, 280); // eighth thumbnail: fourth column, second row
   await page.waitForTimeout(400);
   expect(await mode(page)).toBe("set-custom");
   expect(await page.locator("#dots span").last().getAttribute("class")).toBe("on");
-  // The first four rows still open their own sets.
+  // The first rows still open their own sets.
   await page.goto(`${served.url}/index.html?src=sim&menu`);
   await page.waitForTimeout(700);
   await page.mouse.click(400, 100);
@@ -94,8 +94,8 @@ test("without custom pages the group is not in the menu", async ({ page }) => {
     await page.keyboard.press("Enter");
     await page.keyboard.press("Enter");
     await page.waitForTimeout(300);
-    expect(await mode(page)).toBe("set-y2077"); // the last of four styles
-    await page.screenshot({ path: "test-results/car/four-styles.png" });
+    expect(await mode(page)).toBe("set-y2077n"); // the last of five styles
+    await page.screenshot({ path: "test-results/car/five-styles.png" });
     expect(errors).toEqual([]);
   } finally {
     await plain.close();

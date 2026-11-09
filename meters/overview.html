@@ -34,6 +34,9 @@ figcaption b { color: #ececf0; }
 <h2>2077</h2>
 <div class="grid" id="y2077"></div>
 
+<h2>2077 NIGHT</h2>
+<div class="grid" id="y2077n"></div>
+
 <script>
 var PAGES = {
     street: [['DRIVE', 'tachometer, speed, gear (shift light), coolant, fuel'],
@@ -50,7 +53,10 @@ var PAGES = {
              ['CYBER TRACK', 'equaliser shift bar, giant gear, lap strip']],
     y2077:  [['2077 DRIVE', 'rev ramp, speed, gear block, coolant, fuel'],
              ['2077 G-FORCE', 'boxed G-meter, peak G, 3 s pedal chart'],
-             ['2077 TRACK', 'shift bars, gear block, lap strip']]
+             ['2077 TRACK', 'shift bars, gear block, lap strip']],
+    y2077n: [['2077 DRIVE', 'the 2077 pages in muted cyan'],
+             ['2077 G-FORCE', 'the 2077 pages in muted cyan'],
+             ['2077 TRACK', 'the 2077 pages in muted cyan']]
 };
 Object.keys(PAGES).forEach(function (set) {
     PAGES[set].forEach(function (p, i) {
