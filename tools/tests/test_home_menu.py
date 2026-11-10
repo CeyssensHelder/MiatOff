@@ -37,9 +37,11 @@ def data_url(data: bytes) -> str:
 
 
 def pictured(name="With pictures"):
-    """The Driver menu with a background and an icon pair on its first item."""
-    doc = deepcopy(hm.STARTERS["starter-driver"])
+    """The Track menu with its pictures replaced: a background and an icon pair on its first item only."""
+    doc = deepcopy(hm.STARTERS["starter-track"])
     doc["name"] = name
+    for item in doc["items"]:
+        item["normal"] = item["selected"] = None
     doc["assets"] = {"bg": {"data": data_url(png(16, 10, (0, 64, 0)))},
                      "n": {"data": data_url(png(8, 8, (255, 0, 0)))},
                      "s": {"data": data_url(png(8, 8, (0, 0, 255)))}}
@@ -54,7 +56,11 @@ class DesignTests(unittest.TestCase):
             hm.validate(doc)
             for item in doc["items"]:
                 self.assertTrue(item["y"] >= 64 and item["y"] + item["h"] <= 438, f"{key}: {item['label']} in the menu area")
-        self.assertIn("meters", [w["opens"] for w in hm.STARTERS["starter-driver"]["items"]])
+        self.assertIn("meters", [w["opens"] for w in hm.STARTERS["starter-track"]["items"]])
+        self.assertEqual([d["name"] for d in hm.STARTERS.values()], ["2077", "2077 Night", "Cyber", "Track", "Classic"])
+        for doc in hm.STARTERS.values():
+            for item in doc["items"]:
+                self.assertTrue(item["normal"] and item["selected"], "every built-in item has both pictures")
 
     def test_invalid_designs_are_refused(self):
         def broken(change):
@@ -99,7 +105,7 @@ class DesignTests(unittest.TestCase):
         self.assertNotIn(b"\r", files[hm.RUNTIME_REL])
 
     def test_hidden_items_stay_off_the_car(self):
-        doc = deepcopy(hm.STARTERS["starter-audio"])
+        doc = deepcopy(hm.STARTERS["starter-cyber"])
         doc["items"][1]["hidden"] = True
         design = hm.preview_design(doc)
         self.assertNotIn(doc["items"][1]["id"], [w["id"] for w in design["items"]] + design["order"])
@@ -152,12 +158,12 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual(self.menus.save(unnamed)["name"], ml.HOME_DEFAULT_NAME)
         self.menus.select(saved["id"])
         self.assertEqual(self.menus.chosen()["name"], "mine")
-        self.menus.select("starter-audio")
-        self.assertEqual(self.menus.chosen(), hm.STARTERS["starter-audio"])
+        self.menus.select("starter-cyber")
+        self.assertEqual(self.menus.chosen(), hm.STARTERS["starter-cyber"])
         with self.assertRaises(ValueError):
             self.menus.select("menu-unknown")
         with self.assertRaises(ValueError):
-            self.menus.remove("starter-audio")
+            self.menus.remove("starter-cyber")
         self.menus.select(saved["id"])
         self.menus.remove(saved["id"])
         self.assertIsNone(self.menus.selected(), "removing the chosen menu clears the choice")
@@ -209,7 +215,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.get(f"/api/builder/home/{saved['id']}")["name"], "Sent")
         car = self.get(f"/api/builder/home/{saved['id']}/car")
         self.assertTrue(car["background"]["image"].startswith("data:image/png;base64,"))
-        self.assertEqual(self.get("/api/builder/home/starter-driver/car")["order"], hm.STARTERS["starter-driver"]["order"])
+        self.assertEqual(self.get("/api/builder/home/starter-track/car")["order"], hm.STARTERS["starter-track"]["order"])
         with self.assertRaises(HTTPError) as missing:
             self.get("/api/builder/home/menu-none")
         self.assertEqual(missing.exception.code, 404)

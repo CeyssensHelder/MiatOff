@@ -24,6 +24,7 @@ window.log = {
   info() {},
 };
 window.MiatOffHomeCoins = false; // the PC has none of Mazda's coin pictures
+window.MiatOffHomeFontBase = "/fonts/"; // the Meters fonts, served by the designer
 // The screen is scaled to the window: touches in screen pixels, as the car reports them.
 window.MiatOffHomePoint = (evt) => {
   const b = $("screen").getBoundingClientRect();

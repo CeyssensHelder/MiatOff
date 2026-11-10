@@ -60,6 +60,22 @@ NAME = re.compile(r"^[\x20-\x7e]{1,40}$")
 PNG_URL = re.compile(r"^data:image/png;base64,([A-Za-z0-9+/]+={0,2})$")
 
 
+# The menu's look. Fonts: the Meters fonts, installed with Meters (apps/miatoff/meters/fonts/).
+FONTS = {"Arial": None, "MO Chakra": "ChakraPetch-Bold.ttf", "MO Mono": "ShareTechMono-Regular.ttf",
+         "MO Condensed": "Rajdhani-Bold.ttf", "MO Sport": "RussoOne-Regular.ttf"}
+LOOK = {"frame": "outline", "font": "Arial", "labelColor": "#ffffff", "labelSize": 14}
+
+
+def look(doc) -> dict:
+    """The design's look with the defaults filled in."""
+    return {**LOOK, **doc.get("look", {})}
+
+
+def label_height(size) -> int:
+    """The band below the picture that holds the label (designer, car and generator use the same rule)."""
+    return round(size * 1.6)
+
+
 def require(ok, message):
     if not ok:
         raise ValueError(message)
@@ -123,6 +139,13 @@ def validate(doc):
     require(isinstance(order, list) and len(order) == len(ids) and set(order) == ids and len(set(order)) == len(order),
             "Invalid Commander order")
     require(any(not item["hidden"] for item in items), "Show at least one item")
+    if "look" in doc:
+        value = doc["look"]
+        require(isinstance(value, dict) and set(value) <= set(LOOK), "Invalid look")
+        merged = look(doc)
+        require(merged["frame"] in ("outline", "none") and merged["font"] in FONTS and isinstance(merged["labelColor"], str)
+                and COLOR.match(merged["labelColor"]) and isinstance(merged["labelSize"], int)
+                and not isinstance(merged["labelSize"], bool) and 10 <= merged["labelSize"] <= 32, "Invalid look")
     return doc
 
 
@@ -140,6 +163,7 @@ def car_design(doc, picture) -> dict:
         "background": {"color": doc["background"]["color"], "fit": doc["background"]["fit"],
                        "image": picture(doc["background"]["image"])},
         "accent": doc["accent"],
+        "look": look(doc),
         # Drawing order (later items on top), as in the designer.
         "items": [{"id": item["id"], "label": item["label"], "opens": item["opens"],
                    "route": DESTINATIONS[item["opens"]],
@@ -184,35 +208,36 @@ def car_files(doc) -> dict:
 
 
 # ---------------------------------------------------------------- built-in menus
-def _menu(name, rows, background="#101722", accent="#4fd1b5"):
-    """A design without pictures: rows of (label, destination), each row centred between the status bar and the
-    bottom strip. Without pictures the car shows Mazda's own coins for the factory destinations."""
-    items, gap = [], 24
-    top, bottom = 72, 430
-    w = 128 if max(len(row) for row in rows) <= 4 else 120
-    h = min(150, (bottom - top - gap * (len(rows) - 1)) // len(rows))
-    y = top + (bottom - top - len(rows) * h - (len(rows) - 1) * gap) // 2
-    for row in rows:
-        x = (SCREEN_W - len(row) * w - (len(row) - 1) * gap) // 2
-        for label, opens in row:
-            items.append({"id": "item-" + opens, "label": label, "opens": opens, "normal": None, "selected": None,
-                          "locked": False, "hidden": False, "x": x, "y": y, "w": w, "h": h})
-            x += w + gap
-        y += h + gap
-    return validate({"kind": "HomeMenuDocument", "version": 1, "name": name,
-                     "background": {"color": background, "image": None, "fit": "cover"}, "accent": accent,
-                     "items": items, "order": [item["id"] for item in items], "assets": {}})
+# meters/home-menus/menus.json holds their layout, look and items; each menu's folder holds its artwork, drawn
+# from that file by meters/tests/v3/generate-home-menus.mjs (background.png, <destination>.png and
+# <destination>-selected.png).
+MENUS_DIR = ROOT / "meters" / "home-menus"
 
 
-STARTERS = {
-    "starter-classic": _menu("Classic five", [[("Applications", "applications"), ("Entertainment", "entertainment"),
-                                               ("Communication", "communication"), ("Navigation", "navigation"),
-                                               ("Settings", "settings")]]),
-    "starter-driver": _menu("Driver", [[("Navigation", "navigation"), ("Meters", "meters"), ("Android Auto", "android-auto")],
-                                       [("Entertainment", "entertainment"), ("Communication", "communication"),
-                                        ("Settings", "settings")]], accent="#f2a93b"),
-    "starter-audio": _menu("Radio and media", [[("FM radio", "fm"), ("DAB radio", "dab"), ("Bluetooth", "bluetooth"),
-                                                ("Entertainment", "entertainment")],
-                                               [("Android Auto", "android-auto"), ("CarPlay", "carplay"),
-                                                ("Settings", "settings")]], background="#14101c", accent="#c27cf0"),
-}
+def _picture(path: Path) -> dict:
+    return {"data": "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode("ascii")}
+
+
+def _built_in(menu: dict) -> dict:
+    folder = MENUS_DIR / menu["id"]
+    assets = {"background": _picture(folder / "background.png")}
+    items = []
+    for item in menu["items"]:
+        key = item["opens"]
+        assets[key] = _picture(folder / f"{key}.png")
+        assets[key + "-selected"] = _picture(folder / f"{key}-selected.png")
+        items.append({"id": "item-" + key, "label": item["label"], "opens": key, "normal": key, "selected": key + "-selected",
+                      "locked": False, "hidden": False, "x": item["x"], "y": item["y"], "w": item["w"], "h": item["h"]})
+    return validate({"kind": "HomeMenuDocument", "version": 1, "name": menu["name"],
+                     "background": {"color": menu["background"], "image": "background", "fit": "cover"},
+                     "accent": menu["accent"], "look": dict(menu["look"]), "items": items,
+                     "order": [item["id"] for item in items], "assets": assets})
+
+
+def built_in_sources() -> list:
+    """Repository-relative paths of the built-in menus' files (for the packaged app)."""
+    return sorted(path.relative_to(ROOT).as_posix() for path in MENUS_DIR.rglob("*") if path.is_file())
+
+
+STARTERS = {"starter-" + menu["id"]: _built_in(menu)
+            for menu in json.loads((MENUS_DIR / "menus.json").read_text(encoding="utf-8"))["menus"]}

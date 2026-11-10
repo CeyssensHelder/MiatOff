@@ -3,6 +3,27 @@ import "./legacy.js";
 const legacy = globalThis.MiatOffMenu;
 export const destinations = legacy.destinations;
 export const clone = (value) => structuredClone(value);
+// The menu's look; keep in step with LOOK and FONTS in tools/home_menu.py. Fonts other than Arial are the
+// Meters fonts, which are on the car with Meters.
+export const fonts = ["Arial", "MO Chakra", "MO Mono", "MO Condensed", "MO Sport"];
+export const LOOK = {
+  frame: "outline",
+  font: "Arial",
+  labelColor: "#ffffff",
+  labelSize: 14,
+};
+export const look = (p) => ({ ...LOOK, ...(p.look || {}) });
+// The band below the picture that holds the label; the car and the generator use the same rule.
+export const labelHeight = (size) => Math.round(size * 1.6);
+// Where an item's picture goes: inside the item, above the label band.
+export function artBox(w, l) {
+  return {
+    x: w.x + 4,
+    y: w.y + 4,
+    w: w.w - 8,
+    h: Math.max(8, w.h - 8 - labelHeight(l.labelSize)),
+  };
+}
 export function migrate(raw) {
   if (raw.kind === "HomeMenuDocument") return validate(clone(raw));
   const old = legacy.validate(raw),
@@ -128,6 +149,21 @@ export function validate(p) {
     p.order.some((k) => !ids.has(k))
   )
     throw Error("Invalid Commander order");
+  if (p.look !== undefined) {
+    const l = look(p);
+    if (
+      !p.look ||
+      typeof p.look !== "object" ||
+      Object.keys(p.look).some((k) => !(k in LOOK)) ||
+      !["outline", "none"].includes(l.frame) ||
+      !fonts.includes(l.font) ||
+      !color(l.labelColor) ||
+      !Number.isInteger(l.labelSize) ||
+      l.labelSize < 10 ||
+      l.labelSize > 32
+    )
+      throw Error("Invalid look");
+  }
   if (new TextEncoder().encode(JSON.stringify(p)).length > 8388608)
     throw Error("Design exceeds 8 MiB");
   return p;
@@ -162,7 +198,7 @@ export function checks(p, ctx) {
   for (const w of p.items.filter((w) => !w.hidden)) {
     if (w.y < 64 || w.y + w.h > 438)
       issues.push(w.label + ": overlaps reserved screen area");
-    ctx.font = "14px Arial";
+    ctx.font = `${look(p).labelSize}px "${look(p).font}", Arial`;
     if (ctx.measureText(w.label).width > w.w - 8)
       issues.push(w.label + ": caption will be clipped");
     for (const other of p.items)

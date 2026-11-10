@@ -80,7 +80,7 @@ window.MainMenuCtrl.prototype.createStructure = function () {
 framework.registerCtrlLoaded("MainMenuCtrl");
 `;
 
-async function open(page, { menu = "starter-audio", design = null, control = STAND_IN } = {}) {
+async function open(page, { menu = "starter-cyber", design = null, control = STAND_IN } = {}) {
   await page.route(HARNESS, (route) =>
     route.fulfill({
       contentType: "text/html",
@@ -144,7 +144,7 @@ for (const [label, control] of [
     });
 
     test("a touch selects the item under the finger; Meters goes through Applications", async ({ page }) => {
-      const car = await open(page, { menu: "starter-driver", control: control() });
+      const car = await open(page, { menu: "starter-track", control: control() });
       const meters = car.items.find((w) => w.opens === "meters");
       await page.mouse.click(meters.x + meters.w / 2, meters.y + meters.h / 2);
       await expect.poll(() => page.evaluate(() => window.sent)).toEqual(["SelectApplications", "Selectmiatoff"]);
@@ -198,9 +198,12 @@ test("a control without an expected method is not touched", async ({ page }) => 
 });
 
 test("the PC preview runs the car script", async ({ page }) => {
-  await page.goto(SERVER + "/designer/home/car-preview.html?menu=starter-driver");
-  await expect(page.locator(".MiatOffHome")).toContainText("Meters");
+  await page.goto(SERVER + "/designer/home/car-preview.html?menu=starter-track");
+  await expect(page.locator(".MiatOffHome")).toContainText("METERS");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#route")).toContainText("METERS: opens Applications");
+  await page.waitForTimeout(1100); // the knob is ignored for a second after a choice, as in Mazda's control
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("Enter");
-  await expect(page.locator("#route")).toContainText("Meters: opens Applications");
+  await expect(page.locator("#route")).toContainText("NAVIGATION: Mazda's own Navigation button route");
 });

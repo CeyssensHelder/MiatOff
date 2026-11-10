@@ -1238,7 +1238,7 @@ def main():
                         target.write_bytes(data)
                 car.run("cancel")
 
-            menu = home_menu.STARTERS["starter-driver"]
+            menu = home_menu.STARTERS["starter-track"]
             home_payload = bs.payload(None, menu)
             car = fresh(base, "meters-home", None, menu)
             stock_digest = car.digest()
@@ -1268,7 +1268,7 @@ def main():
             car = fresh(base, "meters-home-bad", None, menu)
             stock_digest = car.digest()
             damaged = car.stick / "miatoff-app/userjs/miatoff-home-design.js"
-            damaged.write_bytes(damaged.read_bytes().replace(b"Meters", b"Meterz"))
+            damaged.write_bytes(damaged.read_bytes().replace(b"METERS", b"METERZ"))
             r = car.run("meters_on")
             check(r.returncode != 0 and car.digest() == stock_digest, "damaged Home menu design on the stick: refused")
 

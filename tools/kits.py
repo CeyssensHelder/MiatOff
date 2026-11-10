@@ -329,7 +329,7 @@ def bundle_sources() -> list:
         "vendor/mzd-aio/" + SAFETY_BLANK,
     ]
     sensors = ["vendor/mzd-aio/transparent-parking-sensor/" + row[0] for row in table("SENSOR_TABLE")]
-    home = [home_menu.RUNTIME_SRC.relative_to(ROOT).as_posix()]
+    home = [home_menu.RUNTIME_SRC.relative_to(ROOT).as_posix(), *home_menu.built_in_sources()]
     return sorted(set(fixed) | set(METERS_FILES.values()) | set(sensors) | set(designer_sources()) | set(home))
 
 

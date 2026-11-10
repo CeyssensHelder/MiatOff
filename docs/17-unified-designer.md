@@ -83,8 +83,27 @@ libraries, without reading private firmware dumps.
 
 **Experimental, not yet tested in a real car.** The Home designer's **Send to MiatOff** stores the design in the
 app's local library, by name. The app's **Design your menu** page lists those menus under **Your menus**, beside
-three built-in ones (Classic five, Driver, Radio and media), each with a **Preview** that runs the car script in
-the browser. One menu (or Mazda's own Home) is chosen for the stick.
+five built-in ones, each with a **Preview** that runs the car script in the browser. One menu (or Mazda's own Home)
+is chosen for the stick.
+
+| Built-in | Style | Items |
+|---|---|---|
+| 2077 | The Meters 2077 style: yellow on black, chamfered panels, hazard stripes, Rajdhani labels | Navigation, Meters, Android Auto, Entertainment, Communication, Settings |
+| 2077 Night | The same in the calmer 2077 NIGHT cyan | as 2077 |
+| Cyber | The Meters CYBER style: cyan and magenta neon HUD frames over a grid floor, Share Tech Mono | FM, DAB, Bluetooth, Entertainment, Android Auto, CarPlay, Navigation, Settings |
+| Track | The Meters TRACK style: dark dot grid, rounded panels, amber focus, Russo One; a large Meters tile | Meters, Navigation, Entertainment, Communication, Settings |
+| Classic | Glass coins on an arc above a soft red line | Mazda's five |
+
+Their layout, look and items are in `meters/home-menus/menus.json`; the artwork (a background and, per item, a
+normal and a selected picture at the picture-box size) is drawn from that file by
+`meters/tests/v3/generate-home-menus.mjs` and committed, like the Meters baselines: review every changed PNG. The
+glyphs are drawn by that script; no Mazda or brand artwork is used. In the designer, **Start from built-in…**
+copies one into the draft to change it and send it as your own.
+
+A design has a **look**: an item frame (an outline, or none, when the selected picture shows focus), and the label
+font, colour and size. The fonts are the Meters fonts, which are on the car with Meters. Each item's picture fits
+the box above its label band (`round(labelSize × 1.6)` high); the designer, the car script and the generator use
+that same rule.
 
 The chosen menu travels in the MiatOff app payload, so the Meters action installs, updates (REPAIR) and removes
 it, checked by the payload's MANIFEST; the installer itself is unchanged. On the unit:
@@ -111,11 +130,11 @@ HMI with those shapes, and also against the real `MainMenuCtrl.js` when a dump i
 
 ### Checklist for the first car test (parked)
 
-1. Install Meters with the **Classic five** menu. Home shows five buttons with Mazda's coins; knob, tilt, press,
-   touch and Back each work; all five open their screens; Home from another screen comes back to the menu.
-2. **Driver**: Meters opens Meters; Android Auto opens with a phone connected and leaves Entertainment open
-   without one.
-3. **Radio and media**: FM, DAB (if fitted) and Bluetooth start that source.
+1. Install Meters with the **Classic** menu. Home shows the five coins; knob, tilt, press, touch and Back each
+   work; all five open their screens; Home from another screen comes back to the menu.
+2. **2077** (or **Track**): the label font loads, the selected tile changes with focus, Meters opens Meters, and
+   Android Auto opens with a phone connected and leaves Entertainment open without one.
+3. **Cyber**: FM, DAB (if fitted) and Bluetooth start that source; CarPlay leaves Entertainment open on a car without it.
 4. A menu with your own pictures and background: they show, and the selected picture follows focus.
 5. Restart the unit: the menu shows from the first Home. Incoming call, reverse camera and Mazda's own screens
    still work.

@@ -17,6 +17,8 @@
       ><button id="export">Export design</button
       ><button id="png">Save preview PNG</button
       ><button id="reset">New design</button
+      ><select id="starter" aria-label="Start from a built-in menu" hidden>
+        <option value="">Start from built-in…</option></select
       ><button id="send" class="primary">Send to MiatOff</button
       ><button id="export-original" hidden>Export retained draft</button
       ><span id="save-status" role="status"></span>
@@ -65,6 +67,29 @@
               <option value="contain">Fit whole image</option>
             </select></label
           ><label>Accent <input id="accent" type="color" /></label>
+        </details>
+        <details>
+          <summary>Look</summary>
+          <label
+            >Item frame
+            <select id="look-frame">
+              <option value="outline">Outline</option>
+              <option value="none">None (pictures show focus)</option>
+            </select></label
+          ><label
+            >Label font
+            <select id="look-font">
+              <option value="Arial">Mazda (Arial)</option>
+              <option value="MO Chakra">Chakra Petch</option>
+              <option value="MO Mono">Share Tech Mono</option>
+              <option value="MO Condensed">Rajdhani</option>
+              <option value="MO Sport">Russo One</option>
+            </select></label
+          ><label>Label colour <input id="look-color" type="color" /></label
+          ><label
+            >Label size
+            <input id="look-size" type="number" min="10" max="32" step="1"
+          /></label>
         </details>
       </aside>
       <main class="home-stage">

@@ -28,6 +28,10 @@
     var TEXT_ICON = { applications: "APP", entertainment: "ENT", communication: "COM", navigation: "NAV",
                       settings: "SET", meters: "M", bluetooth: "BT", fm: "FM", dab: "DAB", "android-auto": "AA",
                       carplay: "CP" };
+    // Label fonts: the Meters fonts, on the car with Meters. Keep in step with FONTS in tools/home_menu.py.
+    var FONT_FILES = { "MO Chakra": "ChakraPetch-Bold.ttf", "MO Mono": "ShareTechMono-Regular.ttf",
+                       "MO Condensed": "Rajdhani-Bold.ttf", "MO Sport": "RussoOne-Regular.ttf" };
+    var FONT_BASE = "apps/miatoff/meters/fonts/";
     var METHODS = ["createStructure", "init", "handleControllerEvent", "startTransitionFrom", "endTransitionTo",
                    "getContextCapture", "restoreContext", "finishPartialActivity", "cleanUp", "setText",
                    "getRemoteUiButtonStatus"];
@@ -77,9 +81,14 @@
         }
         return true;
     }
+    function isLook(l) {
+        return !!l && (l.frame === "outline" || l.frame === "none") &&
+            (l.font === "Arial" || FONT_FILES.hasOwnProperty(l.font)) && isColor(l.labelColor) &&
+            isNumber(l.labelSize, 10, 32);
+    }
     function check(d) {
         var ids = {}, i, w;
-        if (!d || d.version !== 1 || !d.background || !isColor(d.background.color) || !isColor(d.accent) ||
+        if (!d || d.version !== 1 || !isLook(d.look) || !d.background || !isColor(d.background.color) || !isColor(d.accent) ||
                 !isPicture(d.background.image) || (d.background.fit !== "cover" && d.background.fit !== "contain") ||
                 !(d.items instanceof Array) || d.items.length < 1 || d.items.length > 12 ||
                 !(d.order instanceof Array) || d.order.length !== d.items.length) {
@@ -130,17 +139,33 @@
         }
         return e;
     }
-    // A picture fitted into a size x size square at the top of the item, as the designer draws it.
-    function picture(parent, url, size, w) {
-        var img = element("img", "position:absolute;top:4px;left:" + px((w - size) / 2) + ";width:" + px(size) +
-            ";height:" + px(size) + ";display:none", parent);
+    // The band below the picture that holds the label: as the designer draws it.
+    function band(l) {
+        return Math.round(l.labelSize * 1.6);
+    }
+    function useFont(font) {
+        var doc = W.document, style;
+        if (!FONT_FILES.hasOwnProperty(font) || doc.getElementById("miatoff-home-font")) {
+            return;
+        }
+        style = doc.createElement("style");
+        style.id = "miatoff-home-font";
+        style.appendChild(doc.createTextNode("@font-face{font-family:'" + font + "';src:url(" +
+            (W.MiatOffHomeFontBase || FONT_BASE) + FONT_FILES[font] + ")}"));
+        (doc.head || doc.getElementsByTagName("head")[0] || doc.body).appendChild(style);
+    }
+    // A picture fitted into the box b (x, y, w, h), centred, never cropped.
+    function picture(parent, url, b) {
+        var img = element("img", "position:absolute;display:none;left:" + px(b.x) + ";top:" + px(b.y) +
+            ";width:" + px(b.w) + ";height:" + px(b.h), parent);
         img.onload = function () {
             var iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, s;
             if (iw > 0 && ih > 0) {
-                s = Math.min(size / iw, size / ih);
+                s = Math.min(b.w / iw, b.h / ih);
                 img.style.width = px(iw * s);
                 img.style.height = px(ih * s);
-                img.style.left = px((w - iw * s) / 2);
+                img.style.left = px(b.x + (b.w - iw * s) / 2);
+                img.style.top = px(b.y + (b.h - ih * s) / 2);
             }
         };
         img.src = url;
@@ -151,8 +176,18 @@
         return "position:absolute;left:" + px(inset) + ";top:" + px(inset) + ";width:" + px(item.w - 2 * inset - 2 * width) +
             ";height:" + px(item.h - 2 * inset - 2 * width) + ";border:" + width + "px solid " + color;
     }
+    // The outline: always with an outline frame; without one, only on the focused item when no selected picture
+    // shows focus.
+    function frame(v, l, on, accent) {
+        if (l.frame === "outline" || (on && !v.selected)) {
+            v.frame.style.cssText = on ? frameCss(v.item, 4, accent) : frameCss(v.item, 1, "#8997aa");
+        } else {
+            v.frame.style.cssText = "display:none";
+        }
+    }
     function build(ctrl, d) {
-        var root, bg, i, w, box, size, coin, normal, selected, label, mark, view = [];
+        var root, bg, i, w, box, b, coin, normal, selected, label, mark, view = [], l = d.look, lh = band(d.look);
+        useFont(l.font);
         root = W.document.createElement("div");
         root.id = ctrl.controlId;
         root.className = "MainMenuCtrl MiatOffHome";
@@ -167,26 +202,29 @@
             w = d.items[i];
             box = element("div", "position:absolute;left:" + px(w.x) + ";top:" + px(w.y - STATUS_BAR) + ";width:" +
                 px(w.w) + ";height:" + px(w.h), root);
-            mark = element("div", frameCss(w, 1, "#8997aa"), box);
-            size = Math.max(8, Math.min(w.w - 8, w.h - 28));
+            mark = element("div", "display:none", box);
+            b = { x: 4, y: 4, w: w.w - 8, h: Math.max(8, w.h - 8 - lh) };
             // Mazda's own coins for factory buttons without a picture; the PC preview has none of Mazda's files.
             coin = w.route.icon && W.MiatOffHomeCoins !== false ? COINS + ICONS[w.route.icon] : null;
             normal = w.normal || (coin ? coin + ".png" : null);
-            selected = w.selected || (w.normal ? w.normal : (coin ? coin + "_Focus.png" : null));
-            normal = normal ? picture(box, normal, size, w.w) : null;
-            selected = selected ? picture(box, selected, size, w.w) : null;
+            selected = w.selected && w.selected !== w.normal ? w.selected : (w.normal ? null : (coin ? coin + "_Focus.png" : null));
+            normal = normal ? picture(box, normal, b) : null;
+            selected = selected ? picture(box, selected, b) : null;
             if (normal) {
                 normal.style.display = "block";
             } else {
-                element("div", "position:absolute;left:0;top:" + px(size * 0.3) + ";width:100%;text-align:center;color:#e5eaf4;" +
-                    "font-family:Tipperary,Arial,Helvetica,sans-serif;font-size:" + px(Math.min(size * 0.45, 40)), box)
+                element("div", "position:absolute;left:0;top:" + px(b.y + b.h / 2 - Math.min(b.w, b.h) * 0.25) +
+                    ";width:100%;text-align:center;color:#e5eaf4;font-family:Tipperary,Arial,Helvetica,sans-serif;" +
+                    "font-size:" + px(Math.min(Math.min(b.w, b.h) * 0.45, 40)), box)
                     .appendChild(W.document.createTextNode(TEXT_ICON[w.opens] || "*"));
             }
-            label = element("div", "position:absolute;left:4px;top:" + px(w.h - 26) + ";width:" + px(w.w - 8) +
-                ";height:22px;line-height:22px;overflow:hidden;white-space:nowrap;text-align:center;color:#fff;" +
-                "font-family:Tipperary,Arial,Helvetica,sans-serif;font-size:14px", box);
+            label = element("div", "position:absolute;left:4px;top:" + px(w.h - 4 - lh) + ";width:" + px(w.w - 8) +
+                ";height:" + px(lh) + ";line-height:" + px(lh) + ";overflow:hidden;white-space:nowrap;text-align:center;" +
+                "color:" + l.labelColor + ";font-size:" + px(l.labelSize) + ";font-family:" +
+                (l.font === "Arial" ? "" : "'" + l.font + "',") + "Tipperary,Arial,Helvetica,sans-serif", box);
             label.appendChild(W.document.createTextNode(w.label));
             view.push({ item: w, box: box, frame: mark, normal: normal, selected: selected });
+            frame(view[view.length - 1], l, false, d.accent);
         }
         ctrl.divElt = root;
         ctrl._mo = { design: d, view: view, order: [], focus: -1, lit: false, previous: -1, allow: true,
@@ -207,8 +245,8 @@
         for (i = 0; i < m.view.length; i++) {
             v = m.view[i];
             on = at !== -1 && m.order[at] === i;
-            v.frame.style.cssText = on ? frameCss(v.item, 4, m.design.accent) : frameCss(v.item, 1, "#8997aa");
-            if (v.selected && v.normal && v.selected !== v.normal) {
+            frame(v, m.design.look, on, m.design.accent);
+            if (v.selected && v.normal) {
                 v.normal.style.display = on ? "none" : "block";
                 v.selected.style.display = on ? "block" : "none";
             }

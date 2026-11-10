@@ -138,6 +138,7 @@ function draw(guides = true) {
   ctx.textAlign = "left";
   ctx.fillText("MAZDA HOME · CONCEPT", 20, 31);
   ctx.fillText("HOME", 20, 465);
+  const l = M.look(p);
   for (const w of p.items) {
     if (w.hidden) continue;
     // Without guides (the preview PNG) the editing selection is not drawn; Try menu focus is.
@@ -145,33 +146,47 @@ function draw(guides = true) {
       ? w.id === focused
       : guides && store.view.selection.includes(w.id);
     const img = image((chosen && w.selected) || w.normal);
-    const size = Math.min(w.w - 8, w.h - 28);
+    const box = M.artBox(w, l),
+      band = M.labelHeight(l.labelSize);
     ctx.save();
-    ctx.strokeStyle = chosen ? p.accent : "#8997aa";
-    ctx.lineWidth = chosen ? 4 : 1;
-    ctx.strokeRect(w.x + 2, w.y + 2, w.w - 4, w.h - 4);
+    // As the car draws it: an outline frame, or none (then the selected picture shows focus, and an item
+    // without a different selected picture gets the accent outline when chosen).
+    const marked =
+      chosen && (l.frame === "outline" || !w.selected || w.selected === w.normal);
+    if (l.frame === "outline" || marked) {
+      ctx.strokeStyle = chosen ? p.accent : "#8997aa";
+      ctx.lineWidth = chosen ? 4 : 1;
+      ctx.strokeRect(w.x + 2, w.y + 2, w.w - 4, w.h - 4);
+    }
     if (img) {
-      const s = Math.min(size / img.width, size / img.height);
+      const s = Math.min(box.w / img.width, box.h / img.height);
       ctx.drawImage(
         img,
-        w.x + (w.w - img.width * s) / 2,
-        w.y + 4,
+        box.x + (box.w - img.width * s) / 2,
+        box.y + (box.h - img.height * s) / 2,
         img.width * s,
         img.height * s,
       );
     } else {
+      const size = Math.min(box.w, box.h);
       ctx.fillStyle = "#e5eaf4";
       ctx.font = Math.min(size * 0.6, 40) + "px Arial";
       ctx.textAlign = "center";
-      ctx.fillText(symbol[w.opens] || "•", w.x + w.w / 2, w.y + size * 0.75);
+      ctx.fillText(
+        symbol[w.opens] || "•",
+        w.x + w.w / 2,
+        box.y + box.h / 2 + Math.min(size * 0.6, 40) * 0.35,
+      );
     }
     ctx.beginPath();
     ctx.rect(w.x + 4, w.y, w.w - 8, w.h);
     ctx.clip();
-    ctx.fillStyle = "#fff";
-    ctx.font = "14px Arial";
+    ctx.fillStyle = l.labelColor;
+    ctx.font = `${l.labelSize}px "${l.font}", Arial`;
     ctx.textAlign = "center";
-    ctx.fillText(w.label, w.x + w.w / 2, w.y + w.h - 8);
+    ctx.textBaseline = "middle";
+    ctx.fillText(w.label, w.x + w.w / 2, w.y + w.h - 4 - band / 2);
+    ctx.textBaseline = "alphabetic";
     ctx.restore();
     if (guides && !trying && chosen && !w.locked) {
       ctx.fillStyle = "#65e1c3";
@@ -244,6 +259,11 @@ function refresh() {
   }
   if (document.activeElement !== $("menu-name"))
     $("menu-name").value = p.name || "";
+  const l = M.look(p);
+  $("look-frame").value = l.frame;
+  $("look-font").value = l.font;
+  $("look-color").value = l.labelColor;
+  if (document.activeElement !== $("look-size")) $("look-size").value = l.labelSize;
   $("bg-color").value = p.background.color;
   $("bg-fit").value = p.background.fit;
   $("accent").value = p.accent;
@@ -599,6 +619,18 @@ window.addEventListener("keydown", (e) => {
     );
   }
 });
+for (const [id, key] of [
+  ["look-frame", "frame"],
+  ["look-font", "font"],
+  ["look-color", "labelColor"],
+  ["look-size", "labelSize"],
+])
+  $(id).onchange = () =>
+    command("Look", (p) => {
+      const value =
+        key === "labelSize" ? Math.round(Number($(id).value)) : $(id).value;
+      p.look = { ...(p.look || {}), [key]: value };
+    });
 $("menu-name").onchange = () =>
   command("Rename menu", (p) => {
     const name = $("menu-name").value.trim();
@@ -663,6 +695,42 @@ $("file").onchange = async () => {
     notice("Import failed: " + e.message);
   } finally {
     $("file").value = "";
+  }
+};
+// The app's built-in menus, to start from (they are copied into this draft, with their artwork).
+fetch("/api/builder/home", { cache: "no-store" })
+  .then((r) => (r.ok ? r.json() : { menus: [] }))
+  .then(({ menus = [] }) => {
+    for (const m of menus.filter((m) => m.builtIn)) {
+      const o = document.createElement("option");
+      o.value = m.id;
+      o.textContent = m.name;
+      $("starter").append(o);
+    }
+    $("starter").hidden = !menus.some((m) => m.builtIn);
+  })
+  .catch(() => {});
+$("starter").onchange = async () => {
+  const id = $("starter").value,
+    at = generation,
+    token = epoch;
+  $("starter").value = "";
+  if (!id) return;
+  try {
+    const response = await fetch(`/api/builder/home/${encodeURIComponent(id)}`, {
+      cache: "no-store",
+    });
+    const doc = await response.json();
+    if (!response.ok) throw Error(doc.error || "Menu not found");
+    const next = await M.decode(M.migrate(doc));
+    if (token !== epoch || at !== generation)
+      throw Error("Design changed while loading; retry");
+    command("Start from " + (doc.name || "built-in"), () => {
+      store.project = next;
+      store.view.selection = [];
+    });
+  } catch (e) {
+    notice("Could not start from that menu: " + e.message);
   }
 };
 $("reset").onclick = () =>
@@ -794,6 +862,14 @@ window.addEventListener("beforeunload", (e) => {
     e.returnValue = "";
   }
 });
+// Labels may use the Meters fonts; canvas text needs them loaded first.
+Promise.all(
+  M.fonts
+    .filter((font) => font !== "Arial")
+    .map((font) => document.fonts.load(`16px "${font}"`)),
+)
+  .then(() => active && refresh())
+  .catch(() => {});
 window.HomeDesigner = {
   ready: load(),
   async setActive(value) {
