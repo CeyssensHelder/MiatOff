@@ -1,0 +1,126 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+body {
+  overflow: auto;
+  display: block;
+}
+.home-toolbar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px;
+  border-bottom: 1px solid #354158;
+}
+.home-workspace {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 280px;
+  gap: 12px;
+  padding: 12px;
+}
+.home-workspace aside {
+  display: block;
+  position: static;
+  overflow: auto;
+  max-height: calc(100dvh - 100px);
+  padding: 12px;
+}
+.home-workspace label {
+  display: block;
+  margin: 10px 0;
+}
+.home-workspace input:not([type="checkbox"]),
+.home-workspace select {
+  max-width: 100%;
+  width: 100%;
+}
+.home-stage {
+  min-width: 0;
+}
+#canvas-wrap {
+  overflow: auto;
+}
+canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 5/3;
+  touch-action: none;
+  background: #17191d;
+}
+.coordinates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.item-row {
+  display: flex;
+  gap: 4px;
+  margin: 6px 0;
+}
+.item-row .choose {
+  flex: 1;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.choose[aria-pressed="true"] {
+  outline: 2px solid #65e1c3;
+}
+#notice {
+  color: #ffc080;
+  padding: 0 12px;
+}
+#navigation {
+  display: flex;
+  gap: 8px;
+}
+#navigation[hidden] {
+  display: none;
+}
+#checks {
+  font-size: 12px;
+}
+button:disabled {
+  opacity: 0.4;
+}
+.home-workspace p {
+  font-size: 12px;
+  color: #aab9cd;
+}
+@media (max-width: 1000px) {
+  .home-workspace {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+  .inspector-panel {
+    grid-column: 1/-1;
+  }
+  .home-workspace aside {
+    max-height: none;
+  }
+}
+@media (max-width: 600px) {
+  .home-workspace {
+    display: flex;
+    flex-direction: column;
+  }
+  .home-stage {
+    order: -1;
+  }
+  .home-toolbar button {
+    min-height: 40px;
+  }
+  .home-workspace aside {
+    width: 100%;
+  }
+}
+
+.home-stage {
+  display: block;
+  padding: 0;
+  overflow: visible;
+}
+.home-workspace aside {
+  width: auto;
+  min-width: 0;
+}
+#starter {
+  width: auto;
+  max-width: 220px;
+}

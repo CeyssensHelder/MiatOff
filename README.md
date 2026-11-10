@@ -28,6 +28,7 @@ refuses to touch anything it does not recognise.
 | **Camera safety text** | Blanks the safety text over the reversing camera picture (MZD-AIO's blank image); the originals stay on the unit. |
 | **Meters** | Gauges under *Applications*: speed, rpm, G-meter, lap timer, fed by the car's own data. No OBD adapter needed. |
 | **Meters Designer** | Design your own Meters pages on the PC. Up to eight show in the car under *Applications → Meters → CUSTOM*. |
+| **Home menu** | Your own Home screen: up to twelve shortcuts with your pictures, positions, knob order and destinations (also Meters, FM, DAB, Bluetooth, Android Auto, CarPlay). Installed with Meters; Mazda's files stay unchanged. |
 
 You choose per tweak: **Install**, **Remove** or **Leave as-is**. The tool never changes anything you did not pick.
 
@@ -42,6 +43,7 @@ Only one car has been analysed in depth (a 2017 EU ND1, plain `sm.conf`). Everyt
 | 74.00.324A | EU MX-5 ND1 with wireless CarPlay (`sm_WCP.conf`) | Touch in Android Auto, boot trim | Experimental: same edits on `sm_WCP.conf`; tested on a simulator and by a contributor on an ND2 (below), not on our own car (it uses `sm.conf`) |
 | 74.00.324A | EU MX-5 ND1 | Meters | Experimental: installed on our car; an earlier in-car failure (busy root remount) was fixed |
 | 74.00.324A | EU MX-5 ND1 | Meters Designer pages (CUSTOM) | Experimental: installed and used on our car with three simple pages; known issues in [docs/15](docs/15-meters-designer.md#known-issues) |
+| 74.00.324A | EU MX-5 ND1 | Home menu | Experimental: installed and working on our car in a first test; also tested against a fake HMI and Mazda's own Home control code from our dump |
 | 74.00.324A | EU MX-5 ND1 | Shorter list delay | Experimental: ran on our car without problems; the effect is only visible when scrolling lists |
 | 74.00.324A | EU MX-5 ND1 | Blank reversing-camera safety text | Experimental: simulator and the contributor's unit only; **not tested by us** (no camera) |
 | 74.00.324A | EU MX-5 ND1 | Semi-transparent parking sensor graphics | Experimental: all 44 image hashes match our unit; no visible effect on a car without a reversing camera (our car only beeps), so **not tested by us** |
@@ -100,6 +102,18 @@ that show the unit is recognised.
 4. In the car, accept the step (**INSTALL**, or **REPAIR** for an update). The pages are under *Applications → Meters → CUSTOM*.
 
 To change them later, repeat from step 2. Start with one simple page. More in [docs/15](docs/15-meters-designer.md).
+
+### Your own Home menu
+
+1. In the app, open **Design your menu**. Pick a built-in menu under **Your menus**, or press **Open menu designer**,
+   design one and press **Send to MiatOff**. **Preview** shows a menu as the car draws it.
+2. Choose the menu. Under **Choose tweaks > Interface**, set **Custom menu** to *Install* and Meters to *Install*
+   (or *Update*), then prepare the stick.
+3. In the car, accept **INSTALL** or **REPAIR**. Try a new menu parked first.
+
+*Leave as-is* keeps the menu of your last stick when Meters is installed again. To get Mazda's own Home back, set
+Custom menu to *Mazda's Home* (with Meters set to *Install*) and repeat, or remove Meters. More in
+[docs/17](docs/17-unified-designer.md#home-menu-in-the-car).
 
 ### Opening the app
 

@@ -86,3 +86,12 @@ mode for the shared Designer (one 800 × 480 screen, 1–12 items, background, n
 - [ ] An on/off switch and the shift RPM next to the designer's shift lights, so custom pages and the built-in styles
   share it.
 - [ ] Add it to the simulator and the Meters tests. Ship the sound files with the Meters pages (hash-guarded).
+
+## Designer: make both design pages more the same
+
+User feedback: the Meters and Home design pages look and work differently.
+
+- [ ] Make the Home designer (meters/designer/home/) and the Meters designer (meters/designer/v3/) share one layout:
+  the same toolbar, side panels, inspector sections, Send button and status line, so both feel like one tool.
+- [ ] Do the same for the app's two design pages (Design your Meters, Design your menu): same cards, same list with
+  Preview, same wording for choosing what goes on the stick.

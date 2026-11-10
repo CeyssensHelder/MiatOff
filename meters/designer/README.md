@@ -1,6 +1,9 @@
 # Meters Designer studio
 
-Standalone browser editor; app integration and USB deployment are deferred.
+The current studio has Meters and Mazda Home modes; see [the unified guide](../../docs/17-unified-designer.md).
+Current Meters editing and deployment are described in [docs/15](../../docs/15-meters-designer.md).
+
+Both modes send to the MiatOff app (Send to builder / Send to MiatOff), which puts them on the stick.
 Run `python tools/meters_designer.py --port 8878` from the repository root and keep
 Python running. Open http://127.0.0.1:8878/designer/index.html. The server is loopback-only.
 A fixed port preserves the browser origin used for drafts.

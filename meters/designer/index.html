@@ -4,19 +4,101 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#0b1018" />
-    <title>Meters Designer · Studio</title>
+    <title>MiatOff Meters Designer</title>
     <link rel="stylesheet" href="studio-v3.css" />
+    <style>
+      .mode-choice {
+        font-size: 12px;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .mode-choice select {
+        max-width: 140px;
+      }
+      #home-studio {
+        position: fixed;
+        inset: 68px 0 0;
+        width: 100%;
+        height: calc(100dvh - 68px);
+        border: 0;
+        background: #0b1018;
+      }
+      body[data-designer-mode="home"]
+        > :not(.studio-header):not(#home-studio):not(#notice):not(script) {
+        display: none !important;
+      }
+      /* A switch error stays readable above the Home frame. */
+      body[data-designer-mode="home"] > #notice:not([hidden]) {
+        position: fixed;
+        top: 68px;
+        left: 0;
+        right: 0;
+        z-index: 10;
+      }
+      body[data-designer-mode="home"]
+        .studio-header
+        > :not(.brand):not(.mode-choice) {
+        display: none !important;
+      }
+      body[data-designer-mode="home"] .studio-header {
+        height: 68px;
+        min-height: 0;
+      }
+      @media (max-width: 1199px) {
+        .studio-header {
+          flex-wrap: wrap;
+        }
+        .mode-choice {
+          flex: none;
+        }
+        .studio-header nav {
+          margin-left: auto;
+        }
+      }
+      @media (max-width: 767px) {
+        .studio-header {
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+        .mode-choice {
+          grid-column: 1/-1;
+          grid-row: 3;
+          justify-content: flex-end;
+        }
+        .mode-choice select {
+          width: 140px;
+        }
+        .detail-control {
+          grid-row: 2;
+        }
+        body[data-designer-mode="home"] .mode-choice {
+          grid-row: 1;
+          grid-column: 2;
+        }
+        .brand {
+          min-width: 0;
+        }
+      }
+    </style>
   </head>
   <body>
     <a class="skip-link" href="#canvas">Skip to design canvas</a>
     <header class="studio-header">
       <div class="brand">
-        <span class="brand-mark" aria-hidden="true">M</span>
+        <!-- The MiatOff app icon, drawn as in packaging/make_icon.py. -->
+        <svg class="brand-mark" aria-hidden="true" viewBox="0 0 1024 1024"><rect x="39" y="39" width="946" height="946" rx="203" fill="#0b1018" stroke="#2b3747" stroke-width="14"/><g fill="none" stroke-width="64"><path d="M271.2 691.0A278 278 0 1 1 752.8 691.0" stroke="#2b3747"/><path d="M271.2 691.0A278 278 0 0 1 718.6 366.0" stroke="#67dcc2"/></g><path d="M512 552L697.8 384.7" stroke="#eaf0f6" stroke-width="40"/><circle cx="512" cy="552" r="62" fill="#eaf0f6"/></svg>
         <div>
-          <strong>Meters Designer</strong
+          <strong>MiatOff Meters Designer</strong
           ><span id="collection-caption" class="breadcrumb">Custom pages</span>
         </div>
       </div>
+      <label class="mode-choice"
+        >Designer
+        <select id="designer-mode" aria-label="Designer mode">
+          <option value="meters">Meters</option>
+          <option value="home">Mazda Home</option>
+        </select></label
+      >
       <div class="detail-control">
         <label for="editing-detail"
           >Editing detail <span id="detail-value">Basic</span></label
@@ -480,6 +562,7 @@
       accept="application/json,.json"
       hidden
     />
-    <script type="module" src="v3/app.mjs"></script>
+    <iframe id="home-studio" title="MiatOff Home Designer" hidden></iframe>
+    <script type="module" src="shared/studio.mjs"></script>
   </body>
 </html>

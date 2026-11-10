@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>MiatOff Home Designer</title>
+    <link rel="stylesheet" href="../studio-v3.css" />
+    <link rel="stylesheet" href="home.css" />
+  </head>
+  <body>
+    <header class="home-toolbar">
+      <button id="undo">Undo</button><button id="redo">Redo</button
+      ><button id="add">Add item</button
+      ><button id="duplicate">Duplicate</button
+      ><button id="remove">Delete</button><button id="try">Try menu</button
+      ><button id="import">Import</button
+      ><button id="export">Export design</button
+      ><button id="png">Save preview PNG</button
+      ><button id="reset">New design</button
+      ><select id="starter" aria-label="Start from a built-in menu" hidden>
+        <option value="">Start from built-in…</option></select
+      ><button id="send" class="primary">Send to MiatOff</button
+      ><button id="export-original" hidden>Export retained draft</button
+      ><span id="save-status" role="status"></span>
+    </header>
+    <p id="notice" role="alert"></p>
+    <div id="recovery" hidden>
+      <button id="reload">Load newer saved draft</button
+      ><button id="export-saved">Export saved draft</button
+      ><button id="recover">Recover with a new design</button>
+    </div>
+    <div class="home-workspace">
+      <aside class="library-panel">
+        <label
+          >Menu name <input id="menu-name" maxlength="40" placeholder="My Home menu"
+        /></label>
+        <h2>Items / Commander order</h2>
+        <p>Use arrows for knob order. Layer buttons change drawing order.</p>
+        <div id="items"></div>
+        <h3>Arrange</h3>
+        <select id="align" aria-label="Align items">
+          <option value="">Align selection…</option>
+          <option value="left">Left</option>
+          <option value="top">Top</option>
+          <option value="horizontal">Distribute horizontally</option></select
+        ><label
+          >Snap
+          <select id="snap">
+            <option value="1">1 px</option>
+            <option value="8" selected>8 px</option>
+          </select></label
+        ><button id="zoom">Fit / 100%</button>
+        <details>
+          <summary>Background</summary>
+          <label>Colour <input id="bg-color" type="color" /></label
+          ><label
+            >Image
+            <input
+              id="bg-image"
+              type="file"
+              accept="image/png,image/jpeg,image/webp" /></label
+          ><button id="bg-clear">Clear background</button
+          ><label
+            >Fit
+            <select id="bg-fit">
+              <option value="cover">Fill / crop</option>
+              <option value="contain">Fit whole image</option>
+            </select></label
+          ><label>Accent <input id="accent" type="color" /></label>
+        </details>
+        <details>
+          <summary>Look</summary>
+          <label
+            >Item frame
+            <select id="look-frame">
+              <option value="outline">Outline</option>
+              <option value="none">None (pictures show focus)</option>
+            </select></label
+          ><label
+            >Label font
+            <select id="look-font">
+              <option value="Arial">Mazda (Arial)</option>
+              <option value="MO Chakra">Chakra Petch</option>
+              <option value="MO Mono">Share Tech Mono</option>
+              <option value="MO Condensed">Rajdhani</option>
+              <option value="MO Sport">Russo One</option>
+            </select></label
+          ><label>Label colour <input id="look-color" type="color" /></label
+          ><label
+            >Label size
+            <input id="look-size" type="number" min="10" max="32" step="1"
+          /></label>
+        </details>
+      </aside>
+      <main class="home-stage">
+        <div id="canvas-wrap">
+          <canvas
+            id="canvas"
+            width="800"
+            height="480"
+            tabindex="0"
+            aria-label="Home menu canvas"
+          ></canvas>
+        </div>
+        <p>
+          Design: drag, resize at the lower-right corner, Shift-click to
+          multi-select. Arrow keys nudge; Shift nudges eight pixels.
+        </p>
+        <div id="navigation" hidden>
+          <button id="previous">Previous</button
+          ><button id="select">Select</button><button id="next">Next</button
+          ><button id="back">Back</button><button id="home">Home</button>
+        </div>
+        <p id="route" role="status">
+          PC design preview. Destinations are simulated.
+        </p>
+        <details>
+          <summary id="check-count">Design checks</summary>
+          <ul id="checks"></ul>
+        </details>
+      </main>
+      <aside class="inspector-panel">
+        <h2>Selected item</h2>
+        <label>Name <input id="name" maxlength="20" /></label
+        ><label
+          >Opens
+          <select id="opens"></select
+        ></label>
+        <div class="coordinates">
+          <label>X<input id="x" type="number" /></label
+          ><label>Y<input id="y" type="number" /></label
+          ><label>Width<input id="w" type="number" /></label
+          ><label>Height<input id="h" type="number" /></label>
+        </div>
+        <label><input id="locked" type="checkbox" />Locked</label
+        ><label><input id="hidden" type="checkbox" />Hidden in menu</label
+        ><label
+          >Normal icon<input
+            id="normal"
+            type="file"
+            accept="image/png,image/jpeg,image/webp" /></label
+        ><button id="normal-clear">Default symbol</button
+        ><label
+          >Selected icon<input
+            id="selected"
+            type="file"
+            accept="image/png,image/jpeg,image/webp" /></label
+        ><button id="selected-clear">Use normal icon</button
+        ><button id="layer-back">Layer backward</button
+        ><button id="layer-front">Layer forward</button>
+        <p>
+          Names, destinations and Commander order stay independent of layout.
+        </p>
+      </aside>
+    </div>
+    <input id="file" type="file" accept="application/json,.json" hidden />
+    <script type="module" src="app.mjs"></script>
+  </body>
+</html>

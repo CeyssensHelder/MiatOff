@@ -1,0 +1,87 @@
+{
+  "about": "Built-in Home menus. Layout, look and items here; the artwork in each folder is drawn from this file by meters/tests/v3/generate-home-menus.mjs. tools/home_menu.py builds the menus from both. Each picture is the item's picture box: item width - 8 by item height - 8 - round(labelSize * 1.6).",
+  "menus": [
+    {
+      "id": "2077",
+      "name": "2077",
+      "theme": "y2077",
+      "palette": "yellow",
+      "background": "#0b0b0c",
+      "accent": "#fcee0a",
+      "look": { "frame": "none", "font": "MO Condensed", "labelColor": "#fcee0a", "labelSize": 22 },
+      "items": [
+        { "label": "NAVIGATION", "opens": "navigation", "x": 36, "y": 104, "w": 232, "h": 156 },
+        { "label": "METERS", "opens": "meters", "x": 284, "y": 104, "w": 232, "h": 156 },
+        { "label": "ANDROID AUTO", "opens": "android-auto", "x": 532, "y": 104, "w": 232, "h": 156 },
+        { "label": "ENTERTAINMENT", "opens": "entertainment", "x": 36, "y": 272, "w": 232, "h": 156 },
+        { "label": "COMMUNICATION", "opens": "communication", "x": 284, "y": 272, "w": 232, "h": 156 },
+        { "label": "SETTINGS", "opens": "settings", "x": 532, "y": 272, "w": 232, "h": 156 }
+      ]
+    },
+    {
+      "id": "2077-night",
+      "name": "2077 Night",
+      "theme": "y2077",
+      "palette": "night",
+      "background": "#0b0b0c",
+      "accent": "#35a9b5",
+      "look": { "frame": "none", "font": "MO Condensed", "labelColor": "#35a9b5", "labelSize": 22 },
+      "items": [
+        { "label": "NAVIGATION", "opens": "navigation", "x": 36, "y": 104, "w": 232, "h": 156 },
+        { "label": "METERS", "opens": "meters", "x": 284, "y": 104, "w": 232, "h": 156 },
+        { "label": "ANDROID AUTO", "opens": "android-auto", "x": 532, "y": 104, "w": 232, "h": 156 },
+        { "label": "ENTERTAINMENT", "opens": "entertainment", "x": 36, "y": 272, "w": 232, "h": 156 },
+        { "label": "COMMUNICATION", "opens": "communication", "x": 284, "y": 272, "w": 232, "h": 156 },
+        { "label": "SETTINGS", "opens": "settings", "x": 532, "y": 272, "w": 232, "h": 156 }
+      ]
+    },
+    {
+      "id": "cyber",
+      "name": "Cyber",
+      "theme": "cyber",
+      "background": "#07060d",
+      "accent": "#ff2bd6",
+      "look": { "frame": "none", "font": "MO Mono", "labelColor": "#00f0ff", "labelSize": 16 },
+      "items": [
+        { "label": "FM RADIO", "opens": "fm", "x": 36, "y": 104, "w": 170, "h": 156 },
+        { "label": "DAB RADIO", "opens": "dab", "x": 222, "y": 104, "w": 170, "h": 156 },
+        { "label": "BLUETOOTH", "opens": "bluetooth", "x": 408, "y": 104, "w": 170, "h": 156 },
+        { "label": "ENTERTAINMENT", "opens": "entertainment", "x": 594, "y": 104, "w": 170, "h": 156 },
+        { "label": "ANDROID AUTO", "opens": "android-auto", "x": 36, "y": 272, "w": 170, "h": 156 },
+        { "label": "CARPLAY", "opens": "carplay", "x": 222, "y": 272, "w": 170, "h": 156 },
+        { "label": "NAVIGATION", "opens": "navigation", "x": 408, "y": 272, "w": 170, "h": 156 },
+        { "label": "SETTINGS", "opens": "settings", "x": 594, "y": 272, "w": 170, "h": 156 }
+      ]
+    },
+    {
+      "id": "track",
+      "name": "Track",
+      "theme": "track",
+      "background": "#0b0f17",
+      "accent": "#f2a93b",
+      "look": { "frame": "none", "font": "MO Sport", "labelColor": "#eaf0f6", "labelSize": 16 },
+      "items": [
+        { "label": "METERS", "opens": "meters", "x": 28, "y": 104, "w": 300, "h": 324 },
+        { "label": "NAVIGATION", "opens": "navigation", "x": 344, "y": 104, "w": 208, "h": 156 },
+        { "label": "ENTERTAINMENT", "opens": "entertainment", "x": 568, "y": 104, "w": 208, "h": 156 },
+        { "label": "COMMUNICATION", "opens": "communication", "x": 344, "y": 272, "w": 208, "h": 156 },
+        { "label": "SETTINGS", "opens": "settings", "x": 568, "y": 272, "w": 208, "h": 156 }
+      ]
+    },
+    {
+      "id": "classic",
+      "name": "Classic",
+      "theme": "classic",
+      "background": "#0c0d10",
+      "accent": "#d4202a",
+      "look": { "frame": "none", "font": "Arial", "labelColor": "#ffffff", "labelSize": 16 },
+      "items": [
+        { "label": "Applications", "opens": "applications", "x": 34, "y": 232, "w": 132, "h": 170 },
+        { "label": "Entertainment", "opens": "entertainment", "x": 184, "y": 168, "w": 132, "h": 170 },
+        { "label": "Communication", "opens": "communication", "x": 334, "y": 136, "w": 132, "h": 170 },
+        { "label": "Navigation", "opens": "navigation", "x": 484, "y": 168, "w": 132, "h": 170 },
+        { "label": "Settings", "opens": "settings", "x": 634, "y": 232, "w": 132, "h": 170 }
+      ]
+    }
+  ]
+}

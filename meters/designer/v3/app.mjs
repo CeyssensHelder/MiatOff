@@ -3,11 +3,7 @@ import { Inspector } from "./inspector.mjs";
 import { Workspace } from "./workspace.mjs";
 import * as E from "./exports.mjs";
 import { allPages, addPage, pageFromStarter, pageSnapshot } from "./pages.mjs";
-import {
-  builderSnapshot,
-  sendToBuilder,
-  removalMessage,
-} from "./builder.mjs";
+import { builderSnapshot, sendToBuilder, removalMessage } from "./builder.mjs";
 // SPDX-License-Identifier: GPL-3.0-or-later
 import * as M from "./model.mjs";
 import { CommandStore, snapshot } from "./commands.mjs";
@@ -29,6 +25,8 @@ const namespace = testMode
   persistence = new Persistence(namespace),
   session = M.id("session"),
   channel = new BroadcastChannel(namespace + "-changes");
+let designerActive = true,
+  modeEpoch = 0;
 let store,
   recovery = false,
   conflict = false,
@@ -365,9 +363,9 @@ async function boot() {
     status("Original draft has not been overwritten", true);
   }
   await Promise.all(
-    M.fonts.filter((font) => font !== "Arial").map((font) =>
-      document.fonts.load(`18px "${font}"`),
-    ),
+    M.fonts
+      .filter((font) => font !== "Arial")
+      .map((font) => document.fonts.load(`18px "${font}"`)),
   );
   await document.fonts.ready;
   invalidate();
@@ -1396,11 +1394,14 @@ function clonePageIds(t) {
   return t;
 }
 async function uploadImage() {
+  const epoch = modeEpoch;
   try {
     const file = $("image").files[0];
     if (!file) return;
     const target = uploadTarget,
       a = await normalizeImage(file);
+    if (epoch !== modeEpoch)
+      throw Error("Upload cancelled because the editor mode changed");
     const t = store.project.themes.find((t) => t.id === target.themeId),
       p = t?.pages.find((p) => p.id === target.pageId);
     if (!p) throw Error("Upload cancelled: its target page was deleted");
@@ -1733,6 +1734,8 @@ function pointerActions() {
     store.cancel();
   };
   window.addEventListener("keydown", (e) => {
+    // While Mazda Home is shown, keys pressed outside its frame must not edit the hidden Meters design.
+    if (!designerActive) return;
     if (e.key === "Escape" && e.target.closest("dialog[open]")) return;
     if (preview) {
       if (e.key === "Escape") $("preview").click();
@@ -1798,12 +1801,13 @@ function persistRecording(recording) {
   }
 }
 function invalidate() {
-  if (!raf && !document.hidden) raf = requestAnimationFrame(frame);
+  if (designerActive && !raf && !document.hidden)
+    raf = requestAnimationFrame(frame);
 }
 function frame(now) {
   raf = 0;
   renderStats.frames++;
-  if (document.hidden) return;
+  if (!designerActive || document.hidden) return;
   const dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 0;
   lastFrame = now;
   sim.step(dt, store.project.vehicle, { force: !sim.state.vehicle });
@@ -2025,3 +2029,23 @@ if (testMode)
     cacheStats: R.cacheStats,
     renderStats,
   };
+
+export async function setDesignerActive(active) {
+  designerActive = active;
+  if (!active) {
+    modeEpoch++;
+    editGeneration++;
+    if (drag) {
+      drag = null;
+      store.cancel();
+    }
+    if (raf) {
+      cancelAnimationFrame(raf);
+      raf = 0;
+    }
+    await flushSave();
+  } else {
+    lastFrame = 0;
+    invalidate();
+  }
+}

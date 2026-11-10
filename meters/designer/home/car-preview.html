@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Home menu preview · MiatOff</title>
+    <style>
+      body {
+        margin: 0;
+        background: #05080d;
+        color: #dfe6ef;
+        font: 14px/1.4 "Segoe UI", Arial, sans-serif;
+      }
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 18px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 4px;
+      }
+      p {
+        margin: 4px 0;
+        color: #9aa7b8;
+      }
+      #frame {
+        width: 100%;
+        aspect-ratio: 800 / 480;
+        position: relative;
+        margin: 14px 0;
+        overflow: hidden;
+        border: 1px solid #2b3747;
+      }
+      #screen {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 800px;
+        height: 480px;
+        transform-origin: top left;
+        background: #000;
+        font-family: Arial, sans-serif;
+      }
+      #status-bar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 800px;
+        height: 64px;
+        background: #0c0f14;
+        border-bottom: 1px solid #222a35;
+        color: #fff;
+        font-size: 22px;
+        line-height: 64px;
+        text-align: right;
+        padding-right: 24px;
+        box-sizing: border-box;
+      }
+      #home {
+        position: absolute;
+        left: 0;
+        top: 64px;
+        width: 800px;
+        height: 416px;
+      }
+      #route {
+        min-height: 22px;
+        color: #7fe0c8;
+      }
+      #log {
+        color: #f2a93b;
+      }
+      kbd {
+        border: 1px solid #46566c;
+        border-radius: 4px;
+        padding: 0 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1 id="title">Home menu preview</h1>
+      <p>
+        This runs the same script the car runs. <kbd>←</kbd>/<kbd>→</kbd> turn the
+        Commander knob, <kbd>Enter</kbd> presses it, a click is a touch.
+      </p>
+      <div id="frame"><div id="screen"><div id="status-bar">12:00</div><div id="home"></div></div></div>
+      <p id="route" role="status"></p>
+      <p id="log" role="alert"></p>
+      <p>
+        On the PC, buttons without your own picture show a text mark; in the car the five
+        factory buttons show Mazda's own coins. Destinations are only described here. Nothing
+        of this has been tested in a car yet.
+      </p>
+    </main>
+    <script type="module" src="car-preview.mjs"></script>
+  </body>
+</html>

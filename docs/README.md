@@ -23,6 +23,8 @@ public source code, from a commercial vendor, or an unconfirmed forum report.
 | 13 | [13-gauges.md](13-gauges.md) | Gauges: data sources, what is on the unit, approach |
 | 14 | [14-bluetooth-startup.md](14-bluetooth-startup.md) | Bluetooth startup, FM fallback, feasibility evidence and next checks |
 | 15 | [15-meters-designer.md](15-meters-designer.md) | Standalone Meters Designer: editing, v3 migration, recovery and browser acceptance |
+| 16 | [16-mazda-menu-customisation.md](16-mazda-menu-customisation.md) | Home-menu feasibility and native integration research |
+| 17 | [17-unified-designer.md](17-unified-designer.md) | Shared Meters/Home studio, documents and verification |
 | — | [sources.md](sources.md) | All sources |
 
 ## For AI assistants

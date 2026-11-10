@@ -36,20 +36,20 @@ def launcher_name() -> str:
     return kits.install_kit().launcher_name()
 
 
-def kit_for(custom=None) -> stickkit.Kit:
-    return kits.install_kit(custom)
+def kit_for(custom=None, home=None) -> stickkit.Kit:
+    return kits.install_kit(custom, home)
 
 
-def payload(custom=None) -> dict:
-    return kit_for(custom).payload()
+def payload(custom=None, home=None) -> dict:
+    return kit_for(custom, home).payload()
 
 
 def check(target: Path, custom=None) -> bool:
     return kit_for(custom).check(Path(target))
 
 
-def build(target: Path, custom=None) -> None:
-    kit_for(custom).build(Path(target))
+def build(target: Path, custom=None, home=None) -> None:
+    kit_for(custom, home).build(Path(target))
 
 
 def load_selection(path: str) -> dict:
