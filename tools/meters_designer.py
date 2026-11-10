@@ -8,12 +8,14 @@ import hashlib
 from pathlib import Path
 import secrets
 import socket
+import sys
 import threading
 from urllib.parse import unquote, urlsplit
 import webbrowser
 import meters_library
 
-ROOT = Path(__file__).resolve().parents[1] / "meters"
+# In the packaged app the files are unpacked below sys._MEIPASS, in the same folders as in the repository.
+ROOT = (Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1]) / "meters"
 DEFAULT_PORT = 8890
 
 
@@ -35,6 +37,13 @@ class Server(ThreadingHTTPServer):
         super().server_bind()
 
 class Handler(SimpleHTTPRequestHandler):
+    # Not left to the Windows registry, where another program can change them: a browser refuses a module of the wrong type.
+    extensions_map = {**SimpleHTTPRequestHandler.extensions_map, ".js": "text/javascript", ".mjs": "text/javascript"}
+
+    def log_message(self, format, *args):
+        if sys.stderr is not None:  # the packaged app has no console; writing to it would end the connection
+            super().log_message(format, *args)
+
     def trusted_host(self):
         return self.headers.get("Host") in (
             f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}")

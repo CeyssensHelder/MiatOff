@@ -23,7 +23,7 @@ import json
 import re
 import sys
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "aa-touch-stick" / "stick" / "aa-touch.sh"
 REPORT_NAME = "CHECK-REPORT.txt"
 

@@ -20,6 +20,9 @@ jobs:
       - run: python collector/tests/test_calibrate.py
       - run: python tools/tests/test_check_dump.py
       - run: python tools/tests/test_stickkit.py
+      - run: python tools/tests/test_drives.py
+      - run: python tools/tests/test_stickflow.py
+      - run: python tools/tests/test_stickwriter.py
       - run: node meters-app/tests/test_meters_app.js
       # Meters Designer and custom pages. The PNG-baseline browser specs stay local: font rendering differs on Linux.
       - run: npm ci

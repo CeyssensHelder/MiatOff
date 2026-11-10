@@ -475,8 +475,22 @@ class GuiTests(unittest.TestCase):
         self.addCleanup(app.destroy)
         return gui, app
 
+    def pick_stick(self, app):
+        """The test folder as the chosen stick: it is not a USB drive, so require_stick_root is replaced in run_action."""
+        import stickkit
+        app.drive_infos = [stickkit.DriveInfo(root=str(self.path))]
+        app.drive["values"] = [str(self.path)]
+        app.drive.current(0)
+
     def run_action(self, gui, app, action, builder):
-        with patch.object(gui, "load_builder", return_value=builder), patch.object(gui.messagebox, "askyesno", return_value=True) as ask, \
+        def kit(custom=None):
+            builder.custom = custom
+            return builder
+        def job(_label, work, done):  # the same work and result delivery, on this thread
+            done(*gui.stickflow.run_captured(work))
+        with patch.object(app, "kit", side_effect=kit), patch.object(app, "start_job", side_effect=job), \
+             patch.object(gui.stickkit, "require_stick_root", builder.stickkit.require_stick_root), \
+             patch.object(gui.messagebox, "askyesno", return_value=True) as ask, \
              patch.object(gui.messagebox, "showinfo") as info, patch.object(gui.messagebox, "showerror") as error, \
              patch.object(gui.messagebox, "showwarning") as warn:
             app.run(action)
@@ -496,26 +510,26 @@ class GuiTests(unittest.TestCase):
         self.assertEqual([item["id"] for item in app.meters_library.selection()["items"]], [ids[0]])
         app.tabs.select(app.choose_tab)
         app.vars["meters"].set("install")
-        app.drive.set(str(self.path))
+        self.pick_stick(app)
         builder = Mock()
-        builder.check.return_value = True
+        builder.verify.return_value = []
         ask, info, error, _warn = self.run_action(gui, app, "build", builder)
         error.assert_not_called()
-        bundle = builder.build.call_args.kwargs["custom"]
+        bundle = builder.custom
         self.assertEqual([item["id"] for item in bundle["items"]], [ids[0]])
         self.assertIn("Applications > Meters > CUSTOM", ask.call_args[0][1])
         self.assertIn("Custom pages: 1", ask.call_args[0][1])
         builder.stickkit.require_stick_root.assert_called_once_with(self.path)
-        self.assertEqual((self.path / "miatoff-plan.txt").read_text().count("meters=install"), 1)
+        self.assertEqual(builder.build.call_args.kwargs["plan"].count("meters=install"), 1)
         self.assertFalse((self.path / ml.SELECTION_NAME).exists())  # no archive on the stick root
         # Verify checks against the same selection.
         _ask, info, error, _warn = self.run_action(gui, app, "verify", builder)
         error.assert_not_called()
-        self.assertEqual(builder.check.call_args.kwargs["custom"]["items"], bundle["items"])
+        self.assertEqual(builder.custom["items"], bundle["items"])
         # A changed selection reaches the next build; no pages means no custom argument.
         app.select_custom_meters(False)
         self.run_action(gui, app, "build", builder)
-        self.assertIsNone(builder.build.call_args.kwargs["custom"])
+        self.assertIsNone(builder.custom)
 
     def test_install_is_allowed_for_installed_meters_as_an_update(self):
         gui, app = self.make_app()
@@ -536,16 +550,16 @@ class GuiTests(unittest.TestCase):
         app.tabs.select(app.choose_tab)
         app.vars[key].set("install")
         app.vars["meters"].set("keep")
-        app.drive.set(str(self.path))
+        self.pick_stick(app)
         builder = Mock()
         with patch.object(app.meters_library, "selection", side_effect=RuntimeError("database is locked")):
             ask, info, error, _warn = self.run_action(gui, app, "build", builder)
             error.assert_not_called()
-            info.assert_called_once()
+            self.assertTrue(app.stick_ready)
             self.assertIn("database is locked", ask.call_args[0][1])
             builder.build.assert_called_once()
-            self.assertIsNone(builder.build.call_args.kwargs["custom"])
-            self.assertEqual((self.path / "miatoff-plan.txt").read_text().count("meters=keep"), 1)
+            self.assertIsNone(builder.custom)
+            self.assertEqual(builder.build.call_args.kwargs["plan"].count("meters=keep"), 1)
             # With Meters set to Install, the same failure stops the build.
             builder.reset_mock()
             app.vars["meters"].set("install")
@@ -560,22 +574,149 @@ class GuiTests(unittest.TestCase):
         key = next(k for k in gui.KEYS if k != "meters")
         app.tabs.select(app.choose_tab)
         app.vars[key].set("install")
-        app.drive.set(str(self.path))
+        self.pick_stick(app)
         builder = Mock()
         ask, _info, error, _warn = self.run_action(gui, app, "build", builder)
         error.assert_not_called()
-        self.assertEqual(len(builder.build.call_args.kwargs["custom"]["items"]), 2)
+        self.assertEqual(len(builder.custom["items"]), 2)
         self.assertIn("not reported as outdated", ask.call_args[0][1])
 
     def test_check_tab_builds_the_dump_stick_without_custom_pages(self):
         gui, app = self.make_app()
         app.tabs.select(app.check_tab)
-        app.drive.set(str(self.path))
+        self.pick_stick(app)
         builder = Mock()
         with patch.object(app.meters_library, "selection", side_effect=AssertionError("not needed")):
             _ask, _info, error, _warn = self.run_action(gui, app, "build", builder)
         error.assert_not_called()
-        builder.build.assert_called_once_with(self.path)
+        builder.build.assert_called_once()
+        self.assertEqual(builder.build.call_args.args, (self.path,))
+        self.assertIsNone(builder.build.call_args.kwargs["plan"])  # a check stick carries no plan
+
+    def show(self, app):
+        app.deiconify()
+        app.update()
+        self.addCleanup(app.withdraw)
+
+    def drives(self, *roots):
+        import stickkit
+        return [stickkit.DriveInfo(root=root, total=8_000_000_000, filesystem="FAT32", partition_style="mbr",
+                                   partition_number=1, usb=True) for root in roots]
+
+    def test_tweak_controls_work_from_the_keyboard_and_respect_what_is_allowed(self):
+        gui, app = self.make_app()
+        verdict = {"components": {key: {"state": "available", "detail": ""} for key in gui.KEYS}}
+        app.apply_verdict(verdict)
+        self.show(app)
+        app.go("choose")
+        app.update()
+        segment = app.segments["delay"]
+        segment.labels["keep"].focus_force()
+        app.update()
+        segment.labels["keep"].event_generate("<Right>")
+        app.update()
+        self.assertEqual(app.focus_get(), segment.labels["install"])
+        segment.labels["install"].event_generate("<space>")
+        app.update()
+        self.assertEqual(app.vars["delay"].get(), "install")
+        segment.labels["install"].event_generate("<Right>")  # Remove is not allowed on an available tweak
+        app.update()
+        self.assertEqual(app.focus_get(), segment.labels["install"])
+        self.assertEqual(str(segment.labels["remove"].cget("takefocus")), "0")
+        segment.choose("remove")
+        self.assertEqual(app.vars["delay"].get(), "install")
+
+    def test_tweaks_are_locked_until_a_check_or_the_explicit_override(self):
+        gui, app = self.make_app()
+        self.assertFalse(app.segments["delay"].enabled("install"))
+        app.override.set(True)
+        app._override_changed()
+        self.assertTrue(app.segments["delay"].enabled("install") and app.segments["delay"].enabled("remove"))
+
+    def test_choosing_another_stick_clears_the_check_and_the_override(self):
+        gui, app = self.make_app()
+        app.refresh(self.drives("E:\\"))
+        app.verdict = {"components": {}}
+        app.override.set(True)
+        app.stick_ready = True
+        app.refresh(self.drives("F:\\"))
+        self.assertIsNone(app.verdict)
+        self.assertFalse(app.override.get())
+        self.assertFalse(app.stick_ready)
+
+    def test_pulling_the_stick_out_keeps_the_usb_ready_instructions(self):
+        gui, app = self.make_app()
+        app.refresh(self.drives("E:\\"))
+        app.verdict = {"components": {}}
+        app.stick_ready = True
+        app.review_result.pack(fill="x")
+        app.refresh([])
+        self.assertIsNone(app.verdict)  # the check needs the stick again
+        self.assertTrue(app.stick_ready)
+        self.assertEqual(app.review_result.winfo_manager(), "pack")
+
+    def test_a_build_runs_on_a_worker_thread_and_a_failure_reaches_the_user(self):
+        gui, app = self.make_app()
+        import threading
+        import time
+        app.go("choose")
+        app.update()
+        app.vars["delay"].set("install")
+        self.pick_stick(app)
+        seen = []
+        builder = Mock()
+        builder.build.side_effect = lambda *_a, **_k: (seen.append(threading.current_thread()), (_ for _ in ()).throw(SystemExit("ERROR: out of room")))
+        with patch.object(app, "kit", return_value=builder), patch.object(gui.stickkit, "require_stick_root"), \
+             patch.object(gui.messagebox, "askyesno", return_value=True), patch.object(gui.messagebox, "showerror") as error:
+            app.run("build")
+            self.assertTrue(app.jobs.busy)
+            self.assertEqual(str(app.primary_button.cget("state")), "disabled")
+            for _ in range(300):
+                app.jobs.poll()
+                if not app.jobs.busy:
+                    break
+                time.sleep(0.01)
+        self.assertIsNot(seen[0], threading.main_thread())
+        self.assertFalse(app.jobs.busy)
+        self.assertEqual(error.call_args[0][1], "out of room")
+        self.assertFalse(app.stick_ready)
+
+    def test_first_time_user_makes_check_stick_then_install_stick_on_the_same_usb(self):
+        import kits
+        gui, app = self.make_app()
+        self.pick_stick(app)
+        results = self.path / "miatoff-dumps" / "001-full" / "SUMMARY.txt"
+        results.parent.mkdir(parents=True)
+        results.write_text("fabricated")
+
+        def job(_label, work, done):
+            done(*gui.stickflow.run_captured(work))
+        with patch.object(app, "start_job", side_effect=job), patch.object(gui.stickkit, "require_stick_root"),              patch.object(gui.messagebox, "askyesno", return_value=True) as ask, patch.object(gui.messagebox, "showerror") as error:
+            app.tabs.select(app.check_tab)
+            app.update()
+            app.run("build")
+            error.assert_not_called()
+            self.assertEqual(kits.dump_kit().verify(self.path), [])
+            app.tabs.select(app.review_tab)
+            app.update()
+            app.vars["delay"].set("install")
+            app.run("build")
+            error.assert_not_called()
+            self.assertIn("MiatOff check files", ask.call_args[0][1])
+        self.assertEqual(kits.install_kit().verify(self.path), [])
+        self.assertTrue(app.stick_ready)
+        self.assertIn("delay=install", (self.path / "miatoff-plan.txt").read_text())
+        self.assertEqual(results.read_text(), "fabricated")
+        self.assertFalse((self.path / "dump.sh").exists())
+
+    def test_closing_is_refused_while_a_job_runs(self):
+        gui, app = self.make_app()
+        app.jobs.busy = True
+        with patch.object(gui.messagebox, "showwarning") as warn:
+            app._close()
+        warn.assert_called_once()
+        self.assertTrue(app.winfo_exists())
+        app.jobs.busy = False
 
     def test_removed_pages_section_restores_and_skipped_records_show_a_notice(self):
         gui, app = self.make_app()

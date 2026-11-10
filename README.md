@@ -58,25 +58,32 @@ Another car or firmware? Run the check (below) and open an issue with only `SUMM
 
 ## What you need
 
-- A PC with **Python 3** (including Tk, which the python.org installer has) and this repository
-  (`git clone https://github.com/CeyssensHelder/MiatOff` or *Code → Download ZIP*). **Windows** is what we use. **macOS**
-  also works (reported and tested by a contributor; the stick picker lists external FAT32/MBR volumes under `/Volumes`).
-  **Linux** is supported in the code (vfat mounts under `/media`, `/run/media`, `/mnt`) but not yet tested by anyone.
+- A **Windows, macOS or Linux PC**. Download the app from [Releases](https://github.com/CeyssensHelder/MiatOff/releases)
+  (when a preview is published): no Python or other tools needed, and it works offline. **Windows** is what we use.
+  The macOS and Linux downloads are untested so far. See [Opening the app](#opening-the-app).
 - An **empty USB stick**, 32 GB or smaller, formatted **FAT32** with an **MBR** partition table.
 - An **MX-5 ND1 or ND2** with Mazda Connect on firmware 74.00.324A (see the support status above). We analysed a 2017 EU
   ND1; a US-spec ND1 has been reported working. **Not** the ND3, and no other firmware.
 
 ## How to use it
 
-1. **Open the builder:** `python miatoff_gui.py`, and pick your USB stick in the drive box.
-2. **Check your car first** (tab *Check my car*):
-   - Press **Build check stick**, put the stick in the car (engine on, home screen showing) and choose **FULL**. It only
-     reads; it changes nothing. Bring the stick back.
-   - Press **Read last dump**. You get a report that compares every file with the versions the installer knows, per
-     tweak: *available*, *installed*, *blocked* or *not checked*. The same dump always gives the same report.
-3. **Choose what you want** (tab *Install / remove*): per tweak *Install*, *Remove* or *Leave as-is*. Anything the car
-   cannot take is greyed out after a check. Press **Build install stick**.
-4. **In the car:** engine on, wait for the home screen, plug the stick into the USB hub. A dialog offers your next step with
+Open MiatOff. The list on the left is the whole journey; **Back** and **Continue** are at the bottom.
+
+1. **Prepare USB:** plug in your stick. MiatOff says whether the car can read it, and how to fix it if not. It never
+   formats a drive.
+
+   ![Prepare USB](docs/images/app-prepare.png)
+2. **Check your car:** press **Make check stick**, put the stick in the car (engine on, home screen showing) and choose
+   **FULL**. It only reads; it changes nothing. Bring the stick back and press **Read check results**. You get a plain answer
+   per tweak: *Available*, *Installed*, *Not possible* or *Not checked*. The file-by-file report is under **Technical details**.
+
+   ![Check results](docs/images/app-check.png)
+3. **Choose tweaks:** every tweak starts at *Leave as-is*. Pick what you want to change. Anything the car cannot take stays
+   greyed out.
+
+   ![Choose tweaks](docs/images/app-choose.png)
+4. **Review and prepare:** check the list and press **Prepare USB**. When you see **USB ready**, eject the stick safely.
+5. **In the car:** engine on, wait for the home screen, plug the stick into the USB hub. A dialog offers your next step with
    **INSTALL** (or **REMOVE**) and **CANCEL**. Each step restarts the unit; leave the stick in and the next step appears
    once the screen is back. When everything is done you see "Your plan is complete".
 
@@ -87,12 +94,26 @@ that show the unit is recognised.
 
 ### Your own Meters pages
 
-1. In the builder, open tab *Meters Designer* and press **Open designer**. It opens in your web browser on this PC.
+1. In the app, open **Design your Meters** and press **Open designer**. It opens in your web browser on this PC.
 2. Design your pages and press **Send to builder**. Back in the builder, tick up to eight pages.
-3. On tab *Install / remove*, set Meters to *Install* (or *Update* if it is already on the car) and build the stick.
+3. Under **Choose tweaks**, set Meters to *Install* (or *Update* if it is already on the car) and prepare the stick.
 4. In the car, accept the step (**INSTALL**, or **REPAIR** for an update). The pages are under *Applications → Meters → CUSTOM*.
 
 To change them later, repeat from step 2. Start with one simple page. More in [docs/15](docs/15-meters-designer.md).
+
+### Opening the app
+
+The downloads are previews and are not signed yet, so your computer warns you the first time. Only open a file you
+downloaded from this project's Releases page; `SHA256SUMS.txt` there lists the checksum of each download.
+
+- **Windows:** if SmartScreen says it protected your PC, choose **More info**, then **Run anyway**.
+- **macOS:** open the app once and let it be refused. Then go to **System Settings > Privacy & Security**, press **Open Anyway**
+  next to MiatOff and confirm.
+- **Linux:** unpack the archive and run `MiatOff` inside the folder.
+
+There is no need to turn off your computer's security settings.
+
+To run from source instead (for developers): install Python 3 with Tk, clone this repository and run `python miatoff_gui.py`.
 
 ### Going back
 

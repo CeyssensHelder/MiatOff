@@ -12,11 +12,14 @@ for what the project does, then this file for how to change it safely.
 | `aa-touch-stick/tests/` | Host simulator for it (fake car root, power-loss and failure injection). |
 | `dump-stick/` | Read-only dump of the unit, and its tests. |
 | `tools/check_dump.py` | Deterministic checker for a dump (uses the hashes pinned in `aa-touch.sh`). |
-| `tools/stickkit.py` | Shared stick builder and launcher. |
-| `miatoff_gui.py` | Tk builder: check tab, install/remove tab, writes `miatoff-plan.txt`. |
+| `tools/stickkit.py` | Shared stick builder, launcher and USB drive inspection. |
+| `tools/stickwriter.py` | Writes a kit to a stick: launcher last, what may be replaced or removed. |
+| `tools/kits.py` | What goes on the check and install sticks, and the list of files in the packaged app. |
+| `miatoff_gui.py` | The guided window; writes `miatoff-plan.txt`. Its decisions and wording are in `tools/stickflow.py` (no widgets, tested on its own), its look in `tools/stickui.py`. |
 | `collector/`, `meters/`, `meters-app/` | Live vehicle data and the Meters gauges. |
 | `meters/designer/`, `tools/meters_designer.py`, `tools/meters_library.py` | Meters Designer: page editor and the builder's Custom pages library ([docs/15](docs/15-meters-designer.md)). |
 | `meters/js/custom.js` | The car's ES5 port of the designer renderer for the CUSTOM group; pages come from the generated `custom-pages.js`. Keep it in step with `renderer.mjs` (a parity test checks). |
+| `packaging/` | PyInstaller recipe and the check that a packaged app matches the source. |
 | `vendor/` | Third-party releases, unmodified and checked by sha256. |
 | `docs/` | Research. [docs/ai/HANDOFF.md](docs/ai/HANDOFF.md) and [docs/12-handoff-aa-touch.md](docs/12-handoff-aa-touch.md) are the briefs. |
 
@@ -43,7 +46,10 @@ MO_SYNTHETIC=1 python dump-stick/tests/test_dump_stick.py
 MO_SYNTHETIC=1 python collector/tests/test_collector.py
 MO_SYNTHETIC=1 python collector/tests/test_calibrate.py
 python tools/tests/test_check_dump.py
-python tools/tests/test_stickkit.py
+python tools/tests/test_stickkit.py                                                  # Linux only (fixture paths contain ':')
+python tools/tests/test_drives.py
+python tools/tests/test_stickflow.py
+python tools/tests/test_stickwriter.py
 node meters-app/tests/test_meters_app.js
 python tools/tests/test_meters_library.py                                             # Meters Designer library and GUI tab
 python tools/tests/test_custom_pages_build.py                                         # custom pages in the Meters payload

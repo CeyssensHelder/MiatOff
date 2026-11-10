@@ -1,0 +1,21 @@
+MiatOff desktop app: third-party notices
+
+MiatOff is free software under the GNU General Public License, version 3 or later (see LICENSE). The source code of
+each release is attached to its GitHub release.
+
+This package also contains:
+
+- Python, Python Software Foundation License. The full text, with the notices of the libraries Python includes, is in
+  python-license/LICENSE.txt.  https://www.python.org/
+- Tcl and Tk, BSD-style license.  https://www.tcl-lang.org/software/tcltk/license.html
+- The PyInstaller bootloader, GPL version 2 or later with a special exception that allows it to be distributed with
+  programs built by PyInstaller.  https://pyinstaller.org/
+
+The files written to the USB stick keep their own licenses and notices:
+
+- TouchTune, GPL-3.0-or-later: vendor/touchtune/, unmodified.
+- oem-aa-mod: vendor/oem-aa-mod/, unmodified.
+- MZD-AIO images: vendor/mzd-aio/, with its LICENSE.
+- Chakra Petch, Share Tech Mono, Rajdhani and Russo One fonts, SIL Open Font License: meters/fonts/.
+
+See NOTICE for the details.
