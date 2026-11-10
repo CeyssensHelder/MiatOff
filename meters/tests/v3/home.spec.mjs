@@ -1,0 +1,243 @@
+import { test, expect } from "@playwright/test";
+import { DESIGNER_URL } from "./config.mjs";
+async function open(page, id = crypto.randomUUID(), count = 5) {
+  await page.goto(DESIGNER_URL + "?mode=home&test=1&db=" + id);
+  await expect(page.locator("#designer-mode")).toBeEnabled();
+  const f = page.frameLocator("#home-studio");
+  await expect(f.locator("#items .choose")).toHaveCount(count);
+  return f;
+}
+test("Home editing, mode isolation, undo, draft reload and invalid imports", async ({
+  page,
+}) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  const f = await open(page);
+  await f.locator("#add").click();
+  await expect(f.locator("#items .choose")).toHaveCount(6);
+  await f.locator("#name").fill("My gauges");
+  await f.locator("#name").press("Tab");
+  await f.locator("#opens").selectOption("meters");
+  await f.locator("#x").fill("400");
+  await f.locator("#x").press("Tab");
+  await page.locator("#designer-mode").selectOption("meters");
+  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await expect(page.locator("#canvas")).toBeVisible();
+  await page.evaluate(() => {
+    __studio.command("Remember Meters page", (p) => {
+      p.themes[0].pages[0].name = "Remembered page";
+    });
+  });
+  await page.locator("#designer-mode").selectOption("home");
+  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await expect(f.locator("#name")).toHaveValue("My gauges");
+  expect(
+    await page.evaluate(() => __studio.store.project.themes[0].pages[0].name),
+  ).toBe("Remembered page");
+  await f.locator("#undo").click();
+  await expect(f.locator("#x")).not.toHaveValue("400");
+  await f.locator("#redo").click();
+  await expect(f.locator("#x")).toHaveValue("400");
+  await f.locator("#try").click();
+  await f.locator("#next").click();
+  await f.locator("#select").click();
+  await expect(f.locator("#route")).toContainText("Simulated destination");
+  await f.locator("#try").click();
+  await expect(f.locator("#save-status")).toContainText("Saved");
+  await page.reload();
+  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await expect(f.locator("#items .choose")).toHaveCount(6);
+  await f.locator("#file").setInputFiles({
+    name: "bad.json",
+    mimeType: "application/json",
+    buffer: Buffer.from("{"),
+  });
+  await expect(f.locator("#notice")).toContainText("Import failed");
+  await expect(f.locator("#items .choose")).toHaveCount(6);
+  expect(errors).toEqual([]);
+});
+test("Home conflict detection and responsive preview exports", async ({
+  page,
+  context,
+}) => {
+  const id = crypto.randomUUID(),
+    f = await open(page, id);
+  await f.locator("#add").click();
+  await expect(f.locator("#save-status")).toContainText("Saved");
+  const other = await context.newPage(),
+    g = await open(other, id, 6);
+  await g.locator("#items .choose").first().click();
+  await g.locator("#name").fill("Other tab");
+  await g.locator("#name").press("Tab");
+  await expect(g.locator("#save-status")).toContainText("Saved");
+  await expect(f.locator("#recovery")).toBeVisible();
+  await f.locator("#reload").click();
+  await expect(f.locator("#items")).toContainText("Other tab");
+  for (const [width, height] of [
+    [1366, 768],
+    [768, 1024],
+    [390, 844],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.screenshot({
+      path: "../../../build/home-" + width + ".png",
+      fullPage: true,
+    });
+  }
+  const download = page.waitForEvent("download");
+  await f.locator("#png").click();
+  expect((await download).suggestedFilename()).toBe("mazda-home.png");
+  await other.close();
+});
+
+test("Home artwork states, upload cancellation, pointer transforms and save failures", async ({
+  page,
+}) => {
+  const f = await open(page);
+  await f.locator("#items .choose").first().click();
+  const frame = page.frames().find((f) => f.url().includes("/home/index.html"));
+  async function png(color) {
+    return Buffer.from(
+      await frame.evaluate((color) => {
+        const c = document.createElement("canvas");
+        c.width = c.height = 8;
+        const x = c.getContext("2d");
+        x.fillStyle = color;
+        x.fillRect(0, 0, 8, 8);
+        return c.toDataURL().split(",")[1];
+      }, color),
+      "base64",
+    );
+  }
+  for (const [field, color] of [
+    ["normal", "#ff0000"],
+    ["selected", "#0000ff"],
+    ["bg-image", "#008000"],
+  ]) {
+    await f.locator("#" + field).setInputFiles({
+      name: field + ".png",
+      mimeType: "image/png",
+      buffer: await png(color),
+    });
+    await expect
+      .poll(() =>
+        frame.evaluate(
+          () => Object.keys(HomeDesigner.store.project.assets).length,
+        ),
+      )
+      .toBe(field === "normal" ? 1 : field === "selected" ? 2 : 3);
+  }
+  await f.locator("#try").click();
+  await expect
+    .poll(() =>
+      frame.evaluate(() =>
+        Array.from(
+          document
+            .getElementById("canvas")
+            .getContext("2d")
+            .getImageData(80, 310, 1, 1).data,
+        ).slice(0, 3),
+      ),
+    )
+    .toEqual([0, 0, 255]);
+  await f.locator("#next").click();
+  await expect
+    .poll(() =>
+      frame.evaluate(() =>
+        Array.from(
+          document
+            .getElementById("canvas")
+            .getContext("2d")
+            .getImageData(80, 310, 1, 1).data,
+        ).slice(0, 3),
+      ),
+    )
+    .toEqual([255, 0, 0]);
+  await f.locator("#try").click();
+  const download = page.waitForEvent("download");
+  await f.locator("#export").click();
+  const d = await download;
+  const fs = await import("node:fs/promises");
+  const doc = JSON.parse(await fs.readFile(await d.path(), "utf8"));
+  expect(Object.keys(doc.assets)).toHaveLength(3);
+  await f.locator("#file").setInputFiles({
+    name: "roundtrip.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(doc)),
+  });
+  await expect
+    .poll(() => frame.evaluate(() => HomeDesigner.store.view.selection.length))
+    .toBe(0);
+  expect(
+    await frame.evaluate(
+      () => Object.keys(HomeDesigner.store.project.assets).length,
+    ),
+  ).toBe(3);
+  await f.locator("#items .choose").first().click();
+  const bounds = await f.locator("#canvas").boundingBox();
+  const before = await frame.evaluate(
+    () => HomeDesigner.store.project.items[0].x,
+  );
+  await page.mouse.move(
+    bounds.x + (80 * bounds.width) / 800,
+    bounds.y + (310 * bounds.height) / 480,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    bounds.x + (120 * bounds.width) / 800,
+    bounds.y + (310 * bounds.height) / 480,
+  );
+  await page.mouse.up();
+  expect(
+    await frame.evaluate(() => HomeDesigner.store.project.items[0].x),
+  ).toBeGreaterThan(before);
+  await f.locator("#undo").click();
+  await expect(f.locator("#x")).toHaveValue(String(before));
+  const beforeResize = await frame.evaluate(() => ({
+    ...HomeDesigner.store.project.items[0],
+  }));
+  await page.mouse.move(
+    bounds.x + ((beforeResize.x + beforeResize.w - 8) * bounds.width) / 800,
+    bounds.y + ((beforeResize.y + beforeResize.h - 8) * bounds.height) / 480,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    bounds.x + ((beforeResize.x + beforeResize.w + 24) * bounds.width) / 800,
+    bounds.y + ((beforeResize.y + beforeResize.h + 8) * bounds.height) / 480,
+  );
+  await page.mouse.up();
+  expect(
+    await frame.evaluate(() => HomeDesigner.store.project.items[0].w),
+  ).toBeGreaterThan(beforeResize.w);
+  await f.locator("#undo").click();
+  await frame.evaluate(() => {
+    const original = createImageBitmap;
+    window.createImageBitmap = (...args) =>
+      new Promise((resolve) => {
+        window.finishUpload = () => original(...args).then(resolve);
+      });
+  });
+  await f.locator("#normal").setInputFiles({
+    name: "later.png",
+    mimeType: "image/png",
+    buffer: await png("#ffff00"),
+  });
+  await expect
+    .poll(() => frame.evaluate(() => typeof window.finishUpload))
+    .toBe("function");
+  await page.locator("#designer-mode").selectOption("meters");
+  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await frame.evaluate(() => window.finishUpload());
+  await page.locator("#designer-mode").selectOption("home");
+  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await expect(f.locator("#notice")).toContainText("Design changed");
+  await frame.evaluate(() => {
+    HomeDesigner.persistence.save = async () => {
+      throw Error("Quota exceeded");
+    };
+  });
+  await f.locator("#name").fill("Kept in memory");
+  await f.locator("#name").press("Tab");
+  await expect(f.locator("#notice")).toContainText("Save failed");
+  await expect(f.locator("#name")).toHaveValue("Kept in memory");
+});

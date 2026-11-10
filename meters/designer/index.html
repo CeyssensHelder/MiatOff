@@ -4,8 +4,74 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#0b1018" />
-    <title>Meters Designer · Studio</title>
+    <title>MiatOff Designer · Studio</title>
     <link rel="stylesheet" href="studio-v3.css" />
+    <style>
+      .mode-choice {
+        font-size: 12px;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .mode-choice select {
+        max-width: 140px;
+      }
+      #home-studio {
+        position: fixed;
+        inset: 68px 0 0;
+        width: 100%;
+        height: calc(100dvh - 68px);
+        border: 0;
+        background: #0b1018;
+      }
+      body[data-designer-mode="home"]
+        > :not(.studio-header):not(#home-studio):not(script) {
+        display: none !important;
+      }
+      body[data-designer-mode="home"]
+        .studio-header
+        > :not(.brand):not(.mode-choice) {
+        display: none !important;
+      }
+      body[data-designer-mode="home"] .studio-header {
+        height: 68px;
+        min-height: 0;
+      }
+      @media (max-width: 1199px) {
+        .studio-header {
+          flex-wrap: wrap;
+        }
+        .mode-choice {
+          flex: none;
+        }
+        .studio-header nav {
+          margin-left: auto;
+        }
+      }
+      @media (max-width: 767px) {
+        .studio-header {
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+        .mode-choice {
+          grid-column: 1/-1;
+          grid-row: 3;
+          justify-content: flex-end;
+        }
+        .mode-choice select {
+          width: 140px;
+        }
+        .detail-control {
+          grid-row: 2;
+        }
+        body[data-designer-mode="home"] .mode-choice {
+          grid-row: 1;
+          grid-column: 2;
+        }
+        .brand {
+          min-width: 0;
+        }
+      }
+    </style>
   </head>
   <body>
     <a class="skip-link" href="#canvas">Skip to design canvas</a>
@@ -17,6 +83,13 @@
           ><span id="collection-caption" class="breadcrumb">Custom pages</span>
         </div>
       </div>
+      <label class="mode-choice"
+        >Designer
+        <select id="designer-mode" aria-label="Designer mode">
+          <option value="meters">Meters</option>
+          <option value="home">Mazda Home</option>
+        </select></label
+      >
       <div class="detail-control">
         <label for="editing-detail"
           >Editing detail <span id="detail-value">Basic</span></label
@@ -480,6 +553,7 @@
       accept="application/json,.json"
       hidden
     />
-    <script type="module" src="v3/app.mjs"></script>
+    <iframe id="home-studio" title="Mazda Home Designer" hidden></iframe>
+    <script type="module" src="shared/studio.mjs"></script>
   </body>
 </html>

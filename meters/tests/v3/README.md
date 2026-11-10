@@ -23,6 +23,12 @@ node soak.mjs
 
 The suite expects `http://127.0.0.1:8890`, or the server named in `METERS_DESIGNER_URL`. To start one from the root use `python tools/meters_designer.py --port 8890 --no-browser --library-db <temp file>`; to test another worktree, use another port and set `METERS_DESIGNER_URL=http://127.0.0.1:<port>` (and `MIATOFF_METERS_LIBRARY` to a temporary file) so your own server and library stay untouched. The editor itself requires neither npm nor Playwright.
 
+For the Home/shared-studio browser checks alone, use `npx playwright test --config=home-ci.config.mjs`.
+This is also the CI command: it starts its own loopback server on port 8898 with a new temporary SQLite
+library and shuts the server down after the tests. It refuses to reuse an existing server on that port.
+These checks use isolated test drafts, verify actual artwork pixels and interactions, and capture screenshots
+for inspection without comparing platform-dependent PNG baselines.
+
 `model.test.mjs` checks real v2 starter/v1 migrations, explicit styles/ranges, invalid references, transactions, no-op gestures, history bounds, unit conversion, warnings/track behavior, seeded recording and immutable shared assets. `editor.spec.mjs` checks real font metrics, all variants/effects/fonts, card regression geometry, keyboard/group/arrangement operations, image persistence, upload races, malformed imports, quota injection, revisions, two-tab/CAS conflicts, export pixels, responsive layouts and paused rendering. Its performance figure measures warmed canvas drawing, not the full browser frame or head-unit performance.
 
 `visual.spec.mjs` compares frozen telemetry and loaded fonts at pixel ratio one to reviewed PNGs in `baselines`. Each PNG contains both pages in both modes. `updateSnapshots` is **none**. Never auto-accept a screenshot change. Generate candidates with `node generate-visuals.mjs`, inspect every changed image and its reason, then copy only approved candidates explicitly into `baselines`. Generation alone does not change a baseline.

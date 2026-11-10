@@ -750,6 +750,7 @@ class App(tk.Tk):
         row = tk.Frame(one, bg=CARD)
         row.pack(anchor="w", padx=20, pady=(0, 8))
         ttk.Button(row, text="Open designer", style="Accent.TButton", command=self.open_designer).pack(side="left")
+        ttk.Button(row, text="Mazda Home", style="Plain.TButton", command=lambda: self.open_designer("home")).pack(side="left", padx=8)
         ttk.Button(row, text="Copy address", style="Plain.TButton", command=self.copy_designer_url).pack(side="left", padx=8)
         self.designer_status = self.paragraph(one, "Not started.", font=SMALL)
         custom = self.card(page, "Your pages")
@@ -827,10 +828,10 @@ class App(tk.Tk):
                 self.designer_status.configure(text="✓  Using the designer already running at " + self.designer_url, fg=OK)
         return True
 
-    def open_designer(self):
+    def open_designer(self, mode="meters"):
         import webbrowser
         if self._ensure_designer():
-            webbrowser.open(self.designer_url)
+            webbrowser.open(self.designer_url + ("?mode=home" if mode == "home" else ""))
 
     def preview_custom_meter(self, key):
         import webbrowser

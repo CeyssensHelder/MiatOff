@@ -1,5 +1,8 @@
 # Meters Designer studio
 
+The current studio has Meters and Mazda Home modes; see [the unified guide](../../docs/17-unified-designer.md).
+Current Meters editing and deployment are described in [docs/15](../../docs/15-meters-designer.md).
+
 Standalone browser editor; app integration and USB deployment are deferred.
 Run `python tools/meters_designer.py --port 8878` from the repository root and keep
 Python running. Open http://127.0.0.1:8878/designer/index.html. The server is loopback-only.

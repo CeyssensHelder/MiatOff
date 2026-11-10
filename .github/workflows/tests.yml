@@ -35,6 +35,9 @@ jobs:
         working-directory: meters/tests/v3
       - run: npx playwright test car-parity car-app
         working-directory: meters/tests/v3
+      - name: Shared Designer and Mazda Home browser tests
+        run: npx playwright test --config=home-ci.config.mjs
+        working-directory: meters/tests/v3
       - name: Pull the BusyBox image the AA-touch suite runs in
         run: docker pull busybox:1.25
       # The AA-touch suite includes the Meters scenarios, which need real symlinks and BusyBox.
