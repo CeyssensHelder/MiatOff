@@ -242,6 +242,8 @@ function refresh() {
         $(key).value = key === "name" ? w.label : w[key];
     }
   }
+  if (document.activeElement !== $("menu-name"))
+    $("menu-name").value = p.name || "";
   $("bg-color").value = p.background.color;
   $("bg-fit").value = p.background.fit;
   $("accent").value = p.accent;
@@ -597,6 +599,44 @@ window.addEventListener("keydown", (e) => {
     );
   }
 });
+$("menu-name").onchange = () =>
+  command("Rename menu", (p) => {
+    const name = $("menu-name").value.trim();
+    if (name) p.name = name;
+    else delete p.name;
+  });
+// The MiatOff app keeps sent menus under "Your menus"; a menu with the same name is replaced.
+$("send").onclick = async () => {
+  $("send").disabled = true;
+  try {
+    const session = await fetch("/api/builder/session", { cache: "no-store" });
+    if (!session.ok)
+      throw Error("open the designer from the MiatOff app to send menus to it");
+    const connection = await session.json();
+    if (connection.service !== "MiatOffDesigner" || !connection.token)
+      throw Error("this server cannot receive Home menus");
+    if (params.get("test") === "1" && !connection.testLibrary)
+      throw Error("test drafts can only send to a temporary test library");
+    const response = await fetch("/api/builder/home", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-MiatOff-Token": connection.token,
+      },
+      body: JSON.stringify(M.clean(store.project)),
+    });
+    const result = await response.json();
+    if (!response.ok)
+      throw Error(result.error || "MiatOff could not save this menu");
+    notice(
+      `Sent "${result.name}" (${result.items} items) to MiatOff. Choose it under Your menus in the app.`,
+    );
+  } catch (e) {
+    notice("Not sent: " + e.message);
+  } finally {
+    $("send").disabled = false;
+  }
+};
 $("export").onclick = () =>
   download(JSON.stringify(M.clean(store.project), null, 2), "mazda-home.json");
 $("png").onclick = () => {

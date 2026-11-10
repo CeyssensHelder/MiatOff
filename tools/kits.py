@@ -31,6 +31,7 @@ import sys
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import home_menu  # noqa: E402
 import meters_library  # noqa: E402
 import stickkit  # noqa: E402
 from stickkit import StickError, sha256  # noqa: E402
@@ -139,9 +140,10 @@ def custom_pages_js(custom=None) -> bytes:
     return custom_pages_from_setups([item["setup"] for item in bundle["items"]])
 
 
-def meters_files(custom=None) -> dict:
+def meters_files(custom=None, home=None) -> dict:
     """miatoff-app/ on the stick: the files (LF endings) plus their MANIFEST. `custom` is an optional selection
-    bundle of designer pages that replaces js/custom-pages.js."""
+    bundle of designer pages that replaces js/custom-pages.js; `home` an optional Home menu design, which adds
+    its runtime, design and pictures (home_menu.car_files)."""
     page = (ROOT / "meters" / "index.html").read_text(encoding="utf-8")
     loaded = re.findall(r'<script src="([^"]+)"', page) + re.findall(r'url\(([^)]+)\)', page)
     for name in loaded:
@@ -156,6 +158,14 @@ def meters_files(custom=None) -> dict:
             data = (ROOT / src).read_bytes() if src.endswith(".ttf") else stickkit.lf_bytes(ROOT / src)
         files["miatoff-app/" + rel] = data
         lines.append(f"{sha256(data)}  {rel}\n")
+    if home is not None:
+        try:
+            extra = home_menu.car_files(home)
+        except (ValueError, KeyError, TypeError) as error:
+            raise StickError(f"ERROR: the Home menu is not valid: {error}")
+        for rel, data in extra.items():
+            files["miatoff-app/" + rel] = data
+            lines.append(f"{sha256(data)}  {rel}\n")
     files["miatoff-app/MANIFEST"] = "".join(lines).encode("ascii")
     return files
 
@@ -249,7 +259,7 @@ def dump_kit() -> stickkit.Kit:
     )
 
 
-def _make_install_kit(custom=None) -> stickkit.Kit:
+def _make_install_kit(custom=None, home=None) -> stickkit.Kit:
     conf = stickkit.lf_bytes(INSTALL_STICK / "libpatch.conf")
     if sha256(conf) != pinned("CONF_SHA256"):
         raise StickError("ERROR: stick/libpatch.conf does not match CONF_SHA256 in aa-touch.sh")
@@ -264,7 +274,7 @@ def _make_install_kit(custom=None) -> stickkit.Kit:
             "LICENSE": (INSTALL_DIR / "LICENSE").read_bytes(),
             "NOTICE": stickkit.lf_bytes(INSTALL_STICK / "NOTICE"),
             **touchtune_files(),
-            **meters_files(custom),
+            **meters_files(custom, home),
             **safety_files(),
             **sensor_files(),
         },
@@ -276,9 +286,11 @@ def _default_install_kit() -> stickkit.Kit:
     return _make_install_kit()
 
 
-def install_kit(custom=None) -> stickkit.Kit:
-    """The install stick; custom is an optional selection bundle of designer pages."""
-    return _default_install_kit() if not custom or not custom.get("items") else _make_install_kit(custom)
+def install_kit(custom=None, home=None) -> stickkit.Kit:
+    """The install stick; custom is an optional selection bundle of designer pages, home an optional Home menu."""
+    if (not custom or not custom.get("items")) and home is None:
+        return _default_install_kit()
+    return _make_install_kit(custom if custom and custom.get("items") else None, home)
 
 
 def run_builder(kit_factory, doc: str, argv: list) -> None:
@@ -317,7 +329,8 @@ def bundle_sources() -> list:
         "vendor/mzd-aio/" + SAFETY_BLANK,
     ]
     sensors = ["vendor/mzd-aio/transparent-parking-sensor/" + row[0] for row in table("SENSOR_TABLE")]
-    return sorted(set(fixed) | set(METERS_FILES.values()) | set(sensors) | set(designer_sources()))
+    home = [home_menu.RUNTIME_SRC.relative_to(ROOT).as_posix()]
+    return sorted(set(fixed) | set(METERS_FILES.values()) | set(sensors) | set(designer_sources()) | set(home))
 
 
 def payload_digests() -> dict:

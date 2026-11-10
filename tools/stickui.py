@@ -84,6 +84,11 @@ def apply_theme(root: tk.Tk) -> None:
     style.map("Card.TCheckbutton", background=[("active", CARD)], foreground=[("disabled", FAINT)],
               indicatorbackground=[("selected", ACCENT), ("active", LINE)], indicatorforeground=[("selected", ACCENT_INK)])
 
+    style.configure("Card.TRadiobutton", background=CARD, foreground=INK, font=BODY, indicatorbackground=RAISED,
+                    indicatorforeground=INK, upperbordercolor=LINE, lowerbordercolor=LINE, indicatormargin=(0, 2, 8, 2))
+    style.map("Card.TRadiobutton", background=[("active", CARD)], foreground=[("disabled", FAINT)],
+              indicatorbackground=[("selected", ACCENT), ("active", LINE)], indicatorforeground=[("selected", ACCENT_INK)])
+
     style.configure("TCombobox", fieldbackground=RAISED, background=RAISED, foreground=INK, arrowcolor=INK, bordercolor=LINE,
                     lightcolor=RAISED, darkcolor=RAISED, selectbackground=RAISED, selectforeground=INK, padding=6)
     style.map("TCombobox", fieldbackground=[("readonly", RAISED)], foreground=[("readonly", INK)],

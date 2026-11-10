@@ -29,6 +29,7 @@ jobs:
         working-directory: meters/tests/v3
       - run: node --test meters/tests/v3/*.test.mjs
       - run: python tools/tests/test_custom_pages_build.py
+      - run: python tools/tests/test_home_menu.py
       - run: sudo apt-get install -y xvfb
       - run: xvfb-run -a python tools/tests/test_meters_library.py
       - run: npx playwright install --with-deps chromium

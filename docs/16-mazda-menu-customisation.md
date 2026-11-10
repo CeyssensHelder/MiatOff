@@ -1,7 +1,8 @@
 # 16 — Customising the normal Mazda menu
 
 The prototype now lives in the [shared studio](17-unified-designer.md). The notes below record the earlier
-feasibility investigation. Native Mazda installation remains deferred.
+feasibility investigation. An experimental install now exists as a userscript in the Meters payload, which leaves
+Mazda's files unchanged; see [docs/17](17-unified-designer.md#home-menu-in-the-car).
 
 Research date: **6 November 2026**. Target: the original Gen-6 Mazda Connect on **74.00.324A**, EU MX-5 ND1.
 Branch: `codex/mazda-menu-customisation`, based on `b9e32f9`. The existing uncommitted changes on `master`
@@ -105,7 +106,8 @@ and resized locally, with bounded sizes/dimensions, and imported designs are app
 decode successfully. No supplied CSS, script, raw native event, remote URL or path becomes executable
 configuration. Labels are inserted as text. These input limits are PC design choices, not measured CMU budgets.
 
-This is deliberately a **design prototype**, with no install action, new plan key or production hashes.
+This section describes the original prototype. The install that followed (docs/17) adds no plan key and no pinned
+hashes: the menu travels in the Meters payload and its MANIFEST.
 Its default symbols, DOM and navigation are synthetic. Supplied artwork stays on the PC. It does not include
 Mazda or Miatafy assets. The destination catalogue includes factory menus, Meters, Bluetooth audio, FM/DAB,
 Android Auto and CarPlay as design targets only. Their actual native routes/availability remain unverified;

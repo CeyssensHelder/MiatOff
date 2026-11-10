@@ -490,6 +490,42 @@ class GuiTests(unittest.TestCase):
         app.go_back()
         self.assertEqual(app.current(), "choose")
 
+    def test_your_menus_choose_preview_and_build(self):
+        gui, app = self.make_app()
+        app.go("menu")
+        app.update()
+        texts = [w.cget("text").split("\n")[0] for w in app.home_list.winfo_children()
+                 for w in w.winfo_children() if isinstance(w, gui.ttk.Radiobutton)]
+        self.assertEqual(texts[:4], ["Mazda's own Home", "Classic five", "Driver", "Radio and media"])
+        self.assertEqual(app.home_choice.get(), "")
+        app.home_choice.set("starter-driver")
+        app._home_chosen()
+        self.assertEqual(app.home_menus.selected(), "starter-driver")
+        self.assertIn("Driver", app.home_status.cget("text"))
+        self.assertEqual(app.home_hint.winfo_manager(), "pack", "Meters is not set to Install yet")
+        with patch("webbrowser.open") as browser, patch.object(app, "_ensure_designer", return_value=True):
+            app.preview_home_menu("starter-driver")
+        self.assertTrue(browser.call_args[0][0].endswith("/designer/home/car-preview.html?menu=starter-driver"))
+        app.tabs.select(app.choose_tab)
+        app.vars["meters"].set("install")
+        self.assertEqual(app.home_hint.winfo_manager(), "")
+        self.pick_stick(app)
+        builder = Mock()
+        builder.verify.return_value = []
+        ask, _info, error, _warn = self.run_action(gui, app, "build", builder)
+        error.assert_not_called()
+        self.assertEqual(builder.home["name"], "Driver")
+        self.assertIn("Home menu: Driver", ask.call_args[0][1])
+        app._refresh_review()
+        self.assertIn("Home menu: Driver", [w.cget("text") for w in app.review_lines.winfo_children()])
+        # Back to Mazda's own Home: no menu on the stick.
+        app.home_choice.set("")
+        app._home_chosen()
+        builder = Mock()
+        builder.verify.return_value = []
+        self.run_action(gui, app, "build", builder)
+        self.assertIsNone(builder.home)
+
     def make_app(self):
         import miatoff_gui as gui
         with patch.dict("os.environ", {"MIATOFF_METERS_LIBRARY": str(self.library.path)}), patch.object(gui, "removable_drives", return_value=[]):
@@ -506,8 +542,9 @@ class GuiTests(unittest.TestCase):
         app.drive.current(0)
 
     def run_action(self, gui, app, action, builder):
-        def kit(custom=None):
+        def kit(custom=None, home=None):
             builder.custom = custom
+            builder.home = home
             return builder
         def job(_label, work, done):  # the same work and result delivery, on this thread
             done(*gui.stickflow.run_captured(work))

@@ -17,6 +17,7 @@
       ><button id="export">Export design</button
       ><button id="png">Save preview PNG</button
       ><button id="reset">New design</button
+      ><button id="send" class="primary">Send to MiatOff</button
       ><button id="export-original" hidden>Export retained draft</button
       ><span id="save-status" role="status"></span>
     </header>
@@ -28,6 +29,9 @@
     </div>
     <div class="home-workspace">
       <aside class="library-panel">
+        <label
+          >Menu name <input id="menu-name" maxlength="40" placeholder="My Home menu"
+        /></label>
         <h2>Items / Commander order</h2>
         <p>Use arrows for knob order. Layer buttons change drawing order.</p>
         <div id="items"></div>

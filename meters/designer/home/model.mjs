@@ -59,6 +59,14 @@ export function validate(p) {
     Object.keys(p.assets).length > 25
   )
     throw Error("Invalid artwork table");
+  if (
+    p.name !== undefined &&
+    (typeof p.name !== "string" ||
+      !p.name.trim() ||
+      p.name.length > 40 ||
+      /[^\x20-\x7e]/.test(p.name))
+  )
+    throw Error("Use a menu name of 1 to 40 English characters");
   const ids = new Set();
   const color = (x) => typeof x === "string" && /^#[a-f0-9]{6}$/i.test(x);
   if (

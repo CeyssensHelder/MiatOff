@@ -5,7 +5,7 @@ import defaults from "./playwright.config.mjs";
 process.env.METERS_DESIGNER_URL = "http://127.0.0.1:8898";
 export default defineConfig({
   ...defaults,
-  testMatch: "home.spec.mjs",
+  testMatch: ["home.spec.mjs", "home-car.spec.mjs"],
   webServer: {
     command: "node home-server.mjs",
     url: process.env.METERS_DESIGNER_URL + "/designer/index.html",

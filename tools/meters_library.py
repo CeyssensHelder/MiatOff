@@ -18,6 +18,8 @@ import struct
 import sys
 import tempfile
 
+import home_menu
+
 LEGACY_DB = Path(__file__).resolve().parents[1] / ".miatoff" / "custom-meters.sqlite3"
 DB_NAME = "custom-meters.sqlite3"
 SELECTION_NAME = "miatoff-custom-meters.json"
@@ -488,6 +490,8 @@ class PageLibrary(Library):
             db.execute("CREATE TABLE IF NOT EXISTS retired_pages (id TEXT, sha256 TEXT, document BLOB, selected INTEGER, "
                        "retired TEXT, PRIMARY KEY(id,sha256))")
             db.execute("CREATE TABLE IF NOT EXISTS migration_skipped (id TEXT PRIMARY KEY, reason TEXT NOT NULL, skipped TEXT NOT NULL)")
+            db.execute("CREATE TABLE IF NOT EXISTS home_menus (id TEXT PRIMARY KEY, name TEXT NOT NULL, document BLOB NOT NULL, "
+                       "sha256 TEXT NOT NULL, updated TEXT NOT NULL, items INTEGER NOT NULL)")
             if not db.execute("SELECT 1 FROM library_meta WHERE key='flat-pages-v1'").fetchone():
                 if not db.in_transaction:
                     db.execute("BEGIN IMMEDIATE")
@@ -626,6 +630,93 @@ class PageLibrary(Library):
             self._put(db, setup, 0)
             db.execute("DELETE FROM retired_pages WHERE id=? AND sha256=?", (key, digest))
         return {"id": setup["themes"][0]["id"], "name": setup["themes"][0]["name"]}
+
+
+# ---------------------------------------------------------------- Home menus
+# Designs sent from the Home designer, by name (sending a menu with the same name replaces it), plus the
+# built-in menus of home_menu.STARTERS. At most one menu is chosen for the stick ("home-selected").
+HOME_MAX = 32
+HOME_DEFAULT_NAME = "My Home menu"
+
+
+def _home_key(name):
+    return "menu-" + hashlib.sha256(name.strip().lower().encode()).hexdigest()[:12]
+
+
+class HomeMenus:
+    def __init__(self, library):
+        self.library = library
+
+    def save(self, doc):
+        """Store a design sent from the designer. Returns its row."""
+        doc = deepcopy(home_menu.validate(doc))
+        doc["name"] = (doc.get("name") or HOME_DEFAULT_NAME).strip()
+        key, data = _home_key(doc["name"]), encode(doc)
+        shown = home_menu.summary(doc)["items"]
+        with self.library.connect() as db:
+            if not db.in_transaction:
+                db.execute("BEGIN IMMEDIATE")
+            exists = db.execute("SELECT 1 FROM home_menus WHERE id=?", (key,)).fetchone()
+            count = db.execute("SELECT COUNT(*) FROM home_menus").fetchone()[0]
+            require(exists or count < HOME_MAX, f"The library holds {HOME_MAX} Home menus. Remove one first.")
+            db.execute("INSERT INTO home_menus VALUES (?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,"
+                       "document=excluded.document,sha256=excluded.sha256,updated=excluded.updated,items=excluded.items",
+                       (key, doc["name"], data, hashlib.sha256(data).hexdigest(), _now(), shown))
+        return {"id": key, "name": doc["name"], "items": shown}
+
+    def list(self):
+        """Built-in menus first, then sent ones (newest first)."""
+        rows = [{"id": key, "name": doc["name"], "items": home_menu.summary(doc)["items"], "builtIn": True, "updated": None}
+                for key, doc in home_menu.STARTERS.items()]
+        with self.library.connect() as db:
+            rows += [{"id": row["id"], "name": row["name"], "items": row["items"], "builtIn": False, "updated": row["updated"]}
+                     for row in db.execute("SELECT id,name,items,updated FROM home_menus ORDER BY updated DESC, name")]
+        return rows
+
+    def get(self, key):
+        """The design with this id; KeyError when there is none. A stored row is checked again."""
+        if key in home_menu.STARTERS:
+            return deepcopy(home_menu.STARTERS[key])
+        with self.library.connect() as db:
+            row = db.execute("SELECT document,sha256 FROM home_menus WHERE id=?", (key,)).fetchone()
+        if not row:
+            raise KeyError(key)
+        require(hashlib.sha256(row["document"]).hexdigest() == row["sha256"], "A stored Home menu failed its integrity check")
+        return home_menu.validate(json.loads(row["document"]))
+
+    def remove(self, key):
+        require(key not in home_menu.STARTERS, "Built-in menus cannot be removed")
+        with self.library.connect() as db:
+            db.execute("DELETE FROM home_menus WHERE id=?", (key,))
+            row = db.execute("SELECT value FROM library_meta WHERE key='home-selected'").fetchone()
+            if row and row["value"] == key:
+                db.execute("DELETE FROM library_meta WHERE key='home-selected'")
+
+    def selected(self):
+        """The id of the menu chosen for the stick, or None (also when that menu is gone)."""
+        with self.library.connect() as db:
+            row = db.execute("SELECT value FROM library_meta WHERE key='home-selected'").fetchone()
+            if not row:
+                return None
+            key = row["value"]
+            if key in home_menu.STARTERS or db.execute("SELECT 1 FROM home_menus WHERE id=?", (key,)).fetchone():
+                return key
+        return None
+
+    def select(self, key):
+        """Choose a menu for the stick (None: no Home menu)."""
+        with self.library.connect() as db:
+            if key is None:
+                db.execute("DELETE FROM library_meta WHERE key='home-selected'")
+                return
+            require(key in home_menu.STARTERS or db.execute("SELECT 1 FROM home_menus WHERE id=?", (key,)).fetchone(),
+                    "That Home menu is not in the library")
+            db.execute("INSERT OR REPLACE INTO library_meta VALUES ('home-selected', ?)", (key,))
+
+    def chosen(self):
+        """The design chosen for the stick, or None."""
+        key = self.selected()
+        return self.get(key) if key else None
 
 
 def validate_selection(bundle):

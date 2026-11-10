@@ -498,10 +498,10 @@ class Car:
 SHIM = "data_persist/oem-aa-mod/libpatch-blmjciaapa.so"
 
 
-def fresh(base: Path, name: str, custom=None) -> Car:
+def fresh(base: Path, name: str, custom=None, home=None) -> Car:
     car = Car(base / name)
     make_fixture(car.root)
-    bs.build(car.stick, custom)
+    bs.build(car.stick, custom, home)
     return car
 
 
@@ -1220,6 +1220,57 @@ def main():
             damaged.write_bytes(damaged.read_bytes() + b" ")
             r = car.run("meters_on")
             check(r.returncode != 0 and car.digest() == stock_digest, "damaged custom pages file on the stick: refused")
+
+            # A Home menu travels in the same payload: its script and design in the userscript folder, its pictures
+            # in app/home. Install, change to a menu with pictures (the car sees an older Meters), go back to no
+            # menu, REMOVE gives byte-exact stock; a damaged design on the stick is refused.
+            sys.path.insert(0, str(HERE.parents[1] / "tools"))
+            sys.path.insert(0, str(HERE.parents[1] / "tools" / "tests"))
+            import home_menu
+            from test_home_menu import pictured
+
+            def put_payload(car, home=None):
+                shutil.rmtree(car.stick / "miatoff-app")
+                for name, data in bs.payload(None, home).items():
+                    if name.startswith("miatoff-app/"):
+                        target = car.stick / name
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        target.write_bytes(data)
+                car.run("cancel")
+
+            menu = home_menu.STARTERS["starter-driver"]
+            home_payload = bs.payload(None, menu)
+            car = fresh(base, "meters-home", None, menu)
+            stock_digest = car.digest()
+            r = car.run("meters_on")
+            check(r.returncode == 0 and car.state("meters:") == "on" and
+                  (car.root / js_dir / "miatoff-home.js").read_bytes() == home_payload["miatoff-app/userjs/miatoff-home.js"] and
+                  (car.root / js_dir / "miatoff-home-design.js").read_bytes() == home_payload["miatoff-app/userjs/miatoff-home-design.js"] and
+                  (car.root / js_dir / "miatoff-apps.js").is_file(),
+                  f"Meters with a Home menu installs its script and design beside the Meters userscript ({car.state('meters:')})")
+            check(car.read(OPERA) == OPERA_PATCHED_BYTES and car.read(GAP2) == GAP2_PATCHED_BYTES,
+                  "Home menu: opera.ini and stage_gap2.sh are still exactly the patched files")
+            with_pictures = bs.payload(None, pictured())
+            put_payload(car, pictured())
+            check(car.state("meters:") == "partial", f"another Home menu is recognised as partial ({car.state('meters:')})")
+            r = car.run("meters_on")
+            pictures = sorted(n for n in with_pictures if n.startswith("miatoff-app/app/home/"))
+            check(r.returncode == 0 and car.state("meters:") == "on" and len(pictures) == 3 and
+                  all((car.root / app_dir / n[len("miatoff-app/app/"):]).read_bytes() == with_pictures[n] for n in pictures),
+                  "REPAIR installs the changed menu and its pictures")
+            put_payload(car, None)
+            r = car.run("meters_on")
+            check(r.returncode == 0 and car.state("meters:") == "on" and
+                  not (car.root / js_dir / "miatoff-home.js").exists() and not (car.root / app_dir / "home").exists(),
+                  "REPAIR without a menu takes the Home menu away (Mazda's Home again)")
+            r = car.run("meters_off")
+            check(r.returncode == 0 and car.digest() == stock_digest, "Home menu: REMOVE gives byte-exact stock")
+            car = fresh(base, "meters-home-bad", None, menu)
+            stock_digest = car.digest()
+            damaged = car.stick / "miatoff-app/userjs/miatoff-home-design.js"
+            damaged.write_bytes(damaged.read_bytes().replace(b"Meters", b"Meterz"))
+            r = car.run("meters_on")
+            check(r.returncode != 0 and car.digest() == stock_digest, "damaged Home menu design on the stick: refused")
 
             for point in ("rename-app", "rename-userjs", "stage-gap2", "rename-gap2", "stage-opera", "rename-opera"):
                 car = fresh(base, f"meters-kill-{point}")

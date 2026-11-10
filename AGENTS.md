@@ -18,6 +18,7 @@ for what the project does, then this file for how to change it safely.
 | `miatoff_gui.py` | The guided window; writes `miatoff-plan.txt`. Its decisions and wording are in `tools/stickflow.py` (no widgets, tested on its own), its look in `tools/stickui.py`. |
 | `collector/`, `meters/`, `meters-app/` | Live vehicle data and the Meters gauges. |
 | `meters/designer/`, `tools/meters_designer.py`, `tools/meters_library.py` | Meters Designer: page editor and the builder's Custom pages library ([docs/15](docs/15-meters-designer.md)). |
+| `meters/js/miatoff-home.js`, `tools/home_menu.py` | Home menu: the car's userscript that wraps Mazda's `MainMenuCtrl`, and the design validation, built-in menus and car files. It travels in the Meters payload; never edit Mazda's Home files ([docs/17](docs/17-unified-designer.md#home-menu-in-the-car)). |
 | `meters/js/custom.js` | The car's ES5 port of the designer renderer for the CUSTOM group; pages come from the generated `custom-pages.js`. Keep it in step with `renderer.mjs` (a parity test checks). |
 | `packaging/` | PyInstaller recipe and the check that a packaged app matches the source. |
 | `vendor/` | Third-party releases, unmodified and checked by sha256. |
@@ -48,6 +49,7 @@ MO_SYNTHETIC=1 python collector/tests/test_calibrate.py
 python tools/tests/test_check_dump.py
 python tools/tests/test_stickkit.py                                                  # Linux only (fixture paths contain ':')
 python tools/tests/test_drives.py
+python tools/tests/test_home_menu.py                                                  # Home menu designs, car files, library
 python tools/tests/test_stickflow.py
 python tools/tests/test_stickwriter.py
 node meters-app/tests/test_meters_app.js

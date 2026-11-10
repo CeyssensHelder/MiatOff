@@ -12,6 +12,7 @@ import sys
 import threading
 from urllib.parse import unquote, urlsplit
 import webbrowser
+import home_menu
 import meters_library
 
 # In the packaged app the files are unpacked below sys._MEIPASS, in the same folders as in the repository.
@@ -26,6 +27,7 @@ class Server(ThreadingHTTPServer):
 
     def __init__(self, address, handler, library_path=None):
         self.library = meters_library.PageLibrary(library_path)
+        self.home_menus = meters_library.HomeMenus(self.library)
         self.test_library = library_path is not None
         self.library_id = hashlib.sha256(str(self.library.path.resolve()).encode()).hexdigest()
         self.handoff_token = secrets.token_urlsafe(32)
@@ -67,10 +69,23 @@ class Handler(SimpleHTTPRequestHandler):
                 self.json_response({"themes": self.server.library.list()}, head=head)
             elif path.startswith(("/api/builder/themes/", "/api/builder/pages/")):
                 self.json_response(self.server.library.get(path.rsplit("/", 1)[1]), head=head)
+            elif path == "/api/builder/home":
+                self.json_response({"menus": self.server.home_menus.list(),
+                                    "selected": self.server.home_menus.selected()}, head=head)
+            elif path.startswith("/api/builder/home/"):
+                # /api/builder/home/<id>: the design; /api/builder/home/<id>/car: what the car runtime reads.
+                parts = path.split("/")[4:]
+                doc = self.server.home_menus.get(parts[0])
+                if parts[1:] == ["car"]:
+                    self.json_response(home_menu.preview_design(doc), head=head)
+                elif len(parts) == 1:
+                    self.json_response(doc, head=head)
+                else:
+                    self.json_response({"error": "Unknown builder endpoint"}, 404, head)
             else:
                 self.json_response({"error": "Unknown builder endpoint"}, 404, head)
         except KeyError:
-            self.json_response({"error": "Custom meter not found. Refresh the builder library."}, 404, head)
+            self.json_response({"error": "Not found in the builder library. Refresh it."}, 404, head)
         except Exception as error:
             self.json_response({"error": "Builder library could not be read: " + str(error)}, 422, head)
 
@@ -111,7 +126,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.json_response({"error": "Open the designer from this PC's MiatOff builder and retry."}, 403)
             return
         route = urlsplit(self.path).path
-        if route not in ("/api/builder/pages", "/api/builder/pages/plan"):
+        if route not in ("/api/builder/pages", "/api/builder/pages/plan", "/api/builder/home"):
             self.json_response({"error": "Unknown builder endpoint"}, 404)
             return
         if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
@@ -129,6 +144,9 @@ class Handler(SimpleHTTPRequestHandler):
             def invalid_constant(value):
                 raise ValueError("Nonfinite JSON number")
             setup = json.loads(data, parse_constant=invalid_constant)
+            if route == "/api/builder/home":
+                self.json_response(self.server.home_menus.save(setup))
+                return
             if route.endswith("/plan"):
                 # Dry run: report which pages a send would remove; nothing is written.
                 self.json_response(self.server.library.plan_sync(setup))
@@ -138,7 +156,7 @@ class Handler(SimpleHTTPRequestHandler):
         except meters_library.RemovalNotConfirmed as error:
             self.json_response({"error": str(error), "code": "removal-unconfirmed", "removed": error.removed}, 409)
         except (ValueError, KeyError, TypeError, AttributeError, RecursionError) as error:
-            self.json_response({"error": "Theme not sent: " + str(error)}, 422)
+            self.json_response({"error": ("Menu" if route == "/api/builder/home" else "Theme") + " not sent: " + str(error)}, 422)
         except Exception as error:
             self.json_response({"error": "Could not save to the builder library: " + str(error)}, 500)
 

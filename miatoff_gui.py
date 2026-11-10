@@ -196,7 +196,7 @@ class App(tk.Tk):
         item = RailItem(rail, "✎", "Design your Meters", lambda: self.go("designer"))
         item.pack(fill="x", padx=10, pady=1)
         self.rail_items["designer"] = (item, "✎")
-        item = RailItem(rail, "⌂", "Design your Home menu", lambda: self.go("menu"))
+        item = RailItem(rail, "⌂", "Design your menu", lambda: self.go("menu"))
         item.pack(fill="x", padx=10, pady=1)
         self.rail_items["menu"] = (item, "⌂")
         foot = tk.Frame(rail, bg=RAIL)
@@ -285,6 +285,8 @@ class App(tk.Tk):
             self._refresh_review()
         if page == "check":
             self._look_for_results()
+        if page == "menu":
+            self.refresh_home_menus()
         self._update_chrome()
 
     def _choices_changed(self):
@@ -728,6 +730,16 @@ class App(tk.Tk):
             tk.Label(self.review_lines, text=f"{selected} Meters page(s) you designed", bg=CARD, fg=INK, font=BODY, anchor="w").grid(
                 row=at, column=1, sticky="w", pady=3)
             at += 1
+        try:
+            home = self.home_selection()
+        except Exception:  # the build itself reports this properly
+            home = None
+        if home:
+            tk.Label(self.review_lines, text="Home", bg=CARD, fg=MUTED, font=SMALL_BOLD, anchor="w").grid(
+                row=at, column=0, sticky="w", padx=(0, 18), pady=3)
+            tk.Label(self.review_lines, text=f"Home menu: {home.get('name', 'your menu')}", bg=CARD, fg=INK, font=BODY,
+                     anchor="w").grid(row=at, column=1, sticky="w", pady=3)
+            at += 1
         for note in stickflow.dependency_notes(choices, self.states):
             WrapLabel(self.review_lines, text="!  " + note, bg=CARD, fg=WARN, font=SMALL).grid(
                 row=at, column=0, columnspan=2, sticky="ew", pady=(8, 0))
@@ -804,13 +816,17 @@ class App(tk.Tk):
         self.after(1000, self._poll_custom_meters)
 
     def _build_menu_tab(self):
-        """The Mazda Home menu editor: the same local designer, in its Home mode. A PC preview only."""
+        """The Mazda Home menu: the designer's Home mode, the menus sent from it plus built-in ones, and the one
+        that goes on the stick (with the Meters install)."""
+        self.home_menus = meters_library.HomeMenus(self.meters_library)
+        self.home_choice = tk.StringVar(self, value="")
+        self.home_rows, self._home_signature = [], None
         page = self.page(self.menu_tab, "menu", "Design your Home menu",
-                         "Arrange your own Mazda Home screen in your web browser. A preview on this computer only.")
+                         "Make your own Mazda Home screen in your web browser, then choose the menu that goes on the stick.")
         one = self.card(page, "Open the menu designer")
         self.paragraph(one, "The menu designer opens in your web browser on this computer and saves your work in that "
                             "browser, so always open it from here. Keep this window open while you design: closing "
-                            "MiatOff stops the designer.", pady=(0, 10))
+                            "MiatOff stops the designer. Press Send to MiatOff in the designer to add a menu below.", pady=(0, 10))
         row = tk.Frame(one, bg=CARD)
         row.pack(anchor="w", padx=20, pady=(0, 8))
         ttk.Button(row, text="Open menu designer", style="Accent.TButton",
@@ -818,14 +834,102 @@ class App(tk.Tk):
         ttk.Button(row, text="Copy address", style="Plain.TButton",
                    command=lambda: self.copy_designer_url("home")).pack(side="left", padx=8)
         self.menu_status = self.paragraph(one, "Not started.", font=SMALL)
-        two = self.card(page, "What it does")
-        self.paragraph(two, "Up to twelve shortcuts on an 800 × 480 screen, with your own background, normal and selected "
-                            "icons, names and destinations. Set where each one sits and, separately, the order the "
-                            "Commander knob goes through them. Try menu walks through it with simulated destinations. "
-                            "Export design saves a file you can import again; Save preview PNG saves a picture.")
-        self.paragraph(two, "Nothing of the menu goes on the USB stick: MiatOff cannot install a Home menu in the car yet, "
-                            "and it has not been tested in a car. The destinations are design choices, not checked "
-                            "routes in the unit.", fg=WARN)
+        menus = self.card(page, "Your menus")
+        self.paragraph(menus, "Choose the menu that goes on the stick. Built-in menus are ready to use; menus you send from "
+                              "the designer are added here (sending one with the same name replaces it).", pady=(0, 10))
+        self.home_list = tk.Frame(menus, bg=CARD)
+        self.home_list.pack(fill="x", padx=20)
+        actions = tk.Frame(menus, bg=CARD)
+        actions.pack(fill="x", padx=20, pady=10)
+        ttk.Button(actions, text="Refresh list", style="Small.TButton", command=self.refresh_home_menus).pack(side="left")
+        self.home_status = self.paragraph(menus, "", font=SMALL)
+        # Shown while Meters is not set to Install: the menu travels with the Meters install.
+        self.home_hint = tk.Frame(menus, bg=WARN_BG)
+        WrapLabel(self.home_hint, bg=WARN_BG, fg=WARN, font=SMALL,
+                  text="The Home menu goes on the stick with Meters. To install or change it, set Meters to Install "
+                       "(Update, once a check shows Meters installed) under Choose tweaks.").pack(side="left", fill="x", expand=True, padx=12, pady=8)
+        ttk.Button(self.home_hint, text="Go to Choose tweaks", style="Small.TButton",
+                   command=lambda: self.tabs.select(self.choose_tab)).pack(side="right", padx=12, pady=8)
+        self.vars["meters"].trace_add("write", lambda *_: self._update_home_hint())
+        two = self.card(page, "Good to know")
+        self.paragraph(two, "In the car the menu replaces how Mazda's Home screen looks and the order the Commander knob goes "
+                            "through it. Applications, Entertainment, Communication, Navigation and Settings use Mazda's own "
+                            "routes; without your own picture they show Mazda's own buttons. FM, DAB, Bluetooth, Android Auto, "
+                            "CarPlay and Meters open their list for a moment and then that item, as a tap would; when it is "
+                            "not available the list stays open. If anything is not as expected, Mazda's own Home stays.")
+        self.paragraph(two, "To go back to Mazda's Home, choose \"Mazda's own Home\" and make a new stick with Meters set to "
+                            "Install, or remove Meters. This has not been tested in a real car yet: try it parked first.", fg=WARN)
+        self.refresh_home_menus()
+        self._update_home_hint()
+
+    def _update_home_hint(self):
+        if self.vars["meters"].get() == "install" or not self.home_choice.get():
+            self.home_hint.pack_forget()
+        elif not self.home_hint.winfo_manager():
+            self.home_hint.pack(fill="x", padx=20, pady=(0, 10), before=self.home_status)
+
+    def refresh_home_menus(self):
+        try:
+            rows = self.home_menus.list()
+            chosen = self.home_menus.selected() or ""
+            signature = (tuple((r["id"], r["name"], r["items"], r["updated"]) for r in rows), chosen)
+            if signature != self._home_signature:
+                self._home_signature = signature
+                for frame in self.home_rows:
+                    frame.destroy()
+                self.home_rows = []
+                self.home_choice.set(chosen)
+                for row in [{"id": "", "name": "Mazda's own Home", "items": None, "builtIn": True}] + rows:
+                    frame = tk.Frame(self.home_list, bg=CARD)
+                    frame.pack(fill="x", pady=5)
+                    detail = ("no change to Home" if row["items"] is None else
+                              f"{row['items']} items · " + ("built in" if row["builtIn"] else "sent from the designer"))
+                    ttk.Radiobutton(frame, text=f"{row['name']}\n{detail}", value=row["id"], variable=self.home_choice,
+                                    style="Card.TRadiobutton", command=self._home_chosen).pack(side="left", fill="x", expand=True)
+                    if row["items"] is not None:
+                        if not row["builtIn"]:
+                            ttk.Button(frame, text="Remove", style="Small.TButton",
+                                       command=lambda k=row["id"], n=row["name"]: self.remove_home_menu(k, n)).pack(side="right", padx=(8, 0))
+                        ttk.Button(frame, text="Preview", style="Small.TButton",
+                                   command=lambda k=row["id"]: self.preview_home_menu(k)).pack(side="right", padx=(8, 0))
+                    self.home_rows.append(frame)
+            name = next((r["name"] for r in rows if r["id"] == chosen), None)
+            self.home_status.configure(text=(f"On the next Meters install: {name}." if name else
+                                             "On the next Meters install: Mazda's own Home.") + " Saved on this computer.", fg=MUTED)
+        except Exception as error:
+            self._home_signature = None
+            self.home_status.configure(text="✕  Home menus could not be read; nothing was changed. " + str(error), fg=BAD)
+        self._update_home_hint()
+
+    def _home_chosen(self):
+        try:
+            self.home_menus.select(self.home_choice.get() or None)
+        except Exception as error:
+            messagebox.showerror("Home menu", str(error))
+        self._home_signature = None
+        self.refresh_home_menus()
+
+    def preview_home_menu(self, key):
+        import webbrowser
+        from urllib.parse import urlencode
+        if self._ensure_designer():
+            webbrowser.open(self.designer_url.replace("index.html", "home/car-preview.html") + "?" + urlencode({"menu": key}))
+
+    def remove_home_menu(self, key, name):
+        if not messagebox.askyesno("Home menu", f"Remove \"{name}\" from your menus? The designer keeps its own draft."):
+            return
+        try:
+            self.home_menus.remove(key)
+        except Exception as error:
+            messagebox.showerror("Home menu", str(error))
+        self._home_signature = None
+        self.refresh_home_menus()
+
+    def home_selection(self):
+        """The Home menu design chosen for the stick, or None. A menu that cannot be read stops the build."""
+        if self.checking():
+            return None
+        return self.home_menus.chosen()
 
     def _designer_state(self, text, fg):
         """Both designer pages show whether the one designer server is running."""
@@ -1007,9 +1111,9 @@ class App(tk.Tk):
             return None
         return Path(info.root)
 
-    def kit(self, custom=None):
-        """The kit of the current page. Only the install stick takes custom pages."""
-        return kits.dump_kit() if self.checking() else kits.install_kit(custom)
+    def kit(self, custom=None, home=None):
+        """The kit of the current page. Only the install stick takes custom pages and a Home menu."""
+        return kits.dump_kit() if self.checking() else kits.install_kit(custom, home)
 
     def run(self, action: str):
         if self.current() in ("prepare", *SECTIONS):  # these pages build no stick
@@ -1041,7 +1145,13 @@ class App(tk.Tk):
                         f"\nCustom pages: {len(custom['items'])} included, so a Meters already on the car "
                         "is not reported as outdated")
         summary += note
-        kit = self.kit(custom)
+        home = self.home_selection()
+        if home:
+            summary += (f"\nHome menu: {home.get('name', 'your menu')} (replaces how Mazda's Home looks)"
+                        if choices.get("meters") == "install" else
+                        f"\nHome menu: {home.get('name', 'your menu')} included, so a Meters already on the car "
+                        "is not reported as outdated")
+        kit = self.kit(custom, home)
         previous = stickwriter.replaces(target, kit.id_name)
         if previous:
             summary += (f"\n\nThis USB stick holds the MiatOff {previous} files. They will be replaced; "
@@ -1074,7 +1184,7 @@ class App(tk.Tk):
 
     def _start_verify(self, target):
         custom, note = self.custom_selection(self.choices())
-        kit = self.kit(custom)
+        kit = self.kit(custom, self.home_selection())
         self.start_job("Comparing the USB stick with this version of MiatOff…", lambda: kit.verify(target),
                        lambda problems, error: self._stick_verified(problems, error, note))
 
