@@ -83,6 +83,10 @@ python -m http.server 8800 --directory meters
 Then open `http://localhost:8800/` (the built-in driving simulator) or `http://localhost:8800/?src=sim:1` (the
 simulator at 1 update per second, roughly what `smdb-read` gives).
 
+To exercise the **real shell collector and file-polling path** instead of the browser simulator, use the
+[full-stack development harness](../dev/README.md): `python3 dev/serve.py --docker busybox:1.25` from the
+repository root. It supplies only synthetic data; no car or firmware dump is needed.
+
 ## Data
 `?src=` chooses the source:
 - `sim` / `sim:<hz>`: the simulator (this is the default)

@@ -17,6 +17,7 @@ for what the project does, then this file for how to change it safely.
 | `tools/kits.py` | What goes on the check and install sticks, and the list of files in the packaged app. |
 | `miatoff_gui.py` | The guided window; writes `miatoff-plan.txt`. Its decisions and wording are in `tools/stickflow.py` (no widgets, tested on its own), its look in `tools/stickui.py`. |
 | `collector/`, `meters/`, `meters-app/` | Live vehicle data and the Meters gauges. |
+| `dev/` | Synthetic drive → unchanged collector → real Meters UI; loopback-only preview ([dev/README.md](dev/README.md)). |
 | `meters/designer/`, `tools/meters_designer.py`, `tools/meters_library.py` | Meters Designer: page editor and the builder's Custom pages library ([docs/15](docs/15-meters-designer.md)). |
 | `meters/js/custom.js` | The car's ES5 port of the designer renderer for the CUSTOM group; pages come from the generated `custom-pages.js`. Keep it in step with `renderer.mjs` (a parity test checks). |
 | `packaging/` | PyInstaller recipe and the check that a packaged app matches the source. |
@@ -45,6 +46,7 @@ for what the project does, then this file for how to change it safely.
 MO_SYNTHETIC=1 python dump-stick/tests/test_dump_stick.py
 MO_SYNTHETIC=1 python collector/tests/test_collector.py
 MO_SYNTHETIC=1 python collector/tests/test_calibrate.py
+python dev/tests/test_dev.py                                                        # needs native sh/gawk, or MO_DOCKER_IMAGE=busybox:1.25
 python tools/tests/test_check_dump.py
 python tools/tests/test_stickkit.py                                                  # Linux only (fixture paths contain ':')
 python tools/tests/test_drives.py

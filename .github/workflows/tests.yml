@@ -18,6 +18,7 @@ jobs:
       - run: python dump-stick/tests/test_dump_stick.py
       - run: python collector/tests/test_collector.py
       - run: python collector/tests/test_calibrate.py
+      - run: python dev/tests/test_dev.py
       - run: python tools/tests/test_check_dump.py
       - run: python tools/tests/test_stickkit.py
       - run: python tools/tests/test_drives.py
@@ -33,10 +34,12 @@ jobs:
       - run: xvfb-run -a python tools/tests/test_meters_library.py
       - run: npx playwright install --with-deps chromium
         working-directory: meters/tests/v3
-      - run: npx playwright test car-parity car-app
+      - run: npx playwright test car-parity car-app collector-dev
         working-directory: meters/tests/v3
       - name: Pull the BusyBox image the AA-touch suite runs in
         run: docker pull busybox:1.25
+      - name: Synthetic development harness under BusyBox
+        run: MO_DOCKER_IMAGE=busybox:1.25 python dev/tests/test_dev.py
       # The AA-touch suite includes the Meters scenarios, which need real symlinks and BusyBox.
       # On failure its last lines are also shown as an annotation, which is readable without signing in.
       - name: AA-touch suite under BusyBox
