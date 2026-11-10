@@ -77,7 +77,11 @@ MO_DOCKER_IMAGE=busybox:1.25 npx playwright test collector-dev
 
 On PowerShell set `$env:MO_DOCKER_IMAGE = "busybox:1.25"` instead of the POSIX variable prefix.
 The tests use only fabricated data, regardless of whether private dumps exist. They check continuous collector
-output, raw-to-unit conversion, HTTP isolation, pause/resume, stale-data detection and cleanup.
+output, raw-to-unit conversion (including intake/outside temperature and fuel), HTTP isolation and malformed-path
+rejection, pause/resume, stale-data detection and cleanup.
+
+This contribution is independent of nd-gauges' dashboard revisions: no nd-gauges UI, Mazda firmware assets or fonts
+are imported. Stock-menu emulation and recording replay are separate follow-up work, not part of this synthetic preview.
 
 Inspired by the simulator/mock-D-Bus/preview approach in [gabrik/nd-gauges](https://github.com/gabrik/nd-gauges),
 adapted for MiatOff's raw data format and passive collector. GPL-3.0-or-later.

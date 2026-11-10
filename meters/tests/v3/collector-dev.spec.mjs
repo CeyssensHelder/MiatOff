@@ -10,7 +10,7 @@ test('synthetic collector data reaches Meters; paused traffic shows NO DATA and 
   const script = fileURLToPath(new URL('../../../dev/serve.py', import.meta.url));
   const args = [script, '--no-browser', '--port', '0', '--at', '6'];
   if (process.env.MO_DOCKER_IMAGE) args.push('--docker', process.env.MO_DOCKER_IMAGE);
-  const child = spawn(process.env.PYTHON || 'python', args, { stdio: ['pipe', 'pipe', 'pipe'] });
+  const child = spawn(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), args, { stdio: ['pipe', 'pipe', 'pipe'] });
   const exited = once(child, 'exit');
   let output = '';
   child.stderr.on('data', data => { output += data; });
@@ -28,6 +28,9 @@ test('synthetic collector data reaches Meters; paused traffic shows NO DATA and 
     await page.goto(url + '&set=street&page=0');
     await expect.poll(() => page.evaluate(() => window.MeterData.target.speed)).toBe(30);
     expect(await page.evaluate(() => window.MeterData.target.coolant)).toBe(85);
+    expect(await page.evaluate(() => window.MeterData.target.iat)).toBe(31);
+    expect(await page.evaluate(() => window.MeterData.target.outside)).toBe(17);
+    expect(await page.evaluate(() => window.MeterData.target.fuel)).toBeCloseTo(120 * 100 / 181, 3);
     expect(await page.evaluate(() => window.MeterData.sourceName)).toBe('LIVE');
     await expect(page.locator('#nodata')).toBeHidden();
     child.stdin.write('\n');

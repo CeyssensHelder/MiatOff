@@ -36,6 +36,9 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(403, 'Use the loopback preview address')
             return
         path = unquote(urlsplit(self.path).path)
+        if '\x00' in path:
+            self.send_error(404)
+            return
         target = (ROOT / 'meters' / path.lstrip('/')).resolve()
         public = ROOT / 'meters'
         allowed = path == '/index.html' or any(
