@@ -83,3 +83,12 @@ How it works (74.00.324A, `/jci/gui/apps/system/js/systemApp.js`):
   while the car is stationary or the engine is warming up.
 - [ ] Reuse the Meters settings file (see "Meters: more configuration") for the on/off switch and the shift RPM.
 - [ ] Add it to the simulator and the Meters tests. Ship the sound files with the Meters pages (hash-guarded).
+
+## Designer: make both design pages more the same
+
+User feedback: the Meters and Home design pages look and work differently.
+
+- [ ] Make the Home designer (meters/designer/home/) and the Meters designer (meters/designer/v3/) share one layout:
+  the same toolbar, side panels, inspector sections, Send button and status line, so both feel like one tool.
+- [ ] Do the same for the app's two design pages (Design your Meters, Design your menu): same cards, same list with
+  Preview, same wording for choosing what goes on the stick.

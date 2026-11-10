@@ -718,6 +718,20 @@ class HomeMenus:
         key = self.selected()
         return self.get(key) if key else None
 
+    # The menu the last stick with Meters carried ("" for none): Custom menu "Leave as-is" carries it again.
+    def built(self):
+        """The design the last Meters stick carried, or None (none, never built, or since removed)."""
+        with self.library.connect() as db:
+            row = db.execute("SELECT value FROM library_meta WHERE key='home-built'").fetchone()
+        try:
+            return self.get(row["value"]) if row and row["value"] else None
+        except KeyError:
+            return None
+
+    def mark_built(self, key):
+        with self.library.connect() as db:
+            db.execute("INSERT OR REPLACE INTO library_meta VALUES ('home-built', ?)", (key or "",))
+
 
 def validate_selection(bundle):
     require(isinstance(bundle, dict) and bundle.get("kind") == "MetersThemeSelection" and bundle.get("version") == 1

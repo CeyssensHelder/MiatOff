@@ -41,6 +41,10 @@ COMPONENTS = [
 ITEMS = {item[0]: item for _, items in COMPONENTS for item in items}
 # The order of the plan file does not follow the screen: the car looks keys up by name.
 KEYS = list(ITEMS)
+# Custom menu (the Home menu) is a choice of the builder only: it travels in the Meters payload and has no key in
+# the plan, whose keys the car checks strictly.
+HOME_KEY = "home"
+HOME_TITLE = "Custom menu"
 TRIM_KEYS = ("trim_dvdtv", "trim_sirius", "trim_pandora", "trim_stitcher", "trim_aha")
 
 STATE_TEXT = {
@@ -148,8 +152,18 @@ def component_lines(verdict: dict) -> list:
     return out
 
 
-def blocker(page: str, drive, have_check: bool, override: bool, changed: bool):
-    """Why the footer's main button cannot be pressed on this page, in plain English; None when it can."""
+def home_reason(home: str, meters: str, chosen: bool):
+    """Why the Custom menu choice cannot be built as it stands; None when it can."""
+    if home in ("install", "remove") and meters != "install":
+        return "Custom menu goes on the car with Meters: set Meters to Install (or Update) as well."
+    if home == "install" and not chosen:
+        return "Choose the menu to install under Design your menu > Your menus."
+    return None
+
+
+def blocker(page: str, drive, have_check: bool, override: bool, changed: bool, home=None):
+    """Why the footer's main button cannot be pressed on this page, in plain English; None when it can.
+    home: the Custom menu reason (home_reason), if any."""
     if page == "prepare" or page == "review":
         if drive is None:
             return "Plug in a USB stick to continue."
@@ -157,6 +171,8 @@ def blocker(page: str, drive, have_check: bool, override: bool, changed: bool):
             return "This USB stick cannot be used yet. See Prepare USB."
     if page == "check" and not (have_check or override):
         return "Read the check results to continue."
+    if page in ("choose", "review") and home and (have_check or override):
+        return home
     if page == "choose" and not changed:
         return "Choose at least one change to continue." if have_check or override else "Read the check results first."
     if page == "review":
