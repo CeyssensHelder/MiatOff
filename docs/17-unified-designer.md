@@ -1,8 +1,12 @@
 # Shared MiatOff Designer
 
 Start `python tools/meters_designer.py` from this worktree and open the printed address. Existing addresses
-open Meters. Choose **Mazda Home** in the Designer selector or append `?mode=home`. The desktop builder's
-Designer tab also has a Mazda Home button. Keep the same port to return to browser drafts.
+open Meters. Choose **Mazda Home** in the Designer selector or append `?mode=home`. In the desktop app, Home
+has its own page, **Design your Home menu**, beside **Design your Meters** (`python miatoff_gui.py --menu`); both
+use the one local designer. Keep the same port to return to browser drafts. The header shows the MiatOff app
+icon (drawn inline, as in `packaging/make_icon.py`) and names the mode: MiatOff Meters Designer or MiatOff
+Home Designer. The three desktop shell baselines were regenerated for this header and reviewed: only the
+logo and name changed.
 
 ## Shared editing foundation
 

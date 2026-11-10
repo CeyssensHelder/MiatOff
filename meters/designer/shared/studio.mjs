@@ -61,8 +61,8 @@ async function switchMode(mode) {
         ? "Home screen · PC preview"
         : (metersCaption ??
           document.getElementById("collection-caption").textContent);
-    document.querySelector(".brand strong").textContent =
-      mode === "home" ? "Mazda Home Designer" : "Meters Designer";
+    document.title = document.querySelector(".brand strong").textContent =
+      mode === "home" ? "MiatOff Home Designer" : "MiatOff Meters Designer";
     const url = new URL(location.href);
     url.searchParams.set("mode", mode);
     history.replaceState(null, "", url);

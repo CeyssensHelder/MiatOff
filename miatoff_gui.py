@@ -2,8 +2,9 @@
 """MiatOff: prepare a USB stick, check the car, choose tweaks.
 
 A guided window with four steps (Prepare USB, Check your car, Choose tweaks,
-Review and prepare) and a separate section, Design your Meters, for the local
-designer (tools/meters_designer.py), which opens in the browser.
+Review and prepare) and two separate sections, Design your Meters and Design
+your Home menu, for the local designer (tools/meters_designer.py), which opens
+in the browser. The Home menu is a preview on this PC: nothing of it goes on a stick.
 
 The check is deterministic (tools/check_dump.py). The choice is written to the
 stick as miatoff-plan.txt. In the car the dialog offers the plan's steps one at
@@ -13,6 +14,7 @@ or less).
 
     python miatoff_gui.py
     python miatoff_gui.py --designer              open at the designer section
+    python miatoff_gui.py --menu                  open at the Home menu section
     python miatoff_gui.py --selftest out.json     check the installation, write a report, no window
 
 SPDX-License-Identifier: GPL-3.0-or-later
@@ -40,6 +42,7 @@ import stickwriter  # noqa: E402
 VERIFY_DETAILS = 8                # problems listed when a stick does not match
 JOB_POLL_MS, DRIVE_POLL_MS = 60, 2500
 STEPS = (("prepare", "Prepare USB"), ("check", "Check your car"), ("choose", "Choose tweaks"), ("review", "Review and prepare"))
+SECTIONS = ("designer", "menu")  # pages beside the steps; Back returns to the last step
 
 
 def removable_drives() -> list:
@@ -136,17 +139,18 @@ class App(tk.Tk):
         self._footer(main)
         self.tabs = ttk.Notebook(main, style="Pages.TNotebook", takefocus=False)
         self.tabs.pack(fill="both", expand=True)
-        self.prepare_tab, self.check_tab, self.choose_tab, self.review_tab, self.designer_tab = (
-            tk.Frame(self.tabs, bg=BG) for _ in range(5))
-        for tab in (self.prepare_tab, self.check_tab, self.choose_tab, self.review_tab, self.designer_tab):
+        self.prepare_tab, self.check_tab, self.choose_tab, self.review_tab, self.designer_tab, self.menu_tab = (
+            tk.Frame(self.tabs, bg=BG) for _ in range(6))
+        for tab in (self.prepare_tab, self.check_tab, self.choose_tab, self.review_tab, self.designer_tab, self.menu_tab):
             self.tabs.add(tab)
         self.pages = {"prepare": self.prepare_tab, "check": self.check_tab, "choose": self.choose_tab,
-                      "review": self.review_tab, "designer": self.designer_tab}
+                      "review": self.review_tab, "designer": self.designer_tab, "menu": self.menu_tab}
         self._build_prepare_tab()
         self._build_check_tab()
         self._build_choose_tab()
         self._build_review_tab()
         self._build_designer_tab()
+        self._build_menu_tab()
         self.tabs.bind("<<NotebookTabChanged>>", lambda _e: self._page_changed())
         for var in self.vars.values():
             var.trace_add("write", lambda *_a: self._choices_changed())
@@ -192,6 +196,9 @@ class App(tk.Tk):
         item = RailItem(rail, "✎", "Design your Meters", lambda: self.go("designer"))
         item.pack(fill="x", padx=10, pady=1)
         self.rail_items["designer"] = (item, "✎")
+        item = RailItem(rail, "⌂", "Design your Home menu", lambda: self.go("menu"))
+        item.pack(fill="x", padx=10, pady=1)
+        self.rail_items["menu"] = (item, "⌂")
         foot = tk.Frame(rail, bg=RAIL)
         foot.pack(side="bottom", fill="x", padx=18, pady=16)
         self.rail_drive = WrapLabel(foot, bg=RAIL, fg=MUTED, font=SMALL, wraplength=200)
@@ -256,7 +263,7 @@ class App(tk.Tk):
 
     def go_back(self):
         page = self.current()
-        if page == "designer":
+        if page in SECTIONS:
             self.go(self.last_step)
         else:
             self.go(stickflow.PAGES[max(stickflow.PAGES.index(page) - 1, 0)])
@@ -750,7 +757,6 @@ class App(tk.Tk):
         row = tk.Frame(one, bg=CARD)
         row.pack(anchor="w", padx=20, pady=(0, 8))
         ttk.Button(row, text="Open designer", style="Accent.TButton", command=self.open_designer).pack(side="left")
-        ttk.Button(row, text="Mazda Home", style="Plain.TButton", command=lambda: self.open_designer("home")).pack(side="left", padx=8)
         ttk.Button(row, text="Copy address", style="Plain.TButton", command=self.copy_designer_url).pack(side="left", padx=8)
         self.designer_status = self.paragraph(one, "Not started.", font=SMALL)
         custom = self.card(page, "Your pages")
@@ -797,6 +803,36 @@ class App(tk.Tk):
         self.refresh_custom_meters()
         self.after(1000, self._poll_custom_meters)
 
+    def _build_menu_tab(self):
+        """The Mazda Home menu editor: the same local designer, in its Home mode. A PC preview only."""
+        page = self.page(self.menu_tab, "menu", "Design your Home menu",
+                         "Arrange your own Mazda Home screen in your web browser. A preview on this computer only.")
+        one = self.card(page, "Open the menu designer")
+        self.paragraph(one, "The menu designer opens in your web browser on this computer and saves your work in that "
+                            "browser, so always open it from here. Keep this window open while you design: closing "
+                            "MiatOff stops the designer.", pady=(0, 10))
+        row = tk.Frame(one, bg=CARD)
+        row.pack(anchor="w", padx=20, pady=(0, 8))
+        ttk.Button(row, text="Open menu designer", style="Accent.TButton",
+                   command=lambda: self.open_designer("home")).pack(side="left")
+        ttk.Button(row, text="Copy address", style="Plain.TButton",
+                   command=lambda: self.copy_designer_url("home")).pack(side="left", padx=8)
+        self.menu_status = self.paragraph(one, "Not started.", font=SMALL)
+        two = self.card(page, "What it does")
+        self.paragraph(two, "Up to twelve shortcuts on an 800 × 480 screen, with your own background, normal and selected "
+                            "icons, names and destinations. Set where each one sits and, separately, the order the "
+                            "Commander knob goes through them. Try menu walks through it with simulated destinations. "
+                            "Export design saves a file you can import again; Save preview PNG saves a picture.")
+        self.paragraph(two, "Nothing of the menu goes on the USB stick: MiatOff cannot install a Home menu in the car yet, "
+                            "and it has not been tested in a car. The destinations are design choices, not checked "
+                            "routes in the unit.", fg=WARN)
+
+    def _designer_state(self, text, fg):
+        """Both designer pages show whether the one designer server is running."""
+        for label in (self.designer_status, getattr(self, "menu_status", None)):
+            if label is not None:
+                label.configure(text=text, fg=fg)
+
     def _update_meters_hint(self):
         if self.vars["meters"].get() == "install":
             self.meters_hint.pack_forget()
@@ -808,7 +844,7 @@ class App(tk.Tk):
         if not hasattr(self, "designer_server"):
             try:
                 self.designer_server = meters_designer.launch(open_browser=False)
-                self.designer_status.configure(text="✓  Running at " + self.designer_url, fg=OK)
+                self._designer_state(text="✓  Running at " + self.designer_url, fg=OK)
             except OSError:
                 # Port busy: reuse a designer server that is already running there.
                 import hashlib
@@ -819,13 +855,13 @@ class App(tk.Tk):
                     if connection.get("service") != "MiatOffDesigner" or connection.get("protocol") != 2 or connection.get("libraryId") != expected:
                         raise ValueError("Different or older designer server")
                 except (OSError, ValueError):
-                    self.designer_status.configure(text="✕  Could not start.", fg=BAD)
+                    self._designer_state(text="✕  Could not start.", fg=BAD)
                     messagebox.showerror("Meters Designer", f"Port {meters_designer.DEFAULT_PORT} is in use by "
                                          "another program or by a designer started from a different MiatOff window or "
                                          "folder. Close the old designer / MiatOff window, then reopen the designer "
                                          "from this window, so the editor and builder use the same custom meters library.")
                     return False
-                self.designer_status.configure(text="✓  Using the designer already running at " + self.designer_url, fg=OK)
+                self._designer_state(text="✓  Using the designer already running at " + self.designer_url, fg=OK)
         return True
 
     def open_designer(self, mode="meters"):
@@ -950,9 +986,9 @@ class App(tk.Tk):
         except Exception as error:
             messagebox.showerror("Custom meters export", str(error))
 
-    def copy_designer_url(self):
+    def copy_designer_url(self, mode="meters"):
         self.clipboard_clear()
-        self.clipboard_append(self.designer_url)
+        self.clipboard_append(self.designer_url + ("?mode=home" if mode == "home" else ""))
 
     # ---------------------------------------------------------------- actions
     def checking(self) -> bool:
@@ -976,7 +1012,7 @@ class App(tk.Tk):
         return kits.dump_kit() if self.checking() else kits.install_kit(custom)
 
     def run(self, action: str):
-        if self.current() in ("designer", "prepare"):  # these pages build no stick
+        if self.current() in ("prepare", *SECTIONS):  # these pages build no stick
             return
         target = self.target()
         if target is None:
@@ -1077,6 +1113,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="MiatOff desktop builder")
     parser.add_argument("--designer", action="store_true", help="Open the Custom meters library section")
+    parser.add_argument("--menu", action="store_true", help="Open the Home menu designer section")
     parser.add_argument("--selftest", type=Path, metavar="FILE", help="Check the installation and write a report; no window")
     args = parser.parse_args()
     if args.selftest:
@@ -1084,4 +1121,6 @@ if __name__ == "__main__":
     app = App()
     if args.designer:
         app.go("designer")
+    elif args.menu:
+        app.go("menu")
     app.mainloop()

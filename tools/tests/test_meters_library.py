@@ -467,6 +467,29 @@ class GuiTests(unittest.TestCase):
         button.invoke()
         self.assertEqual(app.tabs.select(), str(app.choose_tab))
 
+    def test_home_menu_has_its_own_page_and_builds_no_stick(self):
+        gui, app = self.make_app()
+        self.assertIn("menu", app.rail_items)
+        app.go("choose")
+        app.update()  # Back returns to the last step, which the page-change event records
+        app.go("menu")
+        app.update()
+        self.assertEqual(app.current(), "menu")
+        def buttons(widget):
+            found = [widget.cget("text")] if isinstance(widget, gui.ttk.Button) else []
+            for child in widget.winfo_children():
+                found += buttons(child)
+            return found
+        self.assertIn("Open menu designer", buttons(app.menu_tab))
+        self.assertNotIn("Mazda Home", buttons(app.designer_tab))
+        app.copy_designer_url("home")
+        self.assertTrue(app.clipboard_get().endswith("/designer/index.html?mode=home"))
+        with patch.object(app, "target") as target:
+            app.run("build")
+        target.assert_not_called()
+        app.go_back()
+        self.assertEqual(app.current(), "choose")
+
     def make_app(self):
         import miatoff_gui as gui
         with patch.dict("os.environ", {"MIATOFF_METERS_LIBRARY": str(self.library.path)}), patch.object(gui, "removable_drives", return_value=[]):
