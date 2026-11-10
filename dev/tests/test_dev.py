@@ -2,9 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Synthetic-only tests; never reads firmware dumps."""
 from pathlib import Path
-import json
 import os
-import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -35,6 +34,29 @@ class DriveTests(unittest.TestCase):
 
 
 class HarnessTests(unittest.TestCase):
+    def get(self, url):
+        with urlopen(url) as response:
+            return response.read()
+
+    def test_occupied_port_cleans_up_without_launching_a_collector(self):
+        from serve import Harness
+        with socket.socket() as occupied:
+            occupied.bind(('127.0.0.1', 0))
+            occupied.listen()
+            harness = Harness(port=occupied.getsockname()[1], docker=os.environ.get('MO_DOCKER_IMAGE', ''))
+            with self.assertRaises(OSError):
+                with harness:
+                    self.fail('should not start')
+            self.assertIsNone(harness.process)
+            self.assertFalse(harness.work.exists())
+
+    def test_invalid_scenario_time_is_rejected_before_startup(self):
+        script = Path(__file__).resolve().parents[1] / 'serve.py'
+        for value in ('nan', 'inf', '-1'):
+            result = subprocess.run([sys.executable, str(script), '--at', value], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn('finite nonnegative', result.stderr)
+
     def test_real_collector_http_client_scaling_staleness_and_cleanup(self):
         from serve import Harness
         docker = os.environ.get('MO_DOCKER_IMAGE', '')
@@ -58,7 +80,7 @@ class HarnessTests(unittest.TestCase):
                 time.sleep(0.1)
             else:
                 self.fail('collector did not keep publishing')
-            self.assertIn(b'js/data.js', urlopen(harness.url).read())
+            self.assertIn(b'js/data.js', self.get(harness.url))
             # Real browser data module, with a controlled clock rather than a 3 s sleep.
             script = """
 const fs = require('fs'), vm = require('vm'), assert = require('assert');
@@ -83,17 +105,19 @@ assert.equal(d.stale(), true, 'repeated LiveSeq must not refresh freshness');
                 with self.assertRaises(HTTPError) as error:
                     urlopen(url + path)
                 self.assertEqual(error.exception.code, 404)
+                error.exception.close()
             with self.assertRaises(HTTPError) as error:
                 urlopen(Request(url + '/live.txt', headers={'Host': 'untrusted.example'}))
             self.assertEqual(error.exception.code, 403)
+            error.exception.close()
             harness.pause()
             time.sleep(0.5)  # drain a possible in-flight snapshot
-            frozen = urlopen(url + '/live.txt').read()
+            frozen = self.get(url + '/live.txt')
             time.sleep(0.5)
-            self.assertEqual(urlopen(url + '/live.txt').read(), frozen)
+            self.assertEqual(self.get(url + '/live.txt'), frozen)
             harness.resume()
             deadline = time.monotonic() + 5
-            while urlopen(url + '/live.txt').read() == frozen:
+            while self.get(url + '/live.txt') == frozen:
                 self.assertLess(time.monotonic(), deadline, 'resume did not restart publishing')
                 time.sleep(0.1)
         self.assertFalse(work.exists(), 'temporary fixtures must be removed')

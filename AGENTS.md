@@ -15,6 +15,7 @@ for what the project does, then this file for how to change it safely.
 | `tools/stickkit.py` | Shared stick builder and launcher. |
 | `miatoff_gui.py` | Tk builder: check tab, install/remove tab, writes `miatoff-plan.txt`. |
 | `collector/`, `meters/`, `meters-app/` | Live vehicle data and the Meters gauges. |
+| `dev/` | Synthetic drive → unchanged collector → real Meters UI; loopback-only preview ([dev/README.md](dev/README.md)). |
 | `meters/designer/`, `tools/meters_designer.py`, `tools/meters_library.py` | Meters Designer: page editor and the builder's Custom pages library ([docs/15](docs/15-meters-designer.md)). |
 | `meters/js/custom.js` | The car's ES5 port of the designer renderer for the CUSTOM group; pages come from the generated `custom-pages.js`. Keep it in step with `renderer.mjs` (a parity test checks). |
 | `vendor/` | Third-party releases, unmodified and checked by sha256. |
@@ -42,6 +43,7 @@ for what the project does, then this file for how to change it safely.
 MO_SYNTHETIC=1 python dump-stick/tests/test_dump_stick.py
 MO_SYNTHETIC=1 python collector/tests/test_collector.py
 MO_SYNTHETIC=1 python collector/tests/test_calibrate.py
+python dev/tests/test_dev.py                                                        # needs native sh/gawk, or MO_DOCKER_IMAGE=busybox:1.25
 python tools/tests/test_check_dump.py
 python tools/tests/test_stickkit.py
 node meters-app/tests/test_meters_app.js

@@ -169,27 +169,39 @@ class Harness:
                 self.server.shutdown()
                 self.http_thread.join()
             self.server.server_close()
-        if self.process:
-            if self.docker:
-                subprocess.run(['docker', 'stop', '-t', '3', self.container],
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=15)
-            else:
-                self.process.terminate()
-            try:
-                self.process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
-                self.process.wait()
-            if not self.docker:
-                # These are our fake programs only, never a real smdb-read.
+        try:
+            if self.process:
+                if self.docker:
+                    self.docker_cleanup('stop', '-t', '3')
+                elif self.process.poll() is None:
+                    self.process.terminate()
                 try:
-                    os.killpg(self.process.pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
-        if self.log:
-            self.log.close()
-        if self.temp:
-            self.temp.cleanup()
+                    self.process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                    self.process.wait()
+                if self.docker:
+                    # Also covers interruption while docker run was still starting.
+                    self.docker_cleanup('rm', '-f')
+                else:
+                    # These are our fake programs only, never a real smdb-read.
+                    try:
+                        os.killpg(self.process.pid, signal.SIGTERM)
+                    except ProcessLookupError:
+                        pass
+        finally:
+            if self.log:
+                self.log.close()
+            if self.temp:
+                self.temp.cleanup()
+
+    def docker_cleanup(self, *args):
+        try:
+            subprocess.run(['docker', *args, self.container], stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL, timeout=15, check=False)
+        except (OSError, subprocess.TimeoutExpired):
+            # Still reap the local process and clean temp files if Docker goes away.
+            print(f'Warning: Docker cleanup failed; check container {self.container}', flush=True)
 
 
 def main():
@@ -216,7 +228,7 @@ def main():
                         # Unbuffered read: a blocked daemon thread must not hold
                         # Python's stdin lock during interpreter shutdown.
                         key = os.read(0, 1)
-                        if not key:
+                        if not key or harness.done.is_set():
                             return
                         if key == b'\n':
                             paused = not paused

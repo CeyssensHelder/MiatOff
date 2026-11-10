@@ -54,6 +54,11 @@ sh /path/to/miatoff-collector.sh &
 Stop with `kill $(cat /tmp/miatoff/collector.pid)` (TERM, never `-9`).
 
 ## Testing without a car
+
+For a continuous synthetic drive through the unchanged collector into the real Meters UI, run
+`python3 dev/serve.py --docker busybox:1.25` from the repository root. Native `sh`/`gawk` mode, pause/resume,
+and tests are described in [dev/README.md](../dev/README.md). This does not use a firmware dump.
+
 ```bash
 python collector/tests/test_collector.py
 ```
