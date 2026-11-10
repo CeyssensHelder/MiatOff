@@ -1734,6 +1734,8 @@ function pointerActions() {
     store.cancel();
   };
   window.addEventListener("keydown", (e) => {
+    // While Mazda Home is shown, keys pressed outside its frame must not edit the hidden Meters design.
+    if (!designerActive) return;
     if (e.key === "Escape" && e.target.closest("dialog[open]")) return;
     if (preview) {
       if (e.key === "Escape") $("preview").click();

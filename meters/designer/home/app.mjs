@@ -64,7 +64,8 @@ function command(name, fn) {
   try {
     store.command(name, (p) => {
       fn(p);
-      store.project = M.clean(p);
+      // fn may replace store.project (import, new design): clean whatever is current now.
+      store.project = M.clean(store.project);
     });
     notice();
   } catch (e) {

@@ -241,3 +241,68 @@ test("Home artwork states, upload cancellation, pointer transforms and save fail
   await expect(f.locator("#notice")).toContainText("Save failed");
   await expect(f.locator("#name")).toHaveValue("Kept in memory");
 });
+
+test("Home import and New design replace the current design, and undo brings it back", async ({
+  page,
+}) => {
+  const f = await open(page);
+  const frame = page.frames().find((f) => f.url().includes("/home/index.html"));
+  const doc = await frame.evaluate(() => {
+    const d = structuredClone(HomeDesigner.store.project);
+    d.items[0].label = "Imported";
+    d.accent = "#123456";
+    return d;
+  });
+  await f.locator("#file").setInputFiles({
+    name: "other.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(doc)),
+  });
+  await expect(f.locator("#items .choose").first()).toHaveText("Imported");
+  expect(await frame.evaluate(() => HomeDesigner.store.project.accent)).toBe(
+    "#123456",
+  );
+  await f.locator("#undo").click();
+  await expect(f.locator("#items .choose").first()).not.toHaveText("Imported");
+  await f.locator("#redo").click();
+  await expect(f.locator("#items .choose").first()).toHaveText("Imported");
+  await f.locator("#reset").click();
+  await expect(f.locator("#items .choose").first()).not.toHaveText("Imported");
+  expect(await frame.evaluate(() => HomeDesigner.store.project.accent)).not.toBe(
+    "#123456",
+  );
+});
+
+test("Meters shortcuts do nothing while Mazda Home is shown", async ({
+  page,
+}) => {
+  await page.goto(DESIGNER_URL + "?test=1&db=" + crypto.randomUUID());
+  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await page.evaluate(() => {
+    __studio.command("Name the page", (p) => {
+      p.themes[0].pages[0].name = "Kept page";
+    });
+    const w = __studio.store.project.themes[0].pages[0].widgets.find(
+      (w) => !w.locked && !w.hidden && w.role !== "background",
+    );
+    __studio.store.view.selection = [w.id];
+  });
+  const state = () =>
+    page.evaluate(() =>
+      JSON.stringify({
+        project: __studio.store.project,
+        undo: __studio.store.undoStack.length,
+        redo: __studio.store.redoStack.length,
+      }),
+    );
+  const before = await state();
+  await page.locator("#designer-mode").selectOption("home");
+  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await page.frameLocator("#home-studio").locator("#items .choose").first().waitFor();
+  await page.locator(".brand").click();
+  // Checked after every key, so one shortcut cannot hide what another did.
+  for (const key of ["Delete", "Backspace", "ArrowLeft", "Control+D", "Control+Z"]) {
+    await page.keyboard.press(key);
+    expect(await state(), key).toBe(before);
+  }
+});
