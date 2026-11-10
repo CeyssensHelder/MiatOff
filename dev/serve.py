@@ -23,6 +23,27 @@ ROOT = Path(__file__).resolve().parents[1]
 HERE = Path(__file__).resolve().parent
 
 
+def replace_shared(staged, path, attempts=20):
+    """Atomic replace that tolerates a reader holding the target open.
+
+    On Windows a Docker bind mount keeps the file open while the container
+    reads it, and os.replace then fails with PermissionError. Retry briefly;
+    if it is still busy, keep the previous snapshot for this tick.
+    """
+    for _ in range(attempts):
+        try:
+            staged.replace(path)
+            return True
+        except PermissionError:
+            time.sleep(0.005)
+    return False
+
+
+def native_supported():
+    """Native mode needs a POSIX host with sh and GNU awk (see README)."""
+    return os.name != 'nt' and bool(shutil.which('sh')) and bool(shutil.which('gawk'))
+
+
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.asset()
@@ -95,7 +116,7 @@ class Harness:
             path = self.work / name
             staged = path.with_suffix('.tmp')
             staged.write_text(text, encoding='utf-8', newline='\n')
-            staged.replace(path)
+            replace_shared(staged, path)
 
     def produce(self):
         start = time.monotonic()
@@ -110,7 +131,7 @@ class Harness:
         (self.work / 'feed').touch()
 
     def start(self):
-        if not self.docker and (os.name == 'nt' or not shutil.which('gawk')):
+        if not self.docker and not native_supported():
             raise RuntimeError('Native mode needs POSIX sh and gawk. Install gawk or use --docker busybox:1.25.')
         self.temp = tempfile.TemporaryDirectory(prefix='miatoff dev ')
         self.work = Path(self.temp.name)
@@ -125,25 +146,26 @@ class Harness:
         self.server = ThreadingHTTPServer(('127.0.0.1', self.port), Handler)
         self.server.live = self.work / 'out/live.txt'
         self.url = f'http://127.0.0.1:{self.server.server_port}/index.html?src=poll:live.txt'
-        env = {
-            'MO_OUT_DIR': 'W/out', 'MO_DBUS_MONITOR': 'W/mock-dbus-monitor',
-            'MO_SMDB_READ': 'W/mock-smdb-read', 'MO_DEV_DATA': 'W',
-            'MO_SLOW_S': '1', 'MO_ONESHOT': '0', 'MO_FLUSH_EVERY': '30',
-            'MO_BUS': 'unix:path=/nonexistent-miatoff-dev-bus',
-        }
+        def collector_env(work):
+            return {
+                'MO_OUT_DIR': f'{work}/out', 'MO_DBUS_MONITOR': f'{work}/mock-dbus-monitor',
+                'MO_SMDB_READ': f'{work}/mock-smdb-read', 'MO_DEV_DATA': work,
+                'MO_SLOW_S': '1', 'MO_ONESHOT': '0', 'MO_FLUSH_EVERY': '30',
+                'MO_BUS': 'unix:path=/nonexistent-miatoff-dev-bus',
+            }
         self.log = (self.work / 'host.log').open('w', encoding='utf-8')
         if self.docker:
             command = ['docker', 'run', '--rm', '--name', self.container,
                        '-v', f'{self.work}:/w']
-            for key, value in env.items():
-                command += ['-e', key + '=' + value.replace('W', '/w')]
+            for key, value in collector_env('/w').items():
+                command += ['-e', key + '=' + value]
             command += [self.docker, 'sh', '/w/miatoff-collector.sh']
             self.process = subprocess.Popen(command, stdout=self.log, stderr=subprocess.STDOUT)
         else:
             # Ubuntu's mawk and macOS awk can buffer pipe input. Pin streaming gawk
             # without changing the collector or the user's PATH outside this child.
             (self.work / 'awk').symlink_to(shutil.which('gawk'))
-            env = {key: value.replace('W', str(self.work)) for key, value in env.items()}
+            env = collector_env(str(self.work))
             env['PATH'] = str(self.work) + os.pathsep + os.environ.get('PATH', '')
             self.process = subprocess.Popen(['sh', str(self.work / 'miatoff-collector.sh')],
                                             env=dict(os.environ, **env), stdout=self.log,
@@ -154,8 +176,11 @@ class Harness:
         while True:
             if self.process.poll() is not None:
                 raise RuntimeError('Collector exited: ' + (self.work / 'host.log').read_text())
-            if self.server.live.exists() and 'EngClnt_Te_Actl=' in self.server.live.read_text():
-                break
+            try:
+                if 'EngClnt_Te_Actl=' in self.server.live.read_text():
+                    break
+            except OSError:
+                pass  # not written yet, or (Windows) being replaced right now
             if time.monotonic() > deadline:
                 raise RuntimeError('No collector data after 30 s. Check Docker or native gawk.\n' +
                                    (self.work / 'host.log').read_text())
@@ -222,10 +247,11 @@ def main():
     signal.signal(signal.SIGTERM, interrupted)
     try:
         with Harness(args.port, args.docker, args.at) as harness:
-            print(f'SYNTHETIC drive → real collector → Meters\n{harness.url}', flush=True)
-            print('Enter: pause/resume D-Bus feed (NO DATA after 3 s). Ctrl-C: stop.', flush=True)
+            # ASCII only: a piped stdout on Windows uses the ANSI code page (cp1252 has no arrows).
+            print(f'SYNTHETIC drive -> real collector -> Meters\n{harness.url}', flush=True)
+            print('Enter: pause/resume D-Bus feed (NO DATA after 3 s). q+Enter or Ctrl-C: stop.', flush=True)
             def keyboard():
-                paused = False
+                paused, line = False, b''
                 try:
                     while not harness.done.is_set():
                         # Unbuffered read: a blocked daemon thread must not hold
@@ -233,10 +259,17 @@ def main():
                         key = os.read(0, 1)
                         if not key or harness.done.is_set():
                             return
-                        if key == b'\n':
-                            paused = not paused
-                            harness.pause() if paused else harness.resume()
-                            print('Feed paused' if paused else 'Feed resumed', flush=True)
+                        if key != b'\n':
+                            line += key
+                            continue
+                        if line.strip().lower() == b'q':
+                            # Clean stop without a signal (Windows has no SIGTERM for a child).
+                            harness.done.set()
+                            return
+                        line = b''
+                        paused = not paused
+                        harness.pause() if paused else harness.resume()
+                        print('Feed paused' if paused else 'Feed resumed', flush=True)
                 except OSError:
                     pass
             threading.Thread(target=keyboard, daemon=True).start()

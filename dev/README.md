@@ -29,7 +29,8 @@ The BusyBox version matches the existing host tests; it is not proof of behaviou
 
 - In the terminal, press **Enter** to pause/resume the fake D-Bus traffic. While paused, the last `live.txt` stays
   readable, its `LiveSeq` stops changing, and a gauge shows **NO DATA** after about three seconds. Resume clears it.
-- **Ctrl-C** stops the preview, collector and fake tools, then removes their temporary files/container.
+- **Ctrl-C** (or **q** then **Enter**) stops the preview, collector and fake tools, then removes their temporary
+  files/container. `q` is also how a script stops it cleanly on Windows, where a child gets no SIGTERM.
 - `--no-browser` prints the URL without opening it.
 - `--port 8800` chooses another port; `--port 0` chooses an available port.
 - `--at 6` holds the scenario at second six (30 km/h, full throttle). Traffic still arrives at 10 Hz; this is

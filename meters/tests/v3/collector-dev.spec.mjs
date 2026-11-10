@@ -38,7 +38,14 @@ test('synthetic collector data reaches Meters; paused traffic shows NO DATA and 
     child.stdin.write('\n');
     await expect(page.locator('#nodata')).toBeHidden({ timeout: 8000 });
   } finally {
-    child.kill('SIGTERM');
-    await exited;
+    // Windows has no SIGTERM for a child (kill() is a hard stop that would leave the container
+    // and temp files behind), so ask the preview to quit itself there.
+    if (child.exitCode === null) {
+      if (process.platform === 'win32') child.stdin.write('q\n');
+      else child.kill('SIGTERM');
+      const timer = setTimeout(() => child.kill(), 30000);
+      await exited;
+      clearTimeout(timer);
+    }
   }
 });

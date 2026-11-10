@@ -13,6 +13,11 @@ from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from drive import raw_state
+from serve import native_supported, replace_shared
+
+DOCKER = os.environ.get('MO_DOCKER_IMAGE', '')
+needs_runtime = unittest.skipUnless(
+    DOCKER or native_supported(), 'needs MO_DOCKER_IMAGE=busybox:1.25, or POSIX sh and gawk')
 
 
 class DriveTests(unittest.TestCase):
@@ -33,17 +38,40 @@ class DriveTests(unittest.TestCase):
         self.assertNotIn('SteeringWheel', idle)
 
 
+class SharedReplaceTests(unittest.TestCase):
+    """Windows + Docker: the bind mount holds the target open while the container reads it."""
+    class Busy:
+        def __init__(self, failures):
+            self.failures, self.calls = failures, 0
+
+        def replace(self, target):
+            self.calls += 1
+            if self.calls <= self.failures:
+                raise PermissionError(13, 'Access is denied')
+
+    def test_retries_a_busy_target(self):
+        staged = self.Busy(failures=3)
+        self.assertTrue(replace_shared(staged, 'target'))
+        self.assertEqual(staged.calls, 4)
+
+    def test_keeps_the_previous_snapshot_when_still_busy(self):
+        staged = self.Busy(failures=99)
+        self.assertFalse(replace_shared(staged, 'target', attempts=5))
+        self.assertEqual(staged.calls, 5)
+
+
 class HarnessTests(unittest.TestCase):
     def get(self, url):
         with urlopen(url) as response:
             return response.read()
 
+    @needs_runtime
     def test_occupied_port_cleans_up_without_launching_a_collector(self):
         from serve import Harness
         with socket.socket() as occupied:
             occupied.bind(('127.0.0.1', 0))
             occupied.listen()
-            harness = Harness(port=occupied.getsockname()[1], docker=os.environ.get('MO_DOCKER_IMAGE', ''))
+            harness = Harness(port=occupied.getsockname()[1], docker=DOCKER)
             with self.assertRaises(OSError):
                 with harness:
                     self.fail('should not start')
@@ -57,9 +85,39 @@ class HarnessTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn('finite nonnegative', result.stderr)
 
+    @needs_runtime
+    def test_preview_keeps_running_then_quits_cleanly_on_q(self):
+        script = Path(__file__).resolve().parents[1] / 'serve.py'
+        command = [sys.executable, str(script), '--no-browser', '--port', '0']
+        if DOCKER:
+            command += ['--docker', DOCKER]
+        process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, text=True, encoding='utf-8')
+        try:
+            # Messages read stderr only once the child has exited, or the read would block.
+            banner = process.stdout.readline() + process.stdout.readline()
+            if '/index.html?src=poll:live.txt' not in banner:
+                process.wait(timeout=30)
+                self.fail('preview did not start: ' + banner + process.stderr.read())
+            # Long enough for the Windows bind-mount replace race to have killed the producer before.
+            time.sleep(8)
+            if process.poll() is not None:
+                self.fail('preview stopped early: ' + process.stderr.read())
+            process.stdin.write('q\n')
+            process.stdin.flush()
+            self.assertEqual(process.wait(timeout=30), 0)
+            self.assertNotIn('Cannot run', process.stderr.read())
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+            for stream in (process.stdin, process.stdout, process.stderr):
+                stream.close()
+
+    @needs_runtime
     def test_real_collector_http_client_scaling_staleness_and_cleanup(self):
         from serve import Harness
-        docker = os.environ.get('MO_DOCKER_IMAGE', '')
+        docker = DOCKER
         with Harness(port=0, docker=docker, at=6) as harness:
             work = harness.work
             url = harness.url.split('/index.html')[0]
