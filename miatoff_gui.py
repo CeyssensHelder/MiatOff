@@ -318,7 +318,8 @@ class App(tk.Tk):
             self.primary_button.configure(text=("Prepare again" if self.stick_ready else "Prepare USB") if page == "review" else "Continue")
         else:
             self.primary_button.grid_remove()
-        reason = stickflow.blocker(page, drive, have_check, self.override.get(), changed) if wizard else None
+        reason = stickflow.blocker(page, drive, have_check, self.override.get(), changed,
+                                   home=self._home_reason()) if wizard else None
         self.primary_button.configure(state="disabled" if busy or reason else "normal")
         for button in self.job_buttons:
             button.configure(state="disabled" if busy else "normal")
@@ -610,6 +611,8 @@ class App(tk.Tk):
             self.first_choose_card = self.first_choose_card or frame
             for index, (key, title, description, install_label, remove_label) in enumerate(items):
                 self._row(frame, key, title, description, install_label, remove_label, first=index == 0)
+            if category == "Interface":
+                self._home_row(frame)
             tk.Frame(frame, bg=CARD, height=10).pack(fill="x")
         self.override = tk.BooleanVar(self, value=False)
         advanced = self.card(body, "Advanced")
@@ -643,6 +646,21 @@ class App(tk.Tk):
         self.segments[key] = segment
         self.options[key] = segment.labels
 
+    def _home_row(self, parent):
+        """Custom menu: a choice of this builder only (the plan has no key for it). The menu travels in the Meters
+        payload, so Install and Remove need Meters set to Install."""
+        self._row(parent, stickflow.HOME_KEY, stickflow.HOME_TITLE,
+                  "Your own Home screen instead of Mazda's: one of your menus or a built-in one. It goes on the car "
+                  "with Meters, so set Meters to Install as well.", "Install", "Mazda's Home")
+        row = tk.Frame(parent, bg=CARD)
+        row.pack(fill="x", padx=20, pady=(0, 8))
+        tk.Label(row, text="Menu", bg=CARD, fg=MUTED, font=SMALL).pack(side="left")
+        self.home_pick = ttk.Combobox(row, state="readonly", width=30)
+        self.home_pick.pack(side="left", padx=8)
+        self.home_pick.bind("<<ComboboxSelected>>", lambda _e: self._home_picked())
+        self._home_ids = []
+        ttk.Button(row, text="Design your menu", style="Small.TButton", command=lambda: self.go("menu")).pack(side="left")
+
     def apply_verdict(self, verdict):
         """Badges from a check, and options the car cannot take greyed out."""
         self._apply_states(verdict["components"], True)
@@ -668,6 +686,13 @@ class App(tk.Tk):
                 self.reasons[key].pack(fill="x")
             else:
                 self.reasons[key].pack_forget()
+        # Custom menu can do what Meters can (it goes on the car with it).
+        home = stickflow.HOME_KEY
+        allowed = stickflow.enabled_options(self.states.get("meters", "not checked"), have_check, self.override.get())
+        for value in ("install", "remove"):
+            self.segments[home].set_enabled(value, value in allowed)
+        if self.vars[home].get() not in ("keep", *allowed) and (have_check or allowed != set()):
+            self.vars[home].set("keep")
         if have_check or self.override.get():
             self.no_check_banner.pack_forget()
         elif not self.no_check_banner.winfo_manager():
@@ -730,15 +755,12 @@ class App(tk.Tk):
             tk.Label(self.review_lines, text=f"{selected} Meters page(s) you designed", bg=CARD, fg=INK, font=BODY, anchor="w").grid(
                 row=at, column=1, sticky="w", pady=3)
             at += 1
-        try:
-            home = self.home_selection()
-        except Exception:  # the build itself reports this properly
-            home = None
-        if home:
-            tk.Label(self.review_lines, text="Home", bg=CARD, fg=MUTED, font=SMALL_BOLD, anchor="w").grid(
+        line = self._home_line()
+        if line:
+            tk.Label(self.review_lines, text=line[0], bg=CARD, fg=MUTED, font=SMALL_BOLD, anchor="w").grid(
                 row=at, column=0, sticky="w", padx=(0, 18), pady=3)
-            tk.Label(self.review_lines, text=f"Home menu: {home.get('name', 'your menu')}", bg=CARD, fg=INK, font=BODY,
-                     anchor="w").grid(row=at, column=1, sticky="w", pady=3)
+            tk.Label(self.review_lines, text=line[1], bg=CARD, fg=INK, font=BODY, anchor="w").grid(
+                row=at, column=1, sticky="w", pady=3)
             at += 1
         for note in stickflow.dependency_notes(choices, self.states):
             WrapLabel(self.review_lines, text="!  " + note, bg=CARD, fg=WARN, font=SMALL).grid(
@@ -835,35 +857,37 @@ class App(tk.Tk):
                    command=lambda: self.copy_designer_url("home")).pack(side="left", padx=8)
         self.menu_status = self.paragraph(one, "Not started.", font=SMALL)
         menus = self.card(page, "Your menus")
-        self.paragraph(menus, "Choose the menu that goes on the stick. Built-in menus are ready to use; menus you send from "
-                              "the designer are added here (sending one with the same name replaces it).", pady=(0, 10))
+        self.paragraph(menus, "Choose the menu that Custom menu installs. Built-in menus are ready to use; menus you send "
+                              "from the designer are added here (sending one with the same name replaces it).", pady=(0, 10))
         self.home_list = tk.Frame(menus, bg=CARD)
         self.home_list.pack(fill="x", padx=20)
         actions = tk.Frame(menus, bg=CARD)
         actions.pack(fill="x", padx=20, pady=10)
         ttk.Button(actions, text="Refresh list", style="Small.TButton", command=self.refresh_home_menus).pack(side="left")
         self.home_status = self.paragraph(menus, "", font=SMALL)
-        # Shown while Meters is not set to Install: the menu travels with the Meters install.
+        # Shown until Custom menu and Meters are both set to Install: only then does the menu go on the car.
         self.home_hint = tk.Frame(menus, bg=WARN_BG)
         WrapLabel(self.home_hint, bg=WARN_BG, fg=WARN, font=SMALL,
-                  text="The Home menu goes on the stick with Meters. To install or change it, set Meters to Install "
-                       "(Update, once a check shows Meters installed) under Choose tweaks.").pack(side="left", fill="x", expand=True, padx=12, pady=8)
+                  text="To put this menu on the car, set Custom menu to Install under Choose tweaks, with Meters set to "
+                       "Install (Update, once a check shows Meters installed).").pack(side="left", fill="x", expand=True, padx=12, pady=8)
         ttk.Button(self.home_hint, text="Go to Choose tweaks", style="Small.TButton",
                    command=lambda: self.tabs.select(self.choose_tab)).pack(side="right", padx=12, pady=8)
-        self.vars["meters"].trace_add("write", lambda *_: self._update_home_hint())
+        for key in ("meters", stickflow.HOME_KEY):
+            self.vars[key].trace_add("write", lambda *_: self._update_home_hint())
         two = self.card(page, "Good to know")
         self.paragraph(two, "In the car the menu replaces how Mazda's Home screen looks and the order the Commander knob goes "
                             "through it. Applications, Entertainment, Communication, Navigation and Settings use Mazda's own "
                             "routes; without your own picture they show Mazda's own buttons. FM, DAB, Bluetooth, Android Auto, "
                             "CarPlay and Meters open their list for a moment and then that item, as a tap would; when it is "
                             "not available the list stays open. If anything is not as expected, Mazda's own Home stays.")
-        self.paragraph(two, "To go back to Mazda's Home, choose \"Mazda's own Home\" and make a new stick with Meters set to "
-                            "Install, or remove Meters. This has not been tested in a real car yet: try it parked first.", fg=WARN)
+        self.paragraph(two, "To go back to Mazda's Home, set Custom menu to Mazda's Home under Choose tweaks (with Meters set "
+                            "to Install), or remove Meters. Try a new menu parked first.", fg=WARN)
         self.refresh_home_menus()
         self._update_home_hint()
 
     def _update_home_hint(self):
-        if self.vars["meters"].get() == "install" or not self.home_choice.get():
+        ready = self.vars["meters"].get() == "install" and self.vars[stickflow.HOME_KEY].get() == "install"
+        if ready or not self.home_choice.get():
             self.home_hint.pack_forget()
         elif not self.home_hint.winfo_manager():
             self.home_hint.pack(fill="x", padx=20, pady=(0, 10), before=self.home_status)
@@ -879,7 +903,7 @@ class App(tk.Tk):
                     frame.destroy()
                 self.home_rows = []
                 self.home_choice.set(chosen)
-                for row in [{"id": "", "name": "Mazda's own Home", "items": None, "builtIn": True}] + rows:
+                for row in rows:
                     frame = tk.Frame(self.home_list, bg=CARD)
                     frame.pack(fill="x", pady=5)
                     detail = ("no change to Home" if row["items"] is None else
@@ -894,8 +918,9 @@ class App(tk.Tk):
                                    command=lambda k=row["id"]: self.preview_home_menu(k)).pack(side="right", padx=(8, 0))
                     self.home_rows.append(frame)
             name = next((r["name"] for r in rows if r["id"] == chosen), None)
-            self.home_status.configure(text=(f"On the next Meters install: {name}." if name else
-                                             "On the next Meters install: Mazda's own Home.") + " Saved on this computer.", fg=MUTED)
+            self.home_status.configure(text=(f"Custom menu installs: {name}." if name else "No menu chosen yet.")
+                                       + " Saved on this computer.", fg=MUTED)
+            self._refresh_home_pick(rows, chosen)
         except Exception as error:
             self._home_signature = None
             self.home_status.configure(text="✕  Home menus could not be read; nothing was changed. " + str(error), fg=BAD)
@@ -925,11 +950,60 @@ class App(tk.Tk):
         self._home_signature = None
         self.refresh_home_menus()
 
+    def _refresh_home_pick(self, rows, chosen):
+        """The Custom menu picker under Choose tweaks, in step with Your menus."""
+        self._home_ids = [row["id"] for row in rows]
+        self.home_pick.configure(values=[row["name"] + (" (built in)" if row["builtIn"] else "") for row in rows])
+        if chosen in self._home_ids:
+            self.home_pick.current(self._home_ids.index(chosen))
+        else:
+            self.home_pick.set("Choose a menu")
+
+    def _home_picked(self):
+        at = self.home_pick.current()
+        if 0 <= at < len(self._home_ids):
+            self.home_choice.set(self._home_ids[at])
+            self._home_chosen()
+        self._update_chrome()
+
+    def _home_reason(self):
+        """Why Custom menu cannot be built as chosen (stickflow.home_reason); None when it can."""
+        if not hasattr(self, "home_menus") or stickflow.HOME_KEY not in self.vars:
+            return None
+        try:
+            chosen = bool(self.home_menus.selected())
+        except Exception:  # the build reports a library that cannot be read
+            chosen = False
+        return stickflow.home_reason(self.vars[stickflow.HOME_KEY].get(), self.vars["meters"].get(), chosen)
+
     def home_selection(self):
-        """The Home menu design chosen for the stick, or None. A menu that cannot be read stops the build."""
+        """The Home menu design for the stick, or None. Install: the chosen menu. Mazda's Home: none. Leave as-is: the
+        menu the last Meters stick carried, so reinstalling Meters keeps the menu on the car. A menu that cannot be
+        read stops the build."""
         if self.checking():
             return None
-        return self.home_menus.chosen()
+        choice = self.vars[stickflow.HOME_KEY].get()
+        if choice == "remove":
+            return None
+        if choice == "install":
+            return self.home_menus.chosen()
+        return self.home_menus.built()
+
+    def _home_line(self):
+        """(action, text) for Review, or None."""
+        choice = self.vars[stickflow.HOME_KEY].get()
+        try:
+            home = self.home_selection()
+        except Exception:  # the build itself reports this properly
+            home = None
+        name = home.get("name", "your menu") if home else None
+        if choice == "install":
+            return ("Install", f"{stickflow.HOME_TITLE}: {name or 'no menu chosen'}")
+        if choice == "remove":
+            return ("Mazda's Home", f"{stickflow.HOME_TITLE}: Mazda's own Home again")
+        if name and self.vars["meters"].get() == "install":
+            return ("Keep", f"{stickflow.HOME_TITLE}: {name} (on the last stick)")
+        return None
 
     def _designer_state(self, text, fg):
         """Both designer pages show whether the one designer server is running."""
@@ -1145,12 +1219,22 @@ class App(tk.Tk):
                         f"\nCustom pages: {len(custom['items'])} included, so a Meters already on the car "
                         "is not reported as outdated")
         summary += note
+        reason = None if checking else self._home_reason()
+        if reason:
+            messagebox.showerror("MiatOff", reason)
+            return
         home = self.home_selection()
-        if home:
-            summary += (f"\nHome menu: {home.get('name', 'your menu')} (replaces how Mazda's Home looks)"
-                        if choices.get("meters") == "install" else
-                        f"\nHome menu: {home.get('name', 'your menu')} included, so a Meters already on the car "
-                        "is not reported as outdated")
+        line = None if checking else self._home_line()
+        if line:
+            summary += f"\n{line[1]}"
+        # What the stick carries, remembered once it is written (Custom menu "Leave as-is" carries it again).
+        self._home_mark = None
+        if not checking and choices.get("meters") == "install":
+            choice = self.vars[stickflow.HOME_KEY].get()
+            if choice == "install":
+                self._home_mark = self.home_menus.selected()
+            elif choice == "remove":
+                self._home_mark = ""
         kit = self.kit(custom, home)
         previous = stickwriter.replaces(target, kit.id_name)
         if previous:
@@ -1179,6 +1263,12 @@ class App(tk.Tk):
             self.stick_ready = True
             self.review_result.pack(fill="x", pady=7)
             self.notice = ("✓  USB ready. Follow the steps on this page.", OK)
+            if getattr(self, "_home_mark", None) is not None:
+                try:
+                    self.home_menus.mark_built(self._home_mark)
+                except Exception as mark_error:  # the stick is fine; only "Leave as-is" may not know it
+                    self.notice = ("!  USB ready, but the menu on it could not be remembered: " + str(mark_error), WARN)
+                self._home_mark = None
             self.update_idletasks()
             self.scrollers["review"].canvas.yview_moveto(1.0)
 

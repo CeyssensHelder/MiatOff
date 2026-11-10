@@ -81,10 +81,23 @@ libraries, without reading private firmware dumps.
 
 ## Home menu in the car
 
-**Experimental, not yet tested in a real car.** The Home designer's **Send to MiatOff** stores the design in the
-app's local library, by name. The app's **Design your menu** page lists those menus under **Your menus**, beside
-five built-in ones, each with a **Preview** that runs the car script in the browser. One menu (or Mazda's own Home)
-is chosen for the stick.
+**Experimental.** Installed and working on our car in a first test on 10 November 2026 (the owner's report); not every item of the checklist below is confirmed yet. The Home designer's **Send to MiatOff** stores the design in the app's local library,
+by name. The app's **Design your menu** page lists those menus under **Your menus**, beside five built-in ones,
+each with a **Preview** that runs the car script in the browser. The menu chosen there is the one Custom menu
+installs.
+
+Under **Choose tweaks > Interface**, **Custom menu** decides what the next Meters stick does with the Home menu.
+It is a choice of the builder only: the plan file has no key for it, because the car's installer rejects plans
+with keys it does not know. Install and *Mazda's Home* need Meters set to Install (the app says so and builds
+nothing otherwise).
+
+| Custom menu | The Meters payload on the stick carries |
+|---|---|
+| Install | the menu chosen under Your menus (shown beside the choice) |
+| Mazda's Home | no menu: REPAIR or INSTALL brings back Mazda's own Home |
+| Leave as-is | the menu the last Meters stick carried, so reinstalling or updating Meters keeps the car as it is |
+
+The app remembers which menu each Meters stick carried once that stick is written.
 
 | Built-in | Style | Items |
 |---|---|---|
@@ -121,7 +134,7 @@ Bluetooth, Android Auto and CarPlay open Entertainment, Meters opens Application
 the list item carrying that event (`SelectRadioFM`, `SelectDAB`, `SelectBTAudio`, `SelectAndroidAuto`,
 `SelectCarPlay`/`SelectCarPlayWifi`, the Meters item) through the list's own callback, as a tap would. An item
 that is unavailable leaves the list open. A missing or invalid design, a missing control method, or an error while
-drawing leaves Mazda's Home. Choosing Mazda's own Home and running Meters Install again, removing Meters, or
+drawing leaves Mazda's Home. Custom menu set to Mazda's Home with Meters Install, removing Meters, or
 `MIATOFF-RESTORE` returns the stock Home.
 
 The routes come from `systemApp.js` and `MainMenuCtrl.js` as read in the owner's dump (with permission, for this
@@ -138,7 +151,9 @@ HMI with those shapes, and also against the real `MainMenuCtrl.js` when a dump i
 4. A menu with your own pictures and background: they show, and the selected picture follows focus.
 5. Restart the unit: the menu shows from the first Home. Incoming call, reverse camera and Mazda's own screens
    still work.
-6. Choose Mazda's own Home, REPAIR: the stock Home is back. Then remove Meters: byte-exact stock (installer).
+6. Custom menu set to Mazda's Home, REPAIR: the stock Home is back. Then remove Meters: byte-exact stock
+   (installer).
 
-**None of this has been tested in a real car.** Native integration beyond this userscript (for example editing
-Mazda's own Home files) is not used; see [the research note](16-mazda-menu-customisation.md).
+First car result: the menu installed and worked on our car on 10 November 2026; record each checklist item here
+as it is confirmed. Native integration beyond this userscript (for example editing Mazda's own Home files) is not
+used; see [the research note](16-mazda-menu-customisation.md).

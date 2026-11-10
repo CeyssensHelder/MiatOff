@@ -154,5 +154,6 @@ The existing car installer and USB install builder are unchanged on this branch.
 - Recovery: remove once, recheck the exact stock hashes and confirm the original Home returns; exercise
   no-dialog restore with an intentionally disabled theme. Do not call it stable after a simulator pass.
 
-None of this work has been tested in a real car. Test outcomes are recorded in
-[docs/17](17-unified-designer.md#verification), not inferred from older support-status claims.
+The userscript install described in docs/17 worked on our car in a first test (10 November 2026). Test
+outcomes are recorded in [docs/17](17-unified-designer.md#home-menu-in-the-car), not inferred from older
+support-status claims.

@@ -490,40 +490,68 @@ class GuiTests(unittest.TestCase):
         app.go_back()
         self.assertEqual(app.current(), "choose")
 
-    def test_your_menus_choose_preview_and_build(self):
+    def test_your_menus_and_custom_menu_under_choose_tweaks(self):
         gui, app = self.make_app()
         app.go("menu")
         app.update()
         texts = [w.cget("text").split("\n")[0] for w in app.home_list.winfo_children()
                  for w in w.winfo_children() if isinstance(w, gui.ttk.Radiobutton)]
-        self.assertEqual(texts[:6], ["Mazda's own Home", "2077", "2077 Night", "Cyber", "Track", "Classic"])
+        self.assertEqual(texts[:5], ["2077", "2077 Night", "Cyber", "Track", "Classic"])
         self.assertEqual(app.home_choice.get(), "")
-        app.home_choice.set("starter-track")
-        app._home_chosen()
-        self.assertEqual(app.home_menus.selected(), "starter-track")
+        self.assertIn("No menu chosen", app.home_status.cget("text"))
+        # Custom menu sits under Choose tweaks, outside the plan, with a picker in step with Your menus.
+        self.assertIn("home", app.vars)
+        self.assertNotIn("home", gui.KEYS)
+        self.assertEqual(app.home_pick.get(), "Choose a menu")
+        app.home_pick.current(app._home_ids.index("starter-track"))
+        app._home_picked()
+        self.assertEqual((app.home_menus.selected(), app.home_choice.get()), ("starter-track", "starter-track"))
         self.assertIn("Track", app.home_status.cget("text"))
-        self.assertEqual(app.home_hint.winfo_manager(), "pack", "Meters is not set to Install yet")
+        self.assertEqual(app.home_hint.winfo_manager(), "pack", "Custom menu is not set to Install yet")
         with patch("webbrowser.open") as browser, patch.object(app, "_ensure_designer", return_value=True):
             app.preview_home_menu("starter-track")
         self.assertTrue(browser.call_args[0][0].endswith("/designer/home/car-preview.html?menu=starter-track"))
         app.tabs.select(app.choose_tab)
-        app.vars["meters"].set("install")
-        self.assertEqual(app.home_hint.winfo_manager(), "")
         self.pick_stick(app)
-        builder = Mock()
-        builder.verify.return_value = []
-        ask, _info, error, _warn = self.run_action(gui, app, "build", builder)
+
+        def build():
+            builder = Mock()
+            builder.verify.return_value = []
+            ask, _info, error, _warn = self.run_action(gui, app, "build", builder)
+            return builder, ask, error
+
+        # Install without Meters: refused, nothing written.
+        app.vars["home"].set("install")
+        app.vars["meters"].set("remove")
+        self.assertIn("Meters", app._home_reason())
+        builder, ask, error = build()
+        self.assertIn("Meters", error.call_args[0][1])
+        ask.assert_not_called()
+        app.vars["meters"].set("install")
+        self.assertIsNone(app._home_reason())
+        self.assertEqual(app.home_hint.winfo_manager(), "")
+        builder, ask, error = build()
         error.assert_not_called()
         self.assertEqual(builder.home["name"], "Track")
-        self.assertIn("Home menu: Track", ask.call_args[0][1])
+        self.assertIn("Custom menu: Track", ask.call_args[0][1])
         app._refresh_review()
-        self.assertIn("Home menu: Track", [w.cget("text") for w in app.review_lines.winfo_children()])
-        # Back to Mazda's own Home: no menu on the stick.
-        app.home_choice.set("")
-        app._home_chosen()
-        builder = Mock()
-        builder.verify.return_value = []
-        self.run_action(gui, app, "build", builder)
+        self.assertIn("Custom menu: Track", [w.cget("text") for w in app.review_lines.winfo_children()])
+        self.assertEqual(app.home_menus.built()["name"], "Track", "the stick's menu is remembered")
+        # Leave as-is carries the last stick's menu again, even when another one is chosen now.
+        app.home_pick.current(app._home_ids.index("starter-cyber"))
+        app._home_picked()
+        app.vars["home"].set("keep")
+        builder, _ask, _error = build()
+        self.assertEqual(builder.home["name"], "Track")
+        app._refresh_review()
+        self.assertIn("Custom menu: Track (on the last stick)", [w.cget("text") for w in app.review_lines.winfo_children()])
+        # Mazda's Home: no menu, and Leave as-is keeps it that way.
+        app.vars["home"].set("remove")
+        builder, _ask, _error = build()
+        self.assertIsNone(builder.home)
+        self.assertIsNone(app.home_menus.built())
+        app.vars["home"].set("keep")
+        builder, _ask, _error = build()
         self.assertIsNone(builder.home)
 
     def make_app(self):

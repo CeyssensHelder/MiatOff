@@ -103,6 +103,20 @@ def test_blockers():
     check("Check your car" in block("review", GOOD, False, False, True), "writing needs a check")
     check(block("review", GOOD, False, True, True) is None, "or the explicit bypass")
     check("cannot be used" in block("review", BAD, True, False, True), "the stick is checked again before writing")
+    # Custom menu travels with Meters and is not a plan key (the car rejects plans with unknown keys).
+    reason = stickflow.home_reason
+    check(stickflow.HOME_KEY not in stickflow.KEYS and stickflow.HOME_KEY not in stickflow.make_plan({}),
+          "Custom menu is not in the plan")
+    check(reason("keep", "keep", False) is None, "Custom menu left as-is needs nothing")
+    check("Meters" in reason("install", "keep", True) and "Meters" in reason("remove", "remove", True),
+          "Custom menu Install or Mazda's Home needs Meters set to Install")
+    check("Choose the menu" in reason("install", "install", False), "Install needs a chosen menu")
+    check(reason("install", "install", True) is None and reason("remove", "install", False) is None, "otherwise it can be built")
+    check("Meters" in block("choose", GOOD, True, False, False, home=reason("install", "keep", True)),
+          "the Custom menu reason stops step 3")
+    check("Meters" in block("review", GOOD, True, False, True, home=reason("install", "keep", True)),
+          "and the writing")
+    check("Plug in" in block("review", None, True, False, True, home="x"), "a missing stick is still named first")
     check(stickflow.done_steps(GOOD, True, True, False) == {"prepare", "check", "choose"}, "finished steps are marked")
     check(stickflow.done_steps(BAD, False, False, False) == set(), "an unsuitable stick is not a finished step")
 
