@@ -92,6 +92,9 @@ d.ingestText(process.argv[2]);
 assert.equal(d.target.speed, 30);
 assert.equal(d.target.throttle, 100);
 assert.equal(d.target.coolant, 85);
+assert.equal(d.target.iat, 31);
+assert.equal(d.target.outside, 17);
+assert(Math.abs(d.target.fuel - 120 * 100 / 181) < 0.001);
 assert(Math.abs(d.target.rpm - Number(process.argv[3]) * 2) < 0.01);
 assert.equal(d.stale(), false);
 now += 3100;
@@ -101,7 +104,7 @@ assert.equal(d.stale(), true, 'repeated LiveSeq must not refresh freshness');
             subprocess.run(['node', '-e', script,
                             str(Path(__file__).resolve().parents[2] / 'meters/js/data.js'),
                             live, values['EngineSpeed']], check=True)
-            for path in ('/', '/collector.log', '/cvd.txt', '/../README.md', '/js/../../README.md'):
+            for path in ('/', '/collector.log', '/cvd.txt', '/../README.md', '/js/../../README.md', '/%00', '/js/%00'):
                 with self.assertRaises(HTTPError) as error:
                     urlopen(url + path)
                 self.assertEqual(error.exception.code, 404)
