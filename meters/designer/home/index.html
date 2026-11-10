@@ -8,20 +8,14 @@
     <link rel="stylesheet" href="home.css" />
   </head>
   <body>
+    <!-- Main actions. Inside the designer the shared header shows them (Undo, Redo, Preview, Send, Export);
+         this row is only visible when the page is opened on its own. -->
     <header class="home-toolbar">
-      <button id="undo">Undo</button><button id="redo">Redo</button
-      ><button id="add">Add item</button
-      ><button id="duplicate">Duplicate</button
-      ><button id="remove">Delete</button><button id="try">Try menu</button
-      ><button id="import">Import</button
-      ><button id="export">Export design</button
-      ><button id="png">Save preview PNG</button
-      ><button id="reset">New design</button
-      ><select id="starter" aria-label="Start from a built-in menu" hidden>
-        <option value="">Start from built-in…</option></select
+      <span id="save-status" role="status"></span
+      ><button id="undo">Undo</button><button id="redo">Redo</button
+      ><button id="try" class="primary">Preview</button
       ><button id="send" class="primary">Send to MiatOff</button
-      ><button id="export-original" hidden>Export retained draft</button
-      ><span id="save-status" role="status"></span>
+      ><button id="export">Export</button>
     </header>
     <p id="notice" role="alert"></p>
     <div id="recovery" hidden>
@@ -29,54 +23,78 @@
       ><button id="export-saved">Export saved draft</button
       ><button id="recover">Recover with a new design</button>
     </div>
-    <div class="home-workspace">
-      <aside class="library-panel">
-        <label
-          >Menu name <input id="menu-name" maxlength="40" placeholder="My Home menu"
-        /></label>
-        <h2>Items / Commander order</h2>
-        <p>Use arrows for knob order. Layer buttons change drawing order.</p>
-        <div id="items"></div>
-        <h3>Arrange</h3>
-        <select id="align" aria-label="Align items">
-          <option value="">Align selection…</option>
-          <option value="left">Left</option>
-          <option value="top">Top</option>
-          <option value="horizontal">Distribute horizontally</option></select
-        ><label
-          >Snap
-          <select id="snap">
-            <option value="1">1 px</option>
-            <option value="8" selected>8 px</option>
-          </select></label
-        ><button id="zoom">Fit / 100%</button>
-        <details>
+    <main class="home-workspace">
+      <aside class="library-panel" aria-label="Menu tools">
+        <section class="panel-section">
+          <div class="panel-heading"><h2>Menu</h2></div>
+          <label class="select-label"
+            >Menu name
+            <input id="menu-name" maxlength="40" placeholder="My Home menu"
+          /></label>
+          <label class="select-label"
+            >Start from
+            <select id="starter" aria-label="Start from a built-in menu" hidden>
+              <option value="">Built-in menu…</option>
+            </select></label
+          >
+          <div class="page-actions">
+            <button id="import">Import</button
+            ><button id="reset">New design</button
+            ><button id="png">Save picture</button
+            ><button id="export-original" hidden>Export retained draft</button>
+          </div>
+        </section>
+        <section class="panel-section">
+          <div class="panel-heading"><h2>Commander order</h2></div>
+          <p class="hint">
+            The knob goes through the items in this order. Arrows change it;
+            the canvas layout stays.
+          </p>
+          <div id="items"></div>
+        </section>
+        <section class="panel-section">
+          <div class="panel-heading"><h2>Arrange</h2></div>
+          <select id="align" aria-label="Align items">
+            <option value="">Align selection…</option>
+            <option value="left">Left</option>
+            <option value="top">Top</option>
+            <option value="horizontal">Distribute horizontally</option>
+          </select>
+        </section>
+        <details class="panel-section" open>
           <summary>Background</summary>
-          <label>Colour <input id="bg-color" type="color" /></label
-          ><label
+          <label class="select-label"
+            >Colour <input id="bg-color" type="color"
+          /></label>
+          <label class="select-label"
             >Image
             <input
               id="bg-image"
               type="file"
-              accept="image/png,image/jpeg,image/webp" /></label
-          ><button id="bg-clear">Clear background</button
-          ><label
+              accept="image/png,image/jpeg,image/webp"
+          /></label>
+          <button id="bg-clear">Clear background</button>
+          <label class="select-label"
             >Fit
             <select id="bg-fit">
               <option value="cover">Fill / crop</option>
               <option value="contain">Fit whole image</option>
             </select></label
-          ><label>Accent <input id="accent" type="color" /></label>
+          >
+          <label class="select-label"
+            >Accent <input id="accent" type="color"
+          /></label>
         </details>
-        <details>
+        <details class="panel-section" open>
           <summary>Look</summary>
-          <label
+          <label class="select-label"
             >Item frame
             <select id="look-frame">
               <option value="outline">Outline</option>
               <option value="none">None (pictures show focus)</option>
             </select></label
-          ><label
+          >
+          <label class="select-label"
             >Label font
             <select id="look-font">
               <option value="Arial">Mazda (Arial)</option>
@@ -85,74 +103,110 @@
               <option value="MO Condensed">Rajdhani</option>
               <option value="MO Sport">Russo One</option>
             </select></label
-          ><label>Label colour <input id="look-color" type="color" /></label
-          ><label
+          >
+          <label class="select-label"
+            >Label colour <input id="look-color" type="color"
+          /></label>
+          <label class="select-label"
             >Label size
             <input id="look-size" type="number" min="10" max="32" step="1"
           /></label>
         </details>
       </aside>
-      <main class="home-stage">
-        <div id="canvas-wrap">
-          <canvas
-            id="canvas"
-            width="800"
-            height="480"
-            tabindex="0"
-            aria-label="Home menu canvas"
-          ></canvas>
+      <section class="workspace" aria-label="Menu workspace">
+        <div class="canvas-toolbar">
+          <button id="add">+ Add item</button>
+          <div class="selection-tools">
+            <button id="duplicate-item">Duplicate</button
+            ><button id="remove">Delete</button
+            ><button id="layer-back" title="Draw behind the item below">
+              Backward</button
+            ><button id="layer-front" title="Draw over the item above">
+              Forward
+            </button>
+          </div>
+          <div class="view-tools">
+            <label class="sr-only" for="snap">Snap</label
+            ><select id="snap" aria-label="Snap">
+              <option value="1">Snap 1 px</option>
+              <option value="8" selected>Snap 8 px</option></select
+            ><button id="zoom">Fit / 100%</button>
+          </div>
         </div>
-        <p>
-          Design: drag, resize at the lower-right corner, Shift-click to
-          multi-select. Arrow keys nudge; Shift nudges eight pixels.
-        </p>
-        <div id="navigation" hidden>
-          <button id="previous">Previous</button
-          ><button id="select">Select</button><button id="next">Next</button
-          ><button id="back">Back</button><button id="home">Home</button>
+        <div class="home-stage">
+          <div id="canvas-wrap">
+            <canvas
+              id="canvas"
+              width="800"
+              height="480"
+              tabindex="0"
+              aria-label="Home menu canvas"
+            ></canvas>
+          </div>
+          <div id="navigation" hidden>
+            <button id="previous">Previous</button
+            ><button id="select">Select</button
+            ><button id="next">Next</button><button id="back">Back</button
+            ><button id="home">Home</button>
+          </div>
         </div>
-        <p id="route" role="status">
-          PC design preview. Destinations are simulated.
-        </p>
-        <details>
-          <summary id="check-count">Design checks</summary>
-          <ul id="checks"></ul>
-        </details>
-      </main>
-      <aside class="inspector-panel">
-        <h2>Selected item</h2>
-        <label>Name <input id="name" maxlength="20" /></label
-        ><label
+        <div class="workspace-footer">
+          <p id="route" role="status">
+            Drag to move, the lower-right corner resizes, Shift-click selects
+            more. Arrow keys nudge; Shift nudges eight pixels.
+          </p>
+          <details class="checks">
+            <summary id="check-count">Design checks</summary>
+            <ul id="checks"></ul>
+          </details>
+        </div>
+      </section>
+      <aside class="inspector-panel" aria-label="Properties">
+        <div class="inspector-heading">
+          <h2>Properties</h2>
+          <p id="inspector-subtitle">Select an item to edit it.</p>
+        </div>
+        <label class="select-label"
+          >Name <input id="name" maxlength="20"
+        /></label>
+        <label class="select-label"
           >Opens
           <select id="opens"></select
         ></label>
         <div class="coordinates">
-          <label>X<input id="x" type="number" /></label
-          ><label>Y<input id="y" type="number" /></label
-          ><label>Width<input id="w" type="number" /></label
-          ><label>Height<input id="h" type="number" /></label>
+          <label class="select-label">X<input id="x" type="number" /></label
+          ><label class="select-label">Y<input id="y" type="number" /></label
+          ><label class="select-label"
+            >Width<input id="w" type="number" /></label
+          ><label class="select-label"
+            >Height<input id="h" type="number"
+          /></label>
         </div>
-        <label><input id="locked" type="checkbox" />Locked</label
-        ><label><input id="hidden" type="checkbox" />Hidden in menu</label
-        ><label
-          >Normal icon<input
+        <label class="check-label"><input id="locked" type="checkbox" />Locked</label
+        ><label class="check-label"
+          ><input id="hidden" type="checkbox" />Hidden in menu</label
+        >
+        <h3>Pictures</h3>
+        <label class="select-label"
+          >Normal<input
             id="normal"
             type="file"
-            accept="image/png,image/jpeg,image/webp" /></label
-        ><button id="normal-clear">Default symbol</button
-        ><label
-          >Selected icon<input
+            accept="image/png,image/jpeg,image/webp"
+        /></label>
+        <button id="normal-clear">Default symbol</button>
+        <label class="select-label"
+          >Selected<input
             id="selected"
             type="file"
-            accept="image/png,image/jpeg,image/webp" /></label
-        ><button id="selected-clear">Use normal icon</button
-        ><button id="layer-back">Layer backward</button
-        ><button id="layer-front">Layer forward</button>
-        <p>
-          Names, destinations and Commander order stay independent of layout.
+            accept="image/png,image/jpeg,image/webp"
+        /></label>
+        <button id="selected-clear">Use normal picture</button>
+        <p class="hint">
+          Names, destinations and Commander order stay independent of the
+          layout.
         </p>
       </aside>
-    </div>
+    </main>
     <input id="file" type="file" accept="application/json,.json" hidden />
     <script type="module" src="app.mjs"></script>
   </body>

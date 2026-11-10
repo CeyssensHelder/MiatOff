@@ -7,18 +7,36 @@
     <title>MiatOff Meters Designer</title>
     <link rel="stylesheet" href="studio-v3.css" />
     <style>
-      .mode-choice {
-        font-size: 12px;
-        display: flex;
-        gap: 6px;
-        align-items: center;
+      .brand strong {
+        white-space: nowrap;
       }
-      .mode-choice select {
-        max-width: 140px;
+      .mode-switch {
+        display: flex;
+        flex: none;
+        padding: 3px;
+        gap: 2px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: #0b1018;
+      }
+      .mode-switch button {
+        font-size: 13px;
+        min-height: 32px;
+        padding: 5px 14px;
+        color: var(--muted);
+      }
+      .mode-switch button[aria-pressed="true"] {
+        background: var(--accent);
+        color: #062a22;
+        font-weight: 700;
+      }
+      .mode-switch button:disabled {
+        cursor: progress;
       }
       #home-studio {
         position: fixed;
-        inset: 68px 0 0;
+        left: 0;
+        top: 68px;
         width: 100%;
         height: calc(100dvh - 68px);
         border: 0;
@@ -38,19 +56,34 @@
       }
       body[data-designer-mode="home"]
         .studio-header
-        > :not(.brand):not(.mode-choice) {
+        > :not(.brand):not(.mode-switch):not(.home-actions) {
         display: none !important;
       }
       body[data-designer-mode="home"] .studio-header {
         height: 68px;
         min-height: 0;
       }
+      .home-actions {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-left: auto;
+      }
+      .home-actions[hidden] {
+        display: none;
+      }
+      #home-save-status {
+        font-size: 11px;
+        color: var(--muted);
+        width: 160px;
+        text-align: right;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
       @media (max-width: 1199px) {
         .studio-header {
           flex-wrap: wrap;
-        }
-        .mode-choice {
-          flex: none;
         }
         .studio-header nav {
           margin-left: auto;
@@ -60,20 +93,28 @@
         .studio-header {
           grid-template-columns: minmax(0, 1fr) auto;
         }
-        .mode-choice {
+        .mode-switch {
           grid-column: 1/-1;
           grid-row: 3;
-          justify-content: flex-end;
-        }
-        .mode-choice select {
-          width: 140px;
+          justify-self: end;
         }
         .detail-control {
           grid-row: 2;
         }
-        body[data-designer-mode="home"] .mode-choice {
+        body[data-designer-mode="home"] .mode-switch {
           grid-row: 1;
           grid-column: 2;
+        }
+        body[data-designer-mode="home"] .home-actions {
+          grid-column: 1/-1;
+          grid-row: 2;
+          flex-wrap: wrap;
+        }
+        body[data-designer-mode="home"] #home-save-status {
+          display: none;
+        }
+        body[data-designer-mode="home"] .studio-header {
+          height: auto;
         }
         .brand {
           min-width: 0;
@@ -92,13 +133,13 @@
           ><span id="collection-caption" class="breadcrumb">Custom pages</span>
         </div>
       </div>
-      <label class="mode-choice"
-        >Designer
-        <select id="designer-mode" aria-label="Designer mode">
-          <option value="meters">Meters</option>
-          <option value="home">Mazda Home</option>
-        </select></label
-      >
+      <div class="mode-switch" role="group" aria-label="What to design">
+        <button id="mode-meters" data-mode="meters" aria-pressed="true">
+          Meters</button
+        ><button id="mode-home" data-mode="home" aria-pressed="false">
+          Home menu
+        </button>
+      </div>
       <div class="detail-control">
         <label for="editing-detail"
           >Editing detail <span id="detail-value">Basic</span></label
@@ -126,11 +167,24 @@
         ><button
           id="send-builder"
           class="primary"
-          aria-label="Send to MiatOff builder"
-          title="Send all Custom pages to MiatOff builder"
+          aria-label="Send to MiatOff"
+          title="Send all Custom pages to MiatOff"
         >
-          Send to builder</button
+          Send to MiatOff</button
         ><button id="export-open">Export</button>
+      </nav>
+      <nav class="home-actions" aria-label="Home menu actions" hidden>
+        <span id="home-save-status" role="status"></span
+        ><button id="home-undo" title="Undo (Ctrl+Z)">Undo</button
+        ><button id="home-redo" title="Redo (Ctrl+Shift+Z)">Redo</button
+        ><button id="home-try" class="primary">Preview</button
+        ><button
+          id="home-send"
+          class="primary"
+          title="Send this menu to MiatOff's Your menus"
+        >
+          Send to MiatOff</button
+        ><button id="home-export">Export</button>
       </nav>
     </header>
     <p id="builder-feedback" class="handoff-feedback" role="status" hidden></p>
@@ -145,9 +199,9 @@
       <button
         id="send-builder-phone"
         class="primary"
-        aria-label="Send to MiatOff builder"
+        aria-label="Send to MiatOff"
       >
-        Send to builder
+        Send to MiatOff
       </button>
     </div>
     <main>

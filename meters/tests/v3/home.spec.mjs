@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { DESIGNER_URL } from "./config.mjs";
 async function open(page, id = crypto.randomUUID(), count = 5) {
   await page.goto(DESIGNER_URL + "?mode=home&test=1&db=" + id);
-  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await expect(page.locator("#mode-meters")).toBeEnabled();
   const f = page.frameLocator("#home-studio");
   await expect(f.locator("#items .choose")).toHaveCount(count);
   return f;
@@ -20,32 +20,32 @@ test("Home editing, mode isolation, undo, draft reload and invalid imports", asy
   await f.locator("#opens").selectOption("meters");
   await f.locator("#x").fill("400");
   await f.locator("#x").press("Tab");
-  await page.locator("#designer-mode").selectOption("meters");
-  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await page.locator("#mode-meters").click();
+  await expect(page.locator("#mode-meters")).toBeEnabled();
   await expect(page.locator("#canvas")).toBeVisible();
   await page.evaluate(() => {
     __studio.command("Remember Meters page", (p) => {
       p.themes[0].pages[0].name = "Remembered page";
     });
   });
-  await page.locator("#designer-mode").selectOption("home");
-  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await page.locator("#mode-home").click();
+  await expect(page.locator("#mode-meters")).toBeEnabled();
   await expect(f.locator("#name")).toHaveValue("My gauges");
   expect(
     await page.evaluate(() => __studio.store.project.themes[0].pages[0].name),
   ).toBe("Remembered page");
-  await f.locator("#undo").click();
+  await page.locator("#home-undo").click();
   await expect(f.locator("#x")).not.toHaveValue("400");
-  await f.locator("#redo").click();
+  await page.locator("#home-redo").click();
   await expect(f.locator("#x")).toHaveValue("400");
-  await f.locator("#try").click();
+  await page.locator("#home-try").click();
   await f.locator("#next").click();
   await f.locator("#select").click();
   await expect(f.locator("#route")).toContainText("Simulated destination");
-  await f.locator("#try").click();
-  await expect(f.locator("#save-status")).toContainText("Saved");
+  await page.locator("#home-try").click();
+  await expect(page.locator("#home-save-status")).toContainText("Saved");
   await page.reload();
-  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await expect(page.locator("#mode-meters")).toBeEnabled();
   await expect(f.locator("#items .choose")).toHaveCount(6);
   await f.locator("#file").setInputFiles({
     name: "bad.json",
@@ -63,13 +63,13 @@ test("Home conflict detection and responsive preview exports", async ({
   const id = crypto.randomUUID(),
     f = await open(page, id);
   await f.locator("#add").click();
-  await expect(f.locator("#save-status")).toContainText("Saved");
+  await expect(page.locator("#home-save-status")).toContainText("Saved");
   const other = await context.newPage(),
     g = await open(other, id, 6);
   await g.locator("#items .choose").first().click();
   await g.locator("#name").fill("Other tab");
   await g.locator("#name").press("Tab");
-  await expect(g.locator("#save-status")).toContainText("Saved");
+  await expect(other.locator("#home-save-status")).toContainText("Saved");
   await expect(f.locator("#recovery")).toBeVisible();
   await f.locator("#reload").click();
   await expect(f.locator("#items")).toContainText("Other tab");
@@ -127,7 +127,7 @@ test("Home artwork states, upload cancellation, pointer transforms and save fail
       )
       .toBe(field === "normal" ? 1 : field === "selected" ? 2 : 3);
   }
-  await f.locator("#try").click();
+  await page.locator("#home-try").click();
   await expect
     .poll(() =>
       frame.evaluate(() =>
@@ -153,9 +153,9 @@ test("Home artwork states, upload cancellation, pointer transforms and save fail
       ),
     )
     .toEqual([255, 0, 0]);
-  await f.locator("#try").click();
+  await page.locator("#home-try").click();
   const download = page.waitForEvent("download");
-  await f.locator("#export").click();
+  await page.locator("#home-export").click();
   const d = await download;
   const fs = await import("node:fs/promises");
   const doc = JSON.parse(await fs.readFile(await d.path(), "utf8"));
@@ -191,7 +191,7 @@ test("Home artwork states, upload cancellation, pointer transforms and save fail
   expect(
     await frame.evaluate(() => HomeDesigner.store.project.items[0].x),
   ).toBeGreaterThan(before);
-  await f.locator("#undo").click();
+  await page.locator("#home-undo").click();
   await expect(f.locator("#x")).toHaveValue(String(before));
   const beforeResize = await frame.evaluate(() => ({
     ...HomeDesigner.store.project.items[0],
@@ -209,7 +209,7 @@ test("Home artwork states, upload cancellation, pointer transforms and save fail
   expect(
     await frame.evaluate(() => HomeDesigner.store.project.items[0].w),
   ).toBeGreaterThan(beforeResize.w);
-  await f.locator("#undo").click();
+  await page.locator("#home-undo").click();
   await frame.evaluate(() => {
     const original = createImageBitmap;
     window.createImageBitmap = (...args) =>
@@ -225,11 +225,11 @@ test("Home artwork states, upload cancellation, pointer transforms and save fail
   await expect
     .poll(() => frame.evaluate(() => typeof window.finishUpload))
     .toBe("function");
-  await page.locator("#designer-mode").selectOption("meters");
-  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await page.locator("#mode-meters").click();
+  await expect(page.locator("#mode-meters")).toBeEnabled();
   await frame.evaluate(() => window.finishUpload());
-  await page.locator("#designer-mode").selectOption("home");
-  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await page.locator("#mode-home").click();
+  await expect(page.locator("#mode-meters")).toBeEnabled();
   await expect(f.locator("#notice")).toContainText("Design changed");
   await frame.evaluate(() => {
     HomeDesigner.persistence.save = async () => {
@@ -262,9 +262,9 @@ test("Home import and New design replace the current design, and undo brings it 
   expect(await frame.evaluate(() => HomeDesigner.store.project.accent)).toBe(
     "#123456",
   );
-  await f.locator("#undo").click();
+  await page.locator("#home-undo").click();
   await expect(f.locator("#items .choose").first()).not.toHaveText("Imported");
-  await f.locator("#redo").click();
+  await page.locator("#home-redo").click();
   await expect(f.locator("#items .choose").first()).toHaveText("Imported");
   await f.locator("#reset").click();
   await expect(f.locator("#items .choose").first()).not.toHaveText("Imported");
@@ -277,7 +277,7 @@ test("Meters shortcuts do nothing while Mazda Home is shown", async ({
   page,
 }) => {
   await page.goto(DESIGNER_URL + "?test=1&db=" + crypto.randomUUID());
-  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await expect(page.locator("#mode-meters")).toBeEnabled();
   await page.evaluate(() => {
     __studio.command("Name the page", (p) => {
       p.themes[0].pages[0].name = "Kept page";
@@ -296,8 +296,8 @@ test("Meters shortcuts do nothing while Mazda Home is shown", async ({
       }),
     );
   const before = await state();
-  await page.locator("#designer-mode").selectOption("home");
-  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await page.locator("#mode-home").click();
+  await expect(page.locator("#mode-meters")).toBeEnabled();
   await page.frameLocator("#home-studio").locator("#items .choose").first().waitFor();
   await page.locator(".brand").click();
   // Checked after every key, so one shortcut cannot hide what another did.
@@ -324,7 +324,7 @@ test("Home recovery: an unreadable draft can be exported, and the retained draft
     "base64",
   );
   await f.locator("#normal").setInputFiles({ name: "i.png", mimeType: "image/png", buffer: icon });
-  await expect(f.locator("#save-status")).toContainText("Saved");
+  await expect(page.locator("#home-save-status")).toContainText("Saved");
   // Make the saved draft unreadable: a name the model refuses.
   await frame.evaluate(async (name) => {
     const db = await new Promise((resolve) => {
@@ -382,15 +382,15 @@ test("A Home page that fails to load leaves Meters running and says so", async (
     route.fulfill({ status: 404, body: "missing" }),
   );
   await page.goto(DESIGNER_URL + "?test=1&db=" + crypto.randomUUID());
-  await expect(page.locator("#designer-mode")).toBeEnabled();
-  await page.locator("#designer-mode").selectOption("home");
+  await expect(page.locator("#mode-meters")).toBeEnabled();
+  await page.locator("#mode-home").click();
   await expect(page.locator("#status")).toContainText("Could not switch designer");
-  await expect(page.locator("#designer-mode")).toHaveValue("meters");
+  await expect(page.locator("#mode-meters")).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#canvas")).toBeVisible();
   await page.goto(DESIGNER_URL + "?mode=home&test=1&db=" + crypto.randomUUID());
   await expect(page.locator("#notice")).toBeVisible();
   await expect(page.locator("#status")).toContainText("Could not switch designer");
-  await expect(page.locator("#designer-mode")).toHaveValue("meters");
+  await expect(page.locator("#mode-meters")).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#canvas")).toBeVisible();
 });
 
@@ -430,4 +430,37 @@ test("Home WebP and multi-item artwork, refused coordinates and Backspace", asyn
   await f.locator("#items .choose").nth(0).click();
   await f.locator("#items .choose").nth(0).press("Backspace");
   await expect(f.locator("#items .choose")).toHaveCount(4);
+});
+
+test("One header: the Meters | Home menu switch and each mode's actions in the same place", async ({
+  page,
+}) => {
+  await page.goto(DESIGNER_URL + "?test=1&db=" + crypto.randomUUID());
+  await expect(page.locator("#mode-meters")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".home-actions")).toBeHidden();
+  await expect(page.locator("#send-builder")).toBeVisible();
+  await page.locator("#mode-home").click();
+  await expect(page.locator("#mode-home")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".home-actions")).toBeVisible();
+  await expect(page.locator("#send-builder")).toBeHidden();
+  const f = page.frameLocator("#home-studio");
+  await expect(f.locator("#items .choose")).toHaveCount(5);
+  // The Home page's own action row stays hidden inside the designer.
+  await expect(f.locator(".home-toolbar")).toBeHidden();
+  await expect(page.locator("#home-undo")).toBeDisabled();
+  await f.locator("#add").click();
+  await expect(f.locator("#items .choose")).toHaveCount(6);
+  await expect(page.locator("#home-undo")).toBeEnabled();
+  await expect(page.locator("#home-save-status")).toContainText(/Saved|Unsaved/);
+  // Undo from the keyboard with the focus on the shared header.
+  await page.locator(".brand").click();
+  await page.keyboard.press("Control+Z");
+  await expect(f.locator("#items .choose")).toHaveCount(5);
+  await page.locator("#home-try").click();
+  await expect(page.locator("#home-try")).toHaveText("Back to design");
+  await expect(f.locator("#navigation")).toBeVisible();
+  await page.locator("#home-try").click();
+  await page.locator("#mode-meters").click();
+  await expect(page.locator("#mode-meters")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#send-builder")).toBeVisible();
 });

@@ -91,7 +91,10 @@ mode for the shared Designer (one 800 × 480 screen, 1–12 items, background, n
 
 User feedback: the Meters and Home design pages look and work differently.
 
-- [ ] Make the Home designer (meters/designer/home/) and the Meters designer (meters/designer/v3/) share one layout:
+- [x] Make the Home designer (meters/designer/home/) and the Meters designer (meters/designer/v3/) share one layout:
   the same toolbar, side panels, inspector sections, Send button and status line, so both feel like one tool.
+  Done: Meters | Home menu tabs, one header with the same actions, the Meters layout for Home, one Send name.
+- [ ] Still different in the designer: Meters has editing detail levels, a project dialog and phone sheets
+  (Tools / Properties); Home shows its panels below the canvas on narrow windows instead.
 - [ ] Do the same for the app's two design pages (Design your Meters, Design your menu): same cards, same list with
   Preview, same wording for choosing what goes on the stick.

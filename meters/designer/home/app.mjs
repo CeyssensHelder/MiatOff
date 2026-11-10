@@ -8,6 +8,17 @@ import { moveGroup, groupBounds, snapSelection } from "../shared/geometry.mjs";
 const $ = (id) => document.getElementById(id),
   canvas = $("canvas"),
   ctx = canvas.getContext("2d");
+// Inside the designer the shared header shows the main actions and the save status.
+if (window.parent !== window) document.body.classList.add("embedded");
+let chromeListener = null;
+function chrome() {
+  chromeListener?.({
+    undo: !$("undo").disabled,
+    redo: !$("redo").disabled,
+    trying,
+    saveStatus: $("save-status").textContent,
+  });
+}
 const params = new URLSearchParams(location.search),
   namespace =
     params.get("test") === "1"
@@ -85,7 +96,8 @@ async function flush() {
       try {
         await persistence.save(doc, { session, roots: store.assetRoots() });
         dirty = at !== generation;
-        $("save-status").textContent = "Saved locally";
+        $("save-status").textContent = "Saved " + new Date().toLocaleTimeString();
+        chrome();
         channel.postMessage({ session, revision: persistence.revision });
       } catch (e) {
         notice("Save failed: " + e.message);
@@ -272,9 +284,14 @@ function refresh() {
   $("add").disabled = p.items.length >= 12;
   $("remove").disabled =
     !selection.length || selection.length >= p.items.length;
-  $("duplicate").disabled = !w || p.items.length >= 12;
+  $("duplicate-item").disabled = !w || p.items.length >= 12;
   $("navigation").hidden = !trying;
-  $("try").textContent = trying ? "Back to design" : "Try menu";
+  $("try").textContent = trying ? "Back to design" : "Preview";
+  $("inspector-subtitle").textContent = !w
+    ? "Select an item to edit it."
+    : selection.length > 1
+      ? `${selection.length} items selected`
+      : `${w.label} · opens ${M.destinations.find((d) => d.id === w.opens)?.label ?? w.opens}`;
   const issues = M.checks(p, ctx);
   $("checks").replaceChildren(
     ...issues.map((text) => {
@@ -285,6 +302,7 @@ function refresh() {
   );
   $("check-count").textContent = "Design checks (" + issues.length + ")";
   draw();
+  chrome();
 }
 store.subscribe((_, { changed }) => {
   if (changed) {
@@ -360,7 +378,7 @@ function add(duplicate = false) {
   });
 }
 $("add").onclick = () => add();
-$("duplicate").onclick = () => add(true);
+$("duplicate-item").onclick = () => add(true);
 $("remove").onclick = () =>
   command("Delete items", (p) => {
     const ids = new Set(unlocked().map((w) => w.id));
@@ -707,7 +725,9 @@ fetch("/api/builder/home", { cache: "no-store" })
       o.textContent = m.name;
       $("starter").append(o);
     }
-    $("starter").hidden = !menus.some((m) => m.builtIn);
+    $("starter").hidden = $("starter").closest("label").hidden = !menus.some(
+      (m) => m.builtIn,
+    );
   })
   .catch(() => {});
 $("starter").onchange = async () => {
@@ -871,6 +891,15 @@ Promise.all(
   .then(() => active && refresh())
   .catch(() => {});
 window.HomeDesigner = {
+  // The shared header's buttons, and its view of this designer's state.
+  act(name) {
+    const button = { undo: "undo", redo: "redo", try: "try", send: "send", export: "export" }[name];
+    if (button && !$(button).disabled) $(button).click();
+  },
+  onChrome(listener) {
+    chromeListener = listener;
+    chrome();
+  },
   ready: load(),
   async setActive(value) {
     epoch++;

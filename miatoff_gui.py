@@ -794,7 +794,7 @@ class App(tk.Tk):
         ttk.Button(row, text="Copy address", style="Plain.TButton", command=self.copy_designer_url).pack(side="left", padx=8)
         self.designer_status = self.paragraph(one, "Not started.", font=SMALL)
         custom = self.card(page, "Your pages")
-        self.paragraph(custom, "In the editor, press Send to builder to sync every page in Custom here. Choose up to eight pages "
+        self.paragraph(custom, "In the designer, press Send to MiatOff to sync every page in Custom here. Choose up to eight pages "
                                "to include in your export. Updates keep your include choices. There are no theme groups.", pady=(0, 10))
         self.custom_list = tk.Frame(custom, bg=CARD)
         self.custom_list.pack(fill="x", padx=20)
@@ -819,7 +819,7 @@ class App(tk.Tk):
         self._update_meters_hint()
         self.custom_notice = WrapLabel(custom, bg=CARD, fg=WARN, font=SMALL)
         removed = self.card(page, "Removed pages")
-        self.paragraph(removed, "When Send to builder is used from an editor draft that lacks some pages, the designer asks first "
+        self.paragraph(removed, "When Send to MiatOff is used from a designer draft that lacks some pages, the designer asks first "
                                 "and then moves those pages here. Restore puts a page back in the list above, not selected. A "
                                 "restored page that is not in the editor draft will be offered for removal again on the next Send.", pady=(0, 10))
         self.removed_list = tk.Frame(removed, bg=CARD)
