@@ -1,0 +1,80 @@
+name: release
+# Builds the desktop app on each operating system. A v* tag also creates a draft GitHub release; run it by hand to only
+# get the builds as workflow artifacts. Every build must pass the selftest: same stick files as from the source.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows-x64
+            app: dist/MiatOff.exe
+          - os: macos-15
+            name: macos-arm64
+            app: dist/MiatOff.app/Contents/MacOS/MiatOff
+          # The oldest supported Ubuntu, so the program also runs on newer ones.
+          - os: ubuntu-22.04
+            name: linux-x64
+            app: dist/MiatOff/MiatOff
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      MIATOFF_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r packaging/requirements.txt
+      - run: python miatoff_gui.py --selftest source.json
+      - run: pyinstaller --noconfirm --clean packaging/miatoff.spec
+      - name: Selftest the packaged app
+        timeout-minutes: 3
+        run: ${{ matrix.app }} --selftest packaged.json
+      - run: python packaging/compare_selftest.py source.json packaged.json
+      - name: Pack
+        run: |
+          mkdir out
+          case "${{ matrix.name }}" in
+            windows-*) cp dist/MiatOff.exe "out/MiatOff-${{ matrix.name }}.exe" ;;
+            # ditto keeps the symlinks inside the app; plain zip would break it.
+            macos-*) ditto -c -k --keepParent dist/MiatOff.app "out/MiatOff-${{ matrix.name }}.zip" ;;
+            linux-*) tar -C dist -czf "out/MiatOff-${{ matrix.name }}.tar.gz" MiatOff ;;
+          esac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MiatOff-${{ matrix.name }}
+          path: out/*
+          if-no-files-found: error
+  release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Source and checksums
+        run: |
+          git archive --format=tar.gz --prefix="MiatOff-$GITHUB_REF_NAME/" -o "out/MiatOff-$GITHUB_REF_NAME-source.tar.gz" HEAD
+          cd out && sha256sum -- * > SHA256SUMS.txt
+      - name: Draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" out/* --draft --prerelease --title "MiatOff $GITHUB_REF_NAME (preview)" \
+            --notes "Experimental preview. The downloads are not signed yet, so Windows and macOS warn when you open them. Tests on a PC or simulator say nothing about your car: run the check first."

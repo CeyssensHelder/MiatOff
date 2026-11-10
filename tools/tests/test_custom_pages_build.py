@@ -94,24 +94,24 @@ class CustomPagesBuildTests(unittest.TestCase):
         self.assertEqual([p["images"] for p in pages], [{"pixel": digest}] * 2)
 
     def test_size_cap_and_invalid_input_stop_the_build_with_a_clear_message(self):
-        with patch.object(bs, "CUSTOM_PAGES_LIMIT", 1000):
-            with self.assertRaises(SystemExit) as stop:
+        with patch.object(bs.kits, "CUSTOM_PAGES_LIMIT", 1000):
+            with self.assertRaises(bs.StickError) as stop:
                 bs.custom_pages_js(self.bundle())
             self.assertIn("limit is", str(stop.exception))
             self.assertIn("fewer pages", str(stop.exception))
         self.assertEqual(bs.CUSTOM_PAGES_LIMIT, 6 * 1024 * 1024)
         tampered = self.bundle()
         tampered["items"][0]["sha256"] = "0" * 64
-        with self.assertRaises(SystemExit) as stop:
+        with self.assertRaises(bs.StickError) as stop:
             bs.custom_pages_js(tampered)
         self.assertIn("not valid", str(stop.exception))
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(bs.StickError):
             bs.custom_pages_js({"kind": "other", "items": [1]})
-        with self.assertRaises(SystemExit):  # nine pages: more than the library selection or the car's group allows
+        with self.assertRaises(bs.StickError):  # nine pages: more than the library selection or the car's group allows
             bs.custom_pages_js(bundle_of(self.pages[:9]))
         two_pages = deepcopy(self.projects[0])
         two = bundle_of([two_pages])
-        with self.assertRaises(SystemExit) as stop:
+        with self.assertRaises(bs.StickError) as stop:
             bs.custom_pages_js(two)
         self.assertIn("single page", str(stop.exception))
 
@@ -167,10 +167,10 @@ class CustomPagesBuildTests(unittest.TestCase):
         self.assertLess(page.index("js/custom.js"), page.index("js/app.js"))
         for font in ("Rajdhani-Bold.ttf", "RussoOne-Regular.ttf"):
             self.assertIn(font, page)
-        files = {k: v for k, v in bs.METERS_FILES.items() if k != "app/meters/js/custom.js"}
-        with patch.object(bs, "METERS_FILES", files):
-            with self.assertRaises(SystemExit) as stop:
-                bs.meters_files()
+        files = {k: v for k, v in bs.kits.METERS_FILES.items() if k != "app/meters/js/custom.js"}
+        with patch.object(bs.kits, "METERS_FILES", files):
+            with self.assertRaises(bs.StickError) as stop:
+                bs.kits.meters_files()
         self.assertIn("custom.js", str(stop.exception))
 
 
