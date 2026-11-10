@@ -140,9 +140,10 @@ function draw(guides = true) {
   ctx.fillText("HOME", 20, 465);
   for (const w of p.items) {
     if (w.hidden) continue;
+    // Without guides (the preview PNG) the editing selection is not drawn; Try menu focus is.
     const chosen = trying
       ? w.id === focused
-      : store.view.selection.includes(w.id);
+      : guides && store.view.selection.includes(w.id);
     const img = image((chosen && w.selected) || w.normal);
     const size = Math.min(w.w - 8, w.h - 28);
     ctx.save();
@@ -304,6 +305,10 @@ for (const d of M.destinations) {
 }
 for (const key of ["x", "y", "w", "h", "name", "opens", "locked", "hidden"])
   $(key).onchange = () => {
+    if (["x", "y", "w", "h"].includes(key) && !/\S/.test($(key).value)) {
+      notice("Enter a number");
+      return refresh();
+    }
     const value = ["locked", "hidden"].includes(key)
       ? $(key).checked
       : ["x", "y", "w", "h"].includes(key)
@@ -378,12 +383,12 @@ for (const kind of ["normal", "selected", "bg"]) {
   $(kind === "bg" ? "bg-image" : kind).onchange = async (e) => {
     const input = e.target,
       file = input.files[0],
-      target = selected()[0]?.id,
+      targets = unlocked().map((w) => w.id),
       at = generation,
       token = epoch;
     if (!file) return;
     try {
-      if (kind !== "bg" && !target) throw Error("Select an item");
+      if (kind !== "bg" && !targets.length) throw Error("Select an unlocked item");
       const a = await normalizeImage(file, {
         types: ["image/png", "image/jpeg", "image/webp"],
         maxBytes: 8388608,
@@ -394,8 +399,8 @@ for (const kind of ["normal", "selected", "bg"]) {
       if (token !== epoch || at !== generation)
         throw Error("Design changed while image loaded; choose it again");
       command("Upload artwork", (p) => {
-        const w = p.items.find((w) => w.id === target);
-        if (kind !== "bg" && (!w || w.locked))
+        const ws = targets.map((id) => p.items.find((w) => w.id === id));
+        if (kind !== "bg" && ws.some((w) => !w || w.locked))
           throw Error("Target item unavailable");
         let key = Object.keys(p.assets).find(
           (k) => p.assets[k].data === a.data,
@@ -405,7 +410,7 @@ for (const kind of ["normal", "selected", "bg"]) {
           p.assets[key] = a;
         }
         if (kind === "bg") p.background.image = key;
-        else w[kind] = key;
+        else for (const w of ws) w[kind] = key;
       });
     } catch (e) {
       notice(e.message);
@@ -577,8 +582,10 @@ window.addEventListener("keydown", (e) => {
   } else if ((e.ctrlKey || e.metaKey) && key === "d") {
     e.preventDefault();
     add(true);
-  } else if (key === "delete") $("remove").click();
-  else if (key.startsWith("arrow")) {
+  } else if (key === "delete" || key === "backspace") {
+    e.preventDefault();
+    $("remove").click();
+  } else if (key.startsWith("arrow")) {
     e.preventDefault();
     const n = e.shiftKey ? 8 : 1;
     command("Nudge items", () =>
@@ -647,19 +654,73 @@ async function load() {
     notice(
       "Draft could not be opened: " +
         e.message +
-        "; export your current design or recover explicitly.",
+        ". Use Export saved draft to keep a copy, then recover with a new design.",
     );
     $("recovery").hidden = false;
     refresh();
   }
+  await showOriginal();
 }
+// Export a stored (packed) document with its artwork when that can still be read, else its layout alone.
+async function exportStored(doc, name) {
+  if (!doc) return notice("There is no saved draft to export.");
+  let out = doc,
+    note = "";
+  try {
+    out = await persistence.hydrate(doc);
+  } catch (e) {
+    note =
+      " Its artwork could not be read (" +
+      e.message +
+      "), so the file has the layout only and cannot be imported as it is.";
+  }
+  download(JSON.stringify(out, null, 2), name);
+  notice("Exported " + name + "." + note);
+}
+async function showOriginal() {
+  $("export-original").hidden = !(await persistence
+    .originalSource()
+    .catch(() => null));
+}
+$("export-saved").onclick = async () => {
+  try {
+    await exportStored(
+      await persistence.current(),
+      "mazda-home-saved-draft.json",
+    );
+  } catch (e) {
+    notice("Export failed: " + e.message);
+  }
+};
+$("export-original").onclick = async () => {
+  try {
+    await exportStored(
+      await persistence.originalSource(),
+      "mazda-home-retained-draft.json",
+    );
+  } catch (e) {
+    notice("Export failed: " + e.message);
+  }
+};
 $("reload").onclick = load;
+let recoverArmed = false;
 $("recover").onclick = async () => {
   try {
+    // Only the first draft replaced by a recovery is retained; a later one stays only in the short history.
+    if (!recoverArmed && (await persistence.originalSource())) {
+      recoverArmed = true;
+      return notice(
+        "A draft from an earlier recovery is already retained, so this saved draft would not be. " +
+          "Use Export saved draft first, then press Recover with a new design again.",
+      );
+    }
+    recoverArmed = false;
     epoch++;
     clearTimeout(timer);
     await saveChain;
     await persistence.prepareReplacement();
+    // Retain what is being replaced now (possibly another tab's newer draft), not the draft this tab opened.
+    persistence.original = (await persistence.current()) ?? persistence.original;
     blocked = false;
     store.project = M.defaults();
     store.view.selection = [];
@@ -668,8 +729,10 @@ $("recover").onclick = async () => {
     dirty = true;
     generation++;
     await flush();
-    $("recovery").hidden = blocked;
+    // The bar stays only if saving the new design was refused (a newer draft elsewhere).
+    $("recovery").hidden = !blocked;
     refresh();
+    await showOriginal();
   } catch (e) {
     blocked = true;
     notice("Recovery failed: " + e.message);
@@ -679,7 +742,7 @@ channel.onmessage = (e) => {
   if (e.data.session !== session && e.data.revision > persistence.revision) {
     blocked = true;
     notice(
-      "Another tab saved a newer Home draft. Reload it before editing; export your current design to keep a copy.",
+      "Another tab saved a newer Home draft. Reload it before editing; Export design keeps a copy of this tab's version.",
     );
     $("recovery").hidden = false;
     refresh();

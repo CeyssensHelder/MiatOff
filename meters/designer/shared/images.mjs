@@ -10,7 +10,13 @@ export async function normalizeImage(
   } = {},
 ) {
   if (!types.includes(file.type) || file.size > maxBytes)
-    throw Error("Choose PNG/JPEG up to 10 MiB");
+    throw Error(
+      "Choose " +
+        types.map((t) => t.slice(6).toUpperCase()).join("/") +
+        " up to " +
+        +(maxBytes / 1048576).toFixed(1) +
+        " MiB",
+    );
   const b = new Uint8Array(await file.arrayBuffer());
   let width = 0,
     height = 0;
@@ -18,7 +24,9 @@ export async function normalizeImage(
     const v = new DataView(b.buffer);
     width = v.getUint32(16);
     height = v.getUint32(20);
-  } else
+  } else if (file.type === "image/webp")
+    ({ width, height } = webpSize(b));
+  else
     for (let i = 2; i + 8 < b.length; ) {
       if (b[i] !== 255) {
         i++;
@@ -34,10 +42,8 @@ export async function normalizeImage(
       if (len < 2) break;
       i += len + 2;
     }
-  if (
-    file.type !== "image/webp" &&
-    (!width || !height || width * height > maxPixels)
-  )
+  // Checked from the header, before the browser decodes (and allocates) the whole image.
+  if (!width || !height || width * height > maxPixels)
     throw Error("Invalid image or more than 16 megapixels");
   const bitmap = await createImageBitmap(file);
   try {
@@ -56,4 +62,24 @@ export async function normalizeImage(
   } finally {
     bitmap.close();
   }
+}
+// Dimensions from a WebP header: extended (VP8X), lossy (VP8) or lossless (VP8L). Zero when unrecognised.
+export function webpSize(b) {
+  const text = (at, n) => String.fromCharCode(...b.subarray(at, at + n));
+  if (b.length < 30 || text(0, 4) !== "RIFF" || text(8, 4) !== "WEBP")
+    return { width: 0, height: 0 };
+  const chunk = text(12, 4),
+    u24 = (at) => b[at] | (b[at + 1] << 8) | (b[at + 2] << 16);
+  if (chunk === "VP8X")
+    return { width: u24(24) + 1, height: u24(27) + 1 };
+  if (chunk === "VP8 " && b[23] === 0x9d && b[24] === 0x01 && b[25] === 0x2a)
+    return {
+      width: (b[26] | (b[27] << 8)) & 0x3fff,
+      height: (b[28] | (b[29] << 8)) & 0x3fff,
+    };
+  if (chunk === "VP8L" && b[20] === 0x2f) {
+    const bits = (b[21] | (b[22] << 8) | (b[23] << 16) | (b[24] << 24)) >>> 0;
+    return { width: (bits & 0x3fff) + 1, height: ((bits >>> 14) & 0x3fff) + 1 };
+  }
+  return { width: 0, height: 0 };
 }

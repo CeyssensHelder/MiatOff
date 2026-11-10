@@ -2,8 +2,43 @@
 const selector = document.getElementById("designer-mode"),
   frame = document.getElementById("home-studio");
 let meters, home, active, metersCaption;
+function showError(text) {
+  document.getElementById("notice").hidden = false;
+  document.getElementById("status").textContent = text;
+}
+// Meters wires this too once it has loaded; Home mode may run without Meters.
+document
+  .getElementById("dismiss-notice")
+  .addEventListener("click", () => {
+    document.getElementById("notice").hidden = true;
+  });
+async function loadHome() {
+  const url = new URL("../home/index.html", import.meta.url);
+  url.search = location.search;
+  await new Promise((resolve, reject) => {
+    // An iframe reports no load errors, so a page that never arrives must time out.
+    const timeout = setTimeout(
+      () => reject(Error("Mazda Home did not load")),
+      20000,
+    );
+    frame.onload = () => {
+      clearTimeout(timeout);
+      resolve();
+    };
+    frame.src = url.href;
+  });
+  const designer = frame.contentWindow.HomeDesigner;
+  if (!designer) throw Error("Mazda Home did not start");
+  await designer.ready;
+  return designer;
+}
+function show(mode) {
+  document.body.dataset.designerMode = mode;
+  frame.hidden = mode !== "home";
+}
 async function switchMode(mode) {
   selector.disabled = true;
+  const previous = active;
   try {
     if (active === "meters") {
       metersCaption = document.getElementById("collection-caption").textContent;
@@ -12,23 +47,11 @@ async function switchMode(mode) {
     if (active === "home") await home.setActive(false);
     if (mode === "meters") {
       meters ??= await import("../v3/app.mjs");
-      document.body.dataset.designerMode = "meters";
-      frame.hidden = true;
+      show("meters");
       await meters.setDesignerActive(true);
     } else {
-      if (!home) {
-        const url = new URL("../home/index.html", import.meta.url);
-        url.search = location.search;
-        await new Promise((resolve, reject) => {
-          frame.onload = resolve;
-          frame.onerror = reject;
-          frame.src = url.href;
-        });
-        home = frame.contentWindow.HomeDesigner;
-        await home.ready;
-      }
-      document.body.dataset.designerMode = "home";
-      frame.hidden = false;
+      home ??= await loadHome();
+      show("home");
       await home.setActive(true);
     }
     active = mode;
@@ -44,9 +67,19 @@ async function switchMode(mode) {
     url.searchParams.set("mode", mode);
     history.replaceState(null, "", url);
   } catch (e) {
-    document.getElementById("notice").hidden = false;
-    document.getElementById("status").textContent =
-      "Could not switch designer: " + e.message;
+    // Put the previous mode back on screen and running, so nothing is left paused behind a wrong selector.
+    selector.value = previous ?? "meters";
+    if (previous) {
+      show(previous);
+      try {
+        if (previous === "meters") await meters.setDesignerActive(true);
+        else await home.setActive(true);
+      } catch {}
+    }
+    showError("Could not switch designer: " + e.message);
+    selector.disabled = false;
+    // Opening straight into Home failed: fall back to Meters rather than an empty page.
+    if (!previous && mode === "home") return switchMode("meters");
   } finally {
     selector.disabled = false;
   }

@@ -25,8 +25,16 @@
         background: #0b1018;
       }
       body[data-designer-mode="home"]
-        > :not(.studio-header):not(#home-studio):not(script) {
+        > :not(.studio-header):not(#home-studio):not(#notice):not(script) {
         display: none !important;
+      }
+      /* A switch error stays readable above the Home frame. */
+      body[data-designer-mode="home"] > #notice:not([hidden]) {
+        position: fixed;
+        top: 68px;
+        left: 0;
+        right: 0;
+        z-index: 10;
       }
       body[data-designer-mode="home"]
         .studio-header

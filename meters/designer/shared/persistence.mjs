@@ -239,17 +239,23 @@ export class Persistence {
   }
   async collect(undoRoots = new Set()) {
     const db = await this.open(),
-      t = db.transaction(["projects", "revisions", "assets"], "readwrite"),
+      t = db.transaction(
+        ["projects", "revisions", "originals", "assets"],
+        "readwrite",
+      ),
       keep = new Set(undoRoots);
-    let pending = 2;
+    let pending = 3;
     const scan = (name) => {
       const c = t.objectStore(name).openCursor();
       c.onsuccess = () => {
         const row = c.result;
         if (row) {
-          Object.values(row.value.document.assets ?? {}).forEach((a) =>
-            keep.add(a.hash),
-          );
+          // A retained original is a bare document (it may be a legacy string); the others are records.
+          const doc = name === "originals" ? row.value : row.value?.document;
+          if (doc && typeof doc === "object")
+            Object.values(doc.assets ?? {}).forEach(
+              (a) => a?.hash && keep.add(a.hash),
+            );
           row.continue();
         } else if (--pending === 0) {
           const a = t.objectStore("assets").openCursor();
@@ -265,10 +271,20 @@ export class Persistence {
     };
     scan("projects");
     scan("revisions");
+    scan("originals");
     return new Promise((resolve, reject) => {
       t.oncomplete = resolve;
       t.onerror = () => reject(t.error);
     });
+  }
+  // The packed document saved now, without its artwork: for exporting a draft that cannot be opened.
+  async current() {
+    const db = await this.open();
+    return (
+      await request(
+        db.transaction("projects").objectStore("projects").get("current"),
+      )
+    )?.document;
   }
   async originalSource() {
     const db = await this.open();

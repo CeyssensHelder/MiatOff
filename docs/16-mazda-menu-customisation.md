@@ -91,12 +91,13 @@ Do not feed a dump to a new analysis tool to bypass the repository's access rule
 bytes later needs an explicitly permitted on-unit investigation or a change to the owner's access instructions.
 Keep all captures private; a future review should share only the required metadata, not a full dump.
 
-## Development included on this branch
+## The PC editor
 
-[`menu-lab/`](../menu-lab/README.md) is an original offline editor and 800 × 480 mock-up. It supports
+The **Mazda Home** mode of the Designer ([docs/17](17-unified-designer.md)) replaces the earlier stand-alone
+menu lab, which was never merged. It is an original offline editor and 800 × 480 mock-up. It supports
 custom background images with fill/fit display, 1–12 editable items with separate normal and selected artwork,
 custom names and destination choices, selection-order changes, and free placement by dragging or coordinates.
-The initial five factory shortcuts can be removed or supplemented in the lab. Visual placement and Commander
+The initial five factory shortcuts can be removed or supplemented in the editor. Visual placement and Commander
 selection order are independent. Presets use an automatic grid above five items.
 
 The version 2 JSON embeds normalised PNG artwork and migrates earlier version 1 exports. Images are decoded
@@ -108,7 +109,7 @@ This is deliberately a **design prototype**, with no install action, new plan ke
 Its default symbols, DOM and navigation are synthetic. Supplied artwork stays on the PC. It does not include
 Mazda or Miatafy assets. The destination catalogue includes factory menus, Meters, Bluetooth audio, FM/DAB,
 Android Auto and CarPlay as design targets only. Their actual native routes/availability remain unverified;
-the lab does not establish that any of these shortcuts can be installed. Arbitrary targets and nested menus
+the editor does not establish that any of these shortcuts can be installed. Arbitrary targets and nested menus
 are deferred. A car implementation must preserve access to factory destinations before permitting removal.
 
 The read-only dump change supplies metadata for the next investigation; it does not introduce a writer.
@@ -151,5 +152,5 @@ The existing car installer and USB install builder are unchanged on this branch.
 - Recovery: remove once, recheck the exact stock hashes and confirm the original Home returns; exercise
   no-dialog restore with an intentionally disabled theme. Do not call it stable after a simulator pass.
 
-None of this branch's new work has been tested in a real car. Test outcomes for this branch are recorded
-in [the validation report](../menu-lab/VALIDATION.md), not inferred from older support-status claims.
+None of this work has been tested in a real car. Test outcomes are recorded in
+[docs/17](17-unified-designer.md#verification), not inferred from older support-status claims.

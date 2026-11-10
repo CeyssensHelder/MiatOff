@@ -31,7 +31,7 @@ clipped captions and reserved screen strips. They do not establish driving safet
 
 Try menu exercises Previous/Next/Select/Back/Home, pointer activation and selected artwork. Destinations are
 clearly simulated and hidden items are skipped. There are no nested menus or arbitrary URL/native-event
-targets. Export design includes referenced artwork; Save preview PNG omits editing handles.
+targets. Export design includes referenced artwork; Save preview PNG omits the editing selection and handles.
 
 ## Documents and recovery
 
@@ -41,9 +41,13 @@ versions 1 and 2 import with their original 120 × 136 item dimensions. Meters f
 
 Documents are limited to 8 MiB and images must decode before import is applied. Uploads are limited to 8 MiB
 and 16 megapixels, normalized locally to PNG within 800 × 480 for backgrounds or 128 × 128 for icons.
-Draft storage retains prior revisions. A conflicting tab pauses editing/autosave until Load newer saved draft
-is used; export preserves an in-memory copy. An unreadable draft is not silently overwritten. Recover with a
-new design explicitly retains the original through the shared recovery path.
+WebP sizes are read from the file header, so the pixel limit applies before decoding. Artwork uploads go to
+every unlocked selected item. Draft storage retains prior revisions. A conflicting tab pauses editing/autosave
+until Load newer saved draft is used; Export design keeps a copy of the in-memory version. An unreadable draft
+is not silently overwritten: **Export saved draft** saves it (with its artwork when that is still readable).
+Recover with a new design retains the replaced draft, and its artwork is kept as long as it is retained;
+**Export retained draft** gives it back. Only the first retained draft is kept, so a second recovery asks for
+an export first. If Home cannot load, the Designer stays in (or falls back to) Meters and says so.
 
 ## Verification
 
@@ -58,9 +62,12 @@ After integrating `master` at `5d972db`, the three desktop shell snapshots were 
 reviewed again to combine the mode selector with the updated crisp rendering. The phone and canvas baselines
 follow upstream. CI now runs Home browser checks through `home-ci.config.mjs`, which owns its server and a
 temporary library; these checks do not compare platform-dependent screenshots.
-The merged branch passed all 82 Chromium cases, 57 JavaScript tests, 29 Python library tests and 9 custom-page
-build tests. The self-contained CI command also passed its three Home cases locally. No new real-car testing
-was performed.
+
+On 10 November 2026 the branch was rebased onto `master` after the packaged-app window (#13), with review
+fixes: Import and New design now apply, Meters shortcuts are idle while Home is shown, recovery keeps and
+exports the replaced draft, a failed Home load leaves Meters running, and WebP sizes are checked before
+decoding. All 87 Chromium cases (8 of them Home), 58 JavaScript tests, 36 Python library tests and 9
+custom-page build tests passed. No new real-car testing was performed.
 
 Validation on 9 November 2026: all 82 Chromium cases, 50 JavaScript tests, 29 Python library tests and
 9 custom-page build tests passed. The Home browser cases were rerun after the final recovery/resize changes,

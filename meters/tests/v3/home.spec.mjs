@@ -306,3 +306,128 @@ test("Meters shortcuts do nothing while Mazda Home is shown", async ({
     expect(await state(), key).toBe(before);
   }
 });
+
+test("Home recovery: an unreadable draft can be exported, and the retained draft keeps its artwork", async ({
+  page,
+}) => {
+  const id = crypto.randomUUID(),
+    f = await open(page, id);
+  let frame = page.frames().find((f) => f.url().includes("/home/index.html"));
+  await f.locator("#items .choose").first().click();
+  const icon = Buffer.from(
+    await frame.evaluate(() => {
+      const c = document.createElement("canvas");
+      c.width = c.height = 8;
+      c.getContext("2d").fillRect(0, 0, 8, 8);
+      return c.toDataURL().split(",")[1];
+    }),
+    "base64",
+  );
+  await f.locator("#normal").setInputFiles({ name: "i.png", mimeType: "image/png", buffer: icon });
+  await expect(f.locator("#save-status")).toContainText("Saved");
+  // Make the saved draft unreadable: a name the model refuses.
+  await frame.evaluate(async (name) => {
+    const db = await new Promise((resolve) => {
+      const r = indexedDB.open(name, 2);
+      r.onsuccess = () => resolve(r.result);
+    });
+    const t = db.transaction("projects", "readwrite"),
+      s = t.objectStore("projects"),
+      r = s.get("current");
+    r.onsuccess = () => {
+      r.result.document.items[0].label = "";
+      s.put(r.result, "current");
+    };
+    await new Promise((resolve) => (t.oncomplete = resolve));
+    db.close();
+  }, "home-test-" + id);
+  await page.reload();
+  await expect(f.locator("#recovery")).toBeVisible();
+  await expect(f.locator("#notice")).toContainText("Export saved draft");
+  let download = page.waitForEvent("download");
+  await f.locator("#export-saved").click();
+  const fs = await import("node:fs/promises");
+  const saved = JSON.parse(await fs.readFile(await (await download).path(), "utf8"));
+  expect(saved.items[0].label).toBe("");
+  expect(Object.values(saved.assets)[0].data).toMatch(/^data:image\/png/);
+  await f.locator("#recover").click();
+  await expect(f.locator("#recovery")).toBeHidden();
+  await expect(f.locator("#export-original")).toBeVisible();
+  // Push the replaced draft out of the short revision history; its artwork must survive collection.
+  frame = page.frames().find((f) => f.url().includes("/home/index.html"));
+  await frame.evaluate(async () => {
+    for (let i = 0; i < 12; i++)
+      await HomeDesigner.persistence.save(HomeDesigner.store.project, {
+        session: "test",
+        roots: [],
+      });
+  });
+  download = page.waitForEvent("download");
+  await f.locator("#export-original").click();
+  const kept = JSON.parse(await fs.readFile(await (await download).path(), "utf8"));
+  expect(kept.items[0].label).toBe("");
+  expect(Object.values(kept.assets)[0].data).toMatch(/^data:image\/png/);
+  // A second recovery would not be retained: it asks for an export first.
+  await frame.evaluate(() => {
+    document.getElementById("recovery").hidden = false;
+  });
+  await f.locator("#recover").click();
+  await expect(f.locator("#notice")).toContainText("already retained");
+});
+
+test("A Home page that fails to load leaves Meters running and says so", async ({
+  page,
+}) => {
+  await page.route("**/designer/home/index.html*", (route) =>
+    route.fulfill({ status: 404, body: "missing" }),
+  );
+  await page.goto(DESIGNER_URL + "?test=1&db=" + crypto.randomUUID());
+  await expect(page.locator("#designer-mode")).toBeEnabled();
+  await page.locator("#designer-mode").selectOption("home");
+  await expect(page.locator("#status")).toContainText("Could not switch designer");
+  await expect(page.locator("#designer-mode")).toHaveValue("meters");
+  await expect(page.locator("#canvas")).toBeVisible();
+  await page.goto(DESIGNER_URL + "?mode=home&test=1&db=" + crypto.randomUUID());
+  await expect(page.locator("#notice")).toBeVisible();
+  await expect(page.locator("#status")).toContainText("Could not switch designer");
+  await expect(page.locator("#designer-mode")).toHaveValue("meters");
+  await expect(page.locator("#canvas")).toBeVisible();
+});
+
+test("Home WebP and multi-item artwork, refused coordinates and Backspace", async ({
+  page,
+}) => {
+  const f = await open(page);
+  const frame = page.frames().find((f) => f.url().includes("/home/index.html"));
+  await f.locator("#items .choose").nth(0).click();
+  await f.locator("#items .choose").nth(1).click({ modifiers: ["Shift"] });
+  const webp = Buffer.from(
+    await frame.evaluate(() => {
+      const c = document.createElement("canvas");
+      c.width = c.height = 16;
+      c.getContext("2d").fillRect(0, 0, 16, 16);
+      return c.toDataURL("image/webp").split(",")[1];
+    }),
+    "base64",
+  );
+  await f.locator("#normal").setInputFiles({ name: "i.webp", mimeType: "image/webp", buffer: webp });
+  await expect
+    .poll(() =>
+      frame.evaluate(() => {
+        const [a, b] = HomeDesigner.store.project.items;
+        return a.normal !== null && a.normal === b.normal;
+      }),
+    )
+    .toBe(true);
+  await f.locator("#normal").setInputFiles({ name: "i.gif", mimeType: "image/gif", buffer: webp });
+  await expect(f.locator("#notice")).toContainText("Choose PNG/JPEG/WEBP up to 8 MiB");
+  await f.locator("#items .choose").nth(0).click();
+  const x = await f.locator("#x").inputValue();
+  await f.locator("#x").fill("");
+  await f.locator("#x").press("Tab");
+  await expect(f.locator("#notice")).toContainText("Enter a number");
+  await expect(f.locator("#x")).toHaveValue(x);
+  await f.locator("#items .choose").nth(0).click();
+  await f.locator("#items .choose").nth(0).press("Backspace");
+  await expect(f.locator("#items .choose")).toHaveCount(4);
+});
