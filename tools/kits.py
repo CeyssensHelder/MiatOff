@@ -25,6 +25,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 from functools import lru_cache
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 import sys
@@ -85,15 +86,33 @@ CUSTOM_PAGES_MAX = 8                  # pages in the car's CUSTOM group
 CUSTOM_DROP = ("id", "locked", "role", "legacyScaleSource")
 
 
+def _positive(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
+
+
+def car_gearing(vehicle: dict) -> dict:
+    """The gearing the car uses to work out the gear: ratios, final drive and rolling circumference (and the tyre
+    they came from), only when all of it is there. Anything missing leaves the car on its built-in ND1 table."""
+    ratios = vehicle.get("ratios")
+    if not (isinstance(ratios, list) and ratios and all(_positive(r) for r in ratios)
+            and _positive(vehicle.get("finalDrive")) and _positive(vehicle.get("circumference"))):
+        return {}
+    out = {"ratios": list(ratios), "finalDrive": vehicle["finalDrive"], "circumference": vehicle["circumference"]}
+    if vehicle.get("tyre") is not None:
+        out["tyre"] = vehicle["tyre"]
+    return out
+
+
 def car_page(setup: dict, images: dict) -> dict:
     """One validated single-page setup, reduced to what the car draws: night look, page, vehicle settings."""
     theme = setup["themes"][0]
     page = theme["pages"][0]
+    vehicle = setup["vehicle"]
     out = {
         "name": page["name"],
         "style": {**theme["style"], **page.get("style", {})},
         "widgets": [{k: v for k, v in w.items() if k not in CUSTOM_DROP} for w in page["widgets"]],
-        "vehicle": {"rpm": setup["vehicle"]["rpm"], "units": setup["vehicle"]["units"]},
+        "vehicle": {"rpm": vehicle["rpm"], "units": vehicle["units"], **car_gearing(vehicle)},
     }
     background = page.get("background") or theme.get("background")
     if background:

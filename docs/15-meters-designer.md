@@ -58,7 +58,7 @@ Run `python miatoff_gui.py --designer` to open the list directly. The loopback b
 | Reading | Car source |
 | --- | --- |
 | speed, rpm, throttle, coolant, intake air, outside, fuel, trip | the live values of the Meters app (smoothed like the built-in pages) |
-| gear | the app's derived gear (rpm per km/h) |
+| gear | a gear the car reports; otherwise derived from rpm per km/h with the page's own gearing (below) |
 | consumption | `econ` (`Drv1AvlFuelE`), scale unverified |
 | G lateral / longitudinal | the app's G values, with the same "what you feel" sign as the built-in G-meter (`?gm=car` mirrors it) |
 | power, torque | the dyno estimate (`dyno.live`), crank estimates only |
@@ -66,6 +66,7 @@ Run `python miatoff_gui.py --designer` to open the list directly. The loopback b
 | chart history | the app's own 10 Hz ring buffer, as long as the longest chart window of the selected pages (at most 120 s) |
 
 A missing value shows an em dash. Units and RPM thresholds come from each page's own vehicle settings, as in the designer.
+Of the vehicle profile only these reach the car (`vehicle` in `custom-pages.js`, written by `car_page()` in `tools/kits.py`): `rpm`, `units` and, when the gearing is complete, `ratios`, `finalDrive`, `circumference` (and `tyre` if set). Complete means at least one ratio, every ratio a number above 0, and a final drive and rolling circumference (m) above 0; otherwise the gearing is left out. With it, the page works out the gear as the closest of its ratios (`ratio x finalDrive x 60 / (circumference x 3.6)` rpm per km/h, within 12 %, not with the clutch pressed, below 5 km/h no gear). Without it, and on the built-in styles, the app's table for the ND1 1.5 6MT (final drive 2.866, 195/50R16, 1.89 m) is used, as before. The gear in chart history uses the gearing of the page shown last. Mass, drag and power figures stay in the designer. Not yet tried in a car with other gearing.
 - **Same picture on both.** The designer and the car draw with the same primitives (rounded rectangles from `arc` quarter circles, G-meter rings as short arcs, text height as a fixed share of the font size, whole-pixel text sizes, boxes and bar segments on whole pixels, thin lines centred on a pixel), and a pixel-parity test holds `renderer.mjs` and `custom.js` together: all starter pages and about 150 instrument cases, each in four states, differ by no more than ten pixels per page. Panels, captions, dial tracks, ticks and scale labels, unlit segments, chart axes and G-meter frames are drawn once, in their normal colour; a warning colours the value, not the scale. An instrument's live part is redrawn only when what it shows changes. When instruments overlap the page is drawn in one pass in painter's order instead.
 - **Known differences.** Bold text in the two older MO fonts (Chakra, Mono) is faux-bold in Chromium on the PC (the editor declares those faces without a weight) but the real face on the car, whose stylesheet declares them bold; how Opera renders it is not known.
 
