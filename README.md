@@ -44,7 +44,7 @@ Only one car has been analysed in depth (a 2017 EU ND1, plain `sm.conf`). Everyt
 | 74.00.324A | EU MX-5 ND1 | Meters | Experimental: installed on our car; an earlier in-car failure (busy root remount) was fixed |
 | 74.00.324A | any MX-5 ND | Your car in the Meters (car setup: rev warnings, gearing, imperial units, for the built-in styles and your own pages) | Experimental: PC and simulator tests only, **not tried in a car** |
 | 74.00.324A | EU MX-5 ND1 | Meters Designer pages (CUSTOM) | Experimental: installed and used on our car with three simple pages; known issues in [docs/15](docs/15-meters-designer.md#known-issues) |
-| 74.00.324A | EU MX-5 ND1 | Home menu | Experimental: installed and working on our car in a first test; also tested against a fake HMI and Mazda's own Home control code from our dump |
+| 74.00.324A | EU MX-5 ND1 | Home menu | Experimental: installed and working on our car (2077/Track menu and after a unit restart checked); also tested against a fake HMI and Mazda's own Home control code from our dump |
 | 74.00.324A | EU MX-5 ND1 | Shorter list delay | Experimental: ran on our car without problems; the effect is only visible when scrolling lists |
 | 74.00.324A | EU MX-5 ND1 | Blank reversing-camera safety text | Experimental: simulator and the contributor's unit only; **not tested by us** (no camera) |
 | 74.00.324A | EU MX-5 ND1 | Semi-transparent parking sensor graphics | Experimental: all 44 image hashes match our unit; no visible effect on a car without a reversing camera (our car only beeps), so **not tested by us** |

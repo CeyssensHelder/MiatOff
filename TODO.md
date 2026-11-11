@@ -71,11 +71,11 @@ farenheit for us Americans?"
 
 Built and merged (PR #14, PR #15): a Home mode in the shared Designer, five built-in menus, *Design your menu* in the app
 and *Custom menu* under *Choose tweaks > Interface*. The car side is a userscript that wraps Mazda's `MainMenuCtrl`; it
-travels in the Meters payload and Mazda's Home files stay unchanged. Installed and working on our car in a first test
+travels in the Meters payload and Mazda's Home files stay unchanged. Installed and working on our car
 ([docs/17](docs/17-unified-designer.md#home-menu-in-the-car)).
 
-- [ ] Confirm the rest of the first car-test checklist
-  ([docs/17](docs/17-unified-designer.md#checklist-for-the-first-car-test-parked)).
+- [x] First car test: the owner reports the menu works; the 2077/Track menu and the menu after a unit restart were
+  checked explicitly ([docs/17](docs/17-unified-designer.md#checklist-for-the-first-car-test-parked)).
 
 ## Later phases
 

@@ -158,6 +158,7 @@ HMI with those shapes, and also against the real `MainMenuCtrl.js` when a dump i
 6. Custom menu set to Mazda's Home, REPAIR: the stock Home is back. Then remove Meters: byte-exact stock
    (installer).
 
-First car result: the menu installed and worked on our car on 10 November 2026; record each checklist item here
-as it is confirmed. Native integration beyond this userscript (for example editing Mazda's own Home files) is not
+First car result: the menu installed and worked on our car on 10 November 2026, and the owner reports it works. Checked
+explicitly in the car: item 2 (2077/Track: font, focus, Meters, Android Auto) and item 5 (the menu after a unit
+restart). The other items were not recorded one by one. Native integration beyond this userscript (for example editing Mazda's own Home files) is not
 used; see [the research note](16-mazda-menu-customisation.md).
