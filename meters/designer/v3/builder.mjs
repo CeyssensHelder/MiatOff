@@ -37,10 +37,7 @@ export class SendCancelled extends Error {
 // `confirmRemoval(removed)` is asked only when the send would remove builder pages that this
 // draft does not contain (another browser, a new project, a restored revision). The server
 // works out which pages those are; the editor does not guess page IDs itself.
-export async function sendToBuilder(
-  setup,
-  { requireTestLibrary = false, confirmRemoval = async () => false } = {},
-) {
+async function connect(requireTestLibrary) {
   const session = await fetch("/api/builder/session", {
     cache: "no-store",
     signal: AbortSignal.timeout(10000),
@@ -60,6 +57,33 @@ export async function sendToBuilder(
     );
   if (requireTestLibrary && !connection.testLibrary)
     throw Error("Test drafts can only send to a temporary test library.");
+  return connection;
+}
+
+// The car chosen in the car setup, for the built-in Meters styles on the stick. The builder keeps the
+// latest one; the payload carries it as js/car-profile.js.
+export async function sendCarProfile(vehicle, label, { requireTestLibrary = false } = {}) {
+  const connection = await connect(requireTestLibrary);
+  const response = await fetch("/api/builder/car", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-MiatOff-Token": connection.token,
+    },
+    body: JSON.stringify({ vehicle, label: String(label ?? "").slice(0, 60) }),
+    signal: AbortSignal.timeout(15000),
+  });
+  const result = await response.json();
+  if (!response.ok)
+    throw Error(result.error || "The builder could not save the car.");
+  return result;
+}
+
+export async function sendToBuilder(
+  setup,
+  { requireTestLibrary = false, confirmRemoval = async () => false } = {},
+) {
+  const connection = await connect(requireTestLibrary);
   const post = (path, extra = {}) =>
     fetch(path, {
       method: "POST",

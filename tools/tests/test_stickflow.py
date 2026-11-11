@@ -161,8 +161,24 @@ def test_jobs():
     check(not jobs.poll(), "nothing to deliver when no job finished")
 
 
+def test_car_line():
+    profile = {"label": "ND1 2.0 manual (US)", "rpm": {"red": 7200}}
+    check(stickflow.car_line(profile) == "Car: ND1 2.0 manual (US) · red from 7200 rpm", "the car line names the car and its red line")
+    check(stickflow.car_line(None) == "Car: default ND1 1.5 · set your car in the designer (Project → Car setup)",
+          "without a car the line says what the car does and where to set it")
+    check(stickflow.car_line({"label": "X"}) == "Car: X", "a profile without a red line still shows its name")
+    check(not stickflow.car_changed(None, None) and not stickflow.car_changed(profile, dict(profile)), "the same car is no change")
+    check(stickflow.car_changed(profile, None) and stickflow.car_changed(None, profile)
+          and stickflow.car_changed(profile, {**profile, "rpm": {"red": 7000}}), "another car, or none, is a change")
+    note = stickflow.car_update_note(profile, None, "keep")
+    check(note is not None and "Meters to Install" in note and "REPAIR" in note, "a changed car asks for a Meters update")
+    check(stickflow.car_update_note(profile, None, "install") is None, "with Meters set to Install no note is needed")
+    check(stickflow.car_update_note(profile, dict(profile), "keep") is None, "an unchanged car asks for nothing")
+
+
 def main():
     test_plan()
+    test_car_line()
     test_options()
     test_review_text()
     test_dependencies()

@@ -3,7 +3,12 @@ import { Inspector } from "./inspector.mjs";
 import { Workspace } from "./workspace.mjs";
 import * as E from "./exports.mjs";
 import { allPages, addPage, pageFromStarter, pageSnapshot } from "./pages.mjs";
-import { builderSnapshot, sendToBuilder, removalMessage } from "./builder.mjs";
+import {
+  builderSnapshot,
+  sendToBuilder,
+  sendCarProfile,
+  removalMessage,
+} from "./builder.mjs";
 // SPDX-License-Identifier: GPL-3.0-or-later
 import * as M from "./model.mjs";
 import { CommandStore, snapshot } from "./commands.mjs";
@@ -22,6 +27,7 @@ import {
   presetById,
   savedChoice,
   markEdited,
+  carLabel,
 } from "./car-setup.mjs";
 const $ = (s) => document.getElementById(s),
   testMode = new URLSearchParams(location.search).get("test") === "1";
@@ -1165,6 +1171,7 @@ function actions() {
         },
       });
       feedback.textContent = `All ${result.pages} Custom pages sent to MiatOff. Choose which ones go on the stick under Design your Meters > Your pages.`;
+      await shareCar();
     } catch (error) {
       if (error.cancelled) {
         feedback.textContent = error.message;
@@ -2031,8 +2038,23 @@ await boot();
 galleries();
 manualControls();
 vehicleControls();
+// The builder keeps the designer's car for the built-in Meters styles. Without a builder server
+// (the designer opened on its own) there is nothing to send to, so failures stay quiet.
+async function shareCar() {
+  try {
+    await sendCarProfile(
+      M.clone(store.project.vehicle),
+      carLabel(store.project.vehicle),
+      { requireTestLibrary: testMode },
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
 carSetup = new CarSetup({
   command: (name, fn) => command(name, fn, { inline: true }),
+  applied: () => shareCar(),
   lastError: () => ui.lastError,
   vehicle: () => store.project.vehicle,
   preferences: ui.preferences,

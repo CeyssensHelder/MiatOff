@@ -295,6 +295,7 @@ class App(tk.Tk):
             self.review_result.pack_forget()
         if self.current() == "review":
             self._refresh_review()
+        self._refresh_car()
         self._update_chrome()
 
     def _update_chrome(self):
@@ -639,6 +640,11 @@ class App(tk.Tk):
         WrapLabel(text, text=description, bg=CARD, fg=MUTED, font=SMALL, wraplength=300).pack(fill="x")
         reason = WrapLabel(text, text="", bg=CARD, fg=WARN, font=SMALL, wraplength=300)
         self.reasons[key] = reason
+        if key == "meters":
+            # The car the Meters on the stick are set up for (from the designer's Project > Car setup).
+            self.car_line_label = WrapLabel(text, text="", bg=CARD, fg=MUTED, font=SMALL, wraplength=300)
+            self.car_line_label.pack(fill="x")
+            self.car_note_label = WrapLabel(text, text="", bg=CARD, fg=WARN, font=SMALL, wraplength=300)
         var = tk.StringVar(self, value="keep")
         self.vars[key] = var
         segment = Segmented(row, var, [("keep", "Leave as-is"), ("install", install_label), ("remove", remove_label)])
@@ -777,6 +783,7 @@ class App(tk.Tk):
     def _build_designer_tab(self):
         import meters_designer
         self.meters_library = meters_library.PageLibrary()
+        self.car_profile = meters_library.CarProfile(self.meters_library)
         self.custom_vars, self.custom_rows = {}, {}
         self._library_signature = None
         self._removed_signature = None
@@ -832,6 +839,7 @@ class App(tk.Tk):
                             "Back up entire project in the designer.")
         self.paragraph(two, "Try new pages parked first.", fg=WARN)
         self.refresh_custom_meters()
+        self._refresh_car()
         self.after(1000, self._poll_custom_meters)
 
     def _build_menu_tab(self):
@@ -1006,6 +1014,29 @@ class App(tk.Tk):
             if label is not None:
                 label.configure(text=text, fg=fg)
 
+    def car_selection(self):
+        """The car profile for the stick, or None (the car's built-in ND1 1.5). The other stick has none."""
+        if self.checking():
+            return None
+        return self.car_profile.get()
+
+    def _refresh_car(self):
+        """The car line and the update note under Meters on Choose tweaks."""
+        if not hasattr(self, "car_profile") or not hasattr(self, "car_line_label"):
+            return
+        try:
+            profile, built = self.car_profile.get(), self.car_profile.built()
+        except Exception:  # the build reports a library that cannot be read
+            return
+        self.car_line_label.configure(text=stickflow.car_line(profile))
+        note = stickflow.car_update_note(profile, built, self.vars["meters"].get())
+        if note:
+            self.car_note_label.configure(text=note)
+            if not self.car_note_label.winfo_manager():
+                self.car_note_label.pack(fill="x")
+        elif self.car_note_label.winfo_manager():
+            self.car_note_label.pack_forget()
+
     def _update_meters_hint(self):
         if self.vars["meters"].get() == "install":
             self.meters_hint.pack_forget()
@@ -1129,6 +1160,7 @@ class App(tk.Tk):
 
     def _poll_custom_meters(self):
         self.refresh_custom_meters()
+        self._refresh_car()
         self.after(1000, self._poll_custom_meters)
 
     def _custom_meter_toggled(self, key):
@@ -1180,9 +1212,9 @@ class App(tk.Tk):
             return None
         return Path(info.root)
 
-    def kit(self, custom=None, home=None):
-        """The kit of the current page. Only the install stick takes custom pages and a Home menu."""
-        return kits.dump_kit() if self.checking() else kits.install_kit(custom, home)
+    def kit(self, custom=None, home=None, car=None):
+        """The kit of the current page. Only the install stick takes custom pages, a Home menu and a car profile."""
+        return kits.dump_kit() if self.checking() else kits.install_kit(custom, home, car)
 
     def run(self, action: str):
         if self.current() in ("prepare", *SECTIONS):  # these pages build no stick
@@ -1230,7 +1262,12 @@ class App(tk.Tk):
                 self._home_mark = self.home_menus.selected()
             elif choice == "remove":
                 self._home_mark = ""
-        kit = self.kit(custom, home)
+        car = self.car_selection()
+        if not checking and choices.get("meters") == "install":
+            summary += "\n" + stickflow.car_line(car)
+        # The car on the stick, remembered once it is written (so a changed car setup is noticed).
+        self._car_mark = (car,) if not checking and choices.get("meters") == "install" else None
+        kit = self.kit(custom, home, car)
         previous = stickwriter.replaces(target, kit.id_name)
         if previous:
             summary += (f"\n\nThis USB stick holds the MiatOff {previous} files. They will be replaced; "
@@ -1264,12 +1301,19 @@ class App(tk.Tk):
                 except Exception as mark_error:  # the stick is fine; only "Leave as-is" may not know it
                     self.notice = ("!  USB ready, but the menu on it could not be remembered: " + str(mark_error), WARN)
                 self._home_mark = None
+            if getattr(self, "_car_mark", None) is not None:
+                try:
+                    self.car_profile.mark_built(self._car_mark[0])
+                except Exception as mark_error:  # the stick is fine; only the update note may be wrong
+                    self.notice = ("!  USB ready, but the car setup on it could not be remembered: " + str(mark_error), WARN)
+                self._car_mark = None
+                self._refresh_car()
             self.update_idletasks()
             self.scrollers["review"].canvas.yview_moveto(1.0)
 
     def _start_verify(self, target):
         custom, note = self.custom_selection(self.choices())
-        kit = self.kit(custom, self.home_selection())
+        kit = self.kit(custom, self.home_selection(), self.car_selection())
         self.start_job("Comparing the USB stick with this version of MiatOff…", lambda: kit.verify(target),
                        lambda problems, error: self._stick_verified(problems, error, note))
 

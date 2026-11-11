@@ -83,26 +83,11 @@
     var SIGNAL_KEYS = ['speed', 'rpm', 'gear', 'coolant', 'iat', 'outside', 'fuel', 'trip', 'consumption', 'gLat',
         'gLong', 'throttle', 'power', 'torque'];
 
+    // Units and their conversion are shared with the built-in styles (js/units.js).
+    var U = W.MeterUnits, convert = U.convert;
     function displayUnit(signal, v) {
-        var d;
-        if (signal === 'coolant' || signal === 'iat' || signal === 'outside') return '°' + v.units.temperature;
-        if (signal === 'speed') return v.units.speed;
-        if (signal === 'trip') return v.units.distance;
-        if (signal === 'power') return v.units.power;
-        if (signal === 'torque') return v.units.torque;
-        if (signal === 'consumption') return v.units.consumption;
-        d = SIGNALS[signal];
-        return d ? d.unit : '';
-    }
-    function convert(n, unit, back) {
-        if (!finite(n)) return null;
-        if (unit === 'mph' || unit === 'mi') return back ? n / 0.621371192237334 : n * 0.621371192237334;
-        if (unit === '°F') return back ? (n - 32) / 1.8 : n * 1.8 + 32;
-        if (unit === 'hp') return back ? n / 0.9863200706 : n * 0.9863200706;
-        if (unit === 'kW') return back ? n / 0.73549875 : n * 0.73549875;
-        if (unit === 'lb-ft') return back ? n / 0.7375621493 : n * 0.7375621493;
-        if (unit.indexOf('mpg') === 0) return n > 0 ? (unit === 'mpg UK' ? 282.480936 : 235.214583) / n : null;
-        return n;
+        var d = SIGNALS[signal];
+        return U.unit(signal, v.units) || (d ? d.unit : '');
     }
     function toUnit(n, signal, unit) { return convert(n, unit, false); }
     function fromUnit(n, signal, unit) { return convert(n, unit, true); }

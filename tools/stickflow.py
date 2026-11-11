@@ -161,6 +161,29 @@ def home_reason(home: str, meters: str, chosen: bool):
     return None
 
 
+def car_line(profile) -> str:
+    """The car line under Meters: the car set in the designer, or what the car does without one."""
+    if profile:
+        label = profile.get("label") or "your car"
+        red = (profile.get("rpm") or {}).get("red")
+        return f"Car: {label} · red from {red} rpm" if red is not None else f"Car: {label}"
+    return "Car: default ND1 1.5 · set your car in the designer (Project → Car setup)"
+
+
+def car_changed(profile, built) -> bool:
+    """True when the car profile to build is not the one the last Meters stick carried (None: the built-in default)."""
+    return (profile or None) != (built or None)
+
+
+def car_update_note(profile, built, meters: str):
+    """Why Meters needs an update on the car for the car profile to arrive; None when nothing is needed. Like
+    a change in your custom pages, it reaches the car as a different Meters payload: REPAIR in the car."""
+    if not car_changed(profile, built) or meters == "install":
+        return None
+    return ("Your car setup changed since the last stick. Set Meters to Install (Update) and press REPAIR in the "
+            "car to put it on the car.")
+
+
 def blocker(page: str, drive, have_check: bool, override: bool, changed: bool, home=None):
     """Why the footer's main button cannot be pressed on this page, in plain English; None when it can.
     home: the Custom menu reason (home_reason), if any."""

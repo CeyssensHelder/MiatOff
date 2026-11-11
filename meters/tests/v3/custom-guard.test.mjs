@@ -54,6 +54,7 @@ test("a page that throws while drawing shows a notice and does not throw into th
     window = {},
     document = { createElement: () => canvas([], { on: false }) };
   const context = vm.createContext({ window, document, Image: function () {} });
+  vm.runInContext(readFileSync(new URL("../../js/units.js", import.meta.url), "utf8"), context);
   vm.runInContext(generatedPages(), context);
   vm.runInContext(readFileSync(new URL("../../js/custom.js", import.meta.url), "utf8"), context);
   const api = {

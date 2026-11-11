@@ -23,6 +23,35 @@
         }
         return o;
     }
+    // The car chosen in the designer's car setup (js/car-profile.js, written by the builder), or null. Each part is
+    // used only when it is complete and sane; anything else keeps the ND1 1.5 values below.
+    function isInt(x) { return typeof x === 'number' && isFinite(x) && Math.floor(x) === x; }
+    function isPos(x) { return typeof x === 'number' && isFinite(x) && x > 0; }
+    function carProfile(p) {
+        if (!p || typeof p !== 'object') return null;
+        var r = p.rpm, out = {};
+        if (r && isInt(r.amber) && isInt(r.red) && isInt(r.shift) && isInt(r.limit) && isInt(r.max) &&
+                1000 < r.amber && r.amber <= r.red && r.red <= r.shift && r.shift <= r.limit && r.limit <= r.max &&
+                r.max <= 15000)
+            out.rpm = { amber: r.amber, red: r.red, shift: r.shift, limit: r.limit, max: r.max };
+        if (p.ratios && p.ratios.length && p.ratios.every(isPos) && isPos(p.finalDrive) && isPos(p.circumference))
+            out.gearing = { ratios: p.ratios, finalDrive: p.finalDrive, circumference: p.circumference };
+        if (isPos(p.ratedPower) && isPos(p.powerRpm) && isPos(p.ratedTorque) && isPos(p.torqueRpm))
+            out.power = { ps: p.ratedPower, psRpm: p.powerRpm, nm: p.ratedTorque, nmRpm: p.torqueRpm };
+        out.label = typeof p.label === 'string' ? p.label : '';
+        out.units = p.units && typeof p.units === 'object' ? p.units : null;
+        return out;
+    }
+    var CAR = carProfile(W.MeterCarProfile) || {};
+    // Display units of the car profile (metric without one). Values stay canonical: convert only where text is drawn.
+    var UNITS = CAR.units || W.MeterUnits.METRIC;
+    // du: a canonical value in the display unit; ul: the label of that unit ('°C', 'mph', 'mpg US', ...).
+    function du(signal, n) { return W.MeterUnits.display(signal, n, UNITS); }
+    function ul(signal) { return W.MeterUnits.unit(signal, UNITS) || ''; }
+    // Same, for the compact info tile: the metric consumption label stays 'L/100' there.
+    function ulShort(signal) { var u = ul(signal); return u === 'L/100km' ? 'L/100' : u; }
+    // A canonical value as text in the display unit ('--' when there is none).
+    function dfmt(signal, n, dec) { return fmt(du(signal, n), dec); }
     // The ND1 manual reports TransmissionGearPosition 0, so derive the gear from rpm per km/h.
     // gearTable gives [0, rpm per km/h in 1st, 2nd, ...] for gear ratios, final drive and rolling circumference (m).
     function gearTable(ratios, finalDrive, circumference) {
@@ -32,7 +61,9 @@
     }
     // Built-in styles, and custom pages without complete gearing: 1.5 6MT ratios, final drive 2.866,
     // 195/50R16 (1.89 m around).
-    var RPM_PER_KMH = gearTable([5.087, 2.991, 2.035, 1.594, 1.286, 1.000], 2.866, 1.89);
+    var RPM_PER_KMH = CAR.gearing
+        ? gearTable(CAR.gearing.ratios, CAR.gearing.finalDrive, CAR.gearing.circumference)
+        : gearTable([5.087, 2.991, 2.035, 1.594, 1.286, 1.000], 2.866, 1.89);
     // A gear the car reports wins; otherwise the closest gear of `table` (default RPM_PER_KMH) within 12 %.
     function derivedGear(table) {
         if (D.target.gear !== undefined) return v.gear;
@@ -61,7 +92,10 @@
     // Rev limits of the ND1 1.5 (P5): 131 PS at 7000 rpm, 150 Nm at 4800 rpm, Mazda's redline 7000 rpm, fuel cut
     // around 7500 (owner reports). Power stays near its peak to the limiter and the gears are close, so the
     // quickest upshift is late: SHIFT leaves ~0.25 s of reaction time before the cut in 2nd/3rd.
-    var RPM = { low: 1000, amber: 6500, red: 7000, shift: 7200, limit: 7500 };   // low: start of the TRACK shift bars
+    // max: top of the rev dials. A car profile replaces amber/red/shift/limit/max (red comes before the limiter so
+    // there is time to react).
+    var RPM = { low: 1000, amber: 6500, red: 7000, shift: 7200, limit: 7500, max: 8000 };   // low: start of the TRACK shift bars
+    if (CAR.rpm) { RPM.amber = CAR.rpm.amber; RPM.red = CAR.rpm.red; RPM.shift = CAR.rpm.shift; RPM.limit = CAR.rpm.limit; RPM.max = CAR.rpm.max; }
     function rpmBand(r) { return r >= RPM.red ? C.red : (r >= RPM.amber ? C.amber : C.band); }
 
     // Readable on the 7" screen: few things per page, numbers at least ~50 px, labels ~20 px.
@@ -69,7 +103,7 @@
     // label left, big value right, optional thin bar underneath
     function Readout(o) {
         this.x = o.x; this.y = o.y; this.w = o.w; this.label = o.label; this.unit = o.unit || '';
-        this.dec = o.dec || 0; this.color = o.color || plain;
+        this.dec = o.dec || 0; this.color = o.color || plain; this.format = o.format || null;
         this.bar = o.max !== undefined ? new G.HBar({ x: o.x, y: o.y + 36, w: o.w, h: 10, min: o.min, max: o.max }) : null;
     }
     Readout.prototype.drawStatic = function (ctx) {
@@ -80,16 +114,17 @@
         var col = this.color(val), right = this.x + this.w;
         text(ctx, this.unit, right, this.y + 6, 20, C.dim, 'right', false);
         ctx.font = G.font(20, false);
-        text(ctx, fmt(val, this.dec), right - ctx.measureText(this.unit).width - 6, this.y, 58, col, 'right', true);
+        text(ctx, this.format ? this.format(val) : fmt(val, this.dec),right - ctx.measureText(this.unit).width - 6, this.y, 58, col, 'right', true);
         if (this.bar) { this.bar.color = col; this.bar.draw(ctx, val); }
     };
 
     // ================================================================== page 1: drive
     function drivePage() {
-        var tach = new G.Dial({ cx: 262, cy: 246, r: 222, min: 0, max: 8000, major: 1000, minor: 500,
+        var tach = new G.Dial({ cx: 262, cy: 246, r: 222, min: 0, max: RPM.max, major: 1000, minor: 500,
             labelDiv: 1000, red: RPM.red, band: 22, tick: 22, numPx: 34, title: 'x1000 r/min', bandColor: rpmBand });
         var rows = [
-            [new Readout({ x: 522, y: 290, w: 262, label: 'COOLANT', unit: '°C', color: coolantCol, min: 40, max: 120 }), 'coolant'],
+            [new Readout({ x: 522, y: 290, w: 262, label: 'COOLANT', unit: ul('coolant'), color: coolantCol, min: 40, max: 120,
+                format: function (x) { return dfmt('coolant', x, 0); } }), 'coolant'],
             [new Readout({ x: 522, y: 392, w: 262, label: 'FUEL', unit: '%', color: lowCol(15), min: 0, max: 100 }), 'fuel']
         ];
         return {
@@ -97,13 +132,13 @@
             drawStatic: function (ctx) {
                 tach.drawStatic(ctx);
                 for (var i = 0; i < rows.length; i++) rows[i][0].drawStatic(ctx);
-                text(ctx, 'km/h', 262, 316, 22, C.dim, 'center', true);
+                text(ctx, ul('speed'), 262, 316, 22, C.dim, 'center', true);
             },
             draw: function (ctx, now) {
                 var rpm = num(v.rpm), i, box = '#16161b', ink = C.text;
                 tach.draw(ctx, rpm);
                 for (i = 0; i < rows.length; i++) rows[i][0].draw(ctx, v[rows[i][1]]);
-                text(ctx, fmt(v.speed, 0), 262, 236, 124, C.text, 'center', true);
+                text(ctx, dfmt('speed', v.speed, 0), 262, 236, 124, C.text, 'center', true);
                 // The gear box doubles as the shift light.
                 if (rpm >= RPM.shift) { if (Math.floor(now / 100) % 2) box = C.red; }
                 else if (rpm >= RPM.amber) { box = C.amber; ink = '#000'; }
@@ -153,18 +188,22 @@
     function infoPage() {
         var defs = [
             // key       label         unit     dec colour       min. sparkline span
-            ['coolant', 'COOLANT',    '°C',    0, coolantCol, 10],
-            ['iat',     'INTAKE AIR', '°C',    0, plain,      10],
-            ['outside', 'OUTSIDE',    '°C',    1, plain,      5],
-            ['fuel',    'FUEL',       '%',     0, lowCol(15), 5],
-            ['trip',    'TRIP',       'km',    0, plain,      1],
-            ['econ',    'AVG FUEL',   'L/100', 1, plain,      2]
+            ['coolant', 'COOLANT',    ul('coolant'),     0, coolantCol, 10],
+            ['iat',     'INTAKE AIR', ul('iat'),         0, plain,      10],
+            ['outside', 'OUTSIDE',    ul('outside'),     1, plain,      5],
+            ['fuel',    'FUEL',       '%',               0, lowCol(15), 5],
+            ['trip',    'TRIP',       ul('trip'),        0, plain,      1],
+            ['econ',    'AVG FUEL',   ulShort('econ'),   1, plain,      2]
         ];
+        function tileFormat(key, dec) {
+            return key === 'fuel' ? null : function (x) { return dfmt(key, x, dec); };
+        }
         var tiles = [], i, d, w = 248, h = 212;
         for (i = 0; i < defs.length; i++) {
             d = defs[i];
             tiles.push({ key: d[0], t: new G.Tile({ x: 16 + (i % 3) * (w + 12), y: 14 + Math.floor(i / 3) * (h + 12),
-                w: w, h: h, label: d[1], unit: d[2], dec: d[3], color: d[4], span: d[5] }) });
+                w: w, h: h, label: d[1], unit: d[2], dec: d[3], color: d[4], span: d[5],
+                format: tileFormat(d[0], d[3]) }) });
         }
         return {
             name: 'INFO',
@@ -250,10 +289,10 @@
                 var i, r;
                 ctx.fillStyle = C.track;
                 for (i = 0; i < N; i++) seg(ctx, i);
-                for (r = LO; r <= 7000; r += 1000) {
+                for (r = LO; r <= HI - 500; r += 1000) {
                     text(ctx, String(r / 1000), X0 + (r - LO) / (HI - LO) * W, Y + H + 20, 18, C.dim, 'center', true);
                 }
-                text(ctx, 'km/h', 130, 372, 22, C.dim, 'center', true);
+                text(ctx, ul('speed'), 130, 372, 22, C.dim, 'center', true);
                 text(ctx, 'rpm', 670, 372, 22, C.dim, 'center', true);
             },
             draw: function (ctx, now) {
@@ -265,16 +304,16 @@
                     for (i = 0; i < lit; i++) { ctx.fillStyle = segCol(i); seg(ctx, i); }
                 }
                 text(ctx, gearText(derivedGear()), 400, 318, 280, shift ? C.red : C.text, 'center', true);
-                text(ctx, fmt(v.speed, 0), 130, 302, 96, C.text, 'center', true);
+                text(ctx, dfmt('speed', v.speed, 0), 130, 302, 96, C.text, 'center', true);
                 text(ctx, fmt(v.rpm, 0), 670, 302, 72, rpm >= RPM.red ? C.red : C.text, 'center', true);
                 hot = v.coolant >= 105;
                 if (hot) {
                     G.roundRect(ctx, 200, 404, 400, 52, 10);
                     ctx.fillStyle = C.red; ctx.fill();
-                    text(ctx, 'COOLANT ' + fmt(v.coolant, 0) + '°C', 400, 431, 30, '#fff', 'center', true);
+                    text(ctx, 'COOLANT ' + dfmt('coolant', v.coolant, 0) + ul('coolant'), 400, 431, 30, '#fff', 'center', true);
                 } else {
-                    text(ctx, 'WATER ' + fmt(v.coolant, 0) + '°', 16, 420, 22, C.dim, 'left', true);
-                    text(ctx, 'AIR ' + fmt(v.iat, 0) + '°', 784, 420, 22, C.dim, 'right', true);
+                    text(ctx, 'WATER ' + dfmt('coolant', v.coolant, 0) + '°', 16, 420, 22, C.dim, 'left', true);
+                    text(ctx, 'AIR ' + dfmt('iat', v.iat, 0) + '°', 784, 420, 22, C.dim, 'right', true);
                 }
             },
             animating: function () { return num(v.rpm) >= RPM.shift; }
@@ -310,10 +349,11 @@
                 }
                 text(ctx, fmtLap(sess.last, 2), 32, 420, 46, C.text, 'left', true);
                 text(ctx, fmtLap(sess.best, 2), 296, 420, 46, C.green, 'left', true);
-                text(ctx, fmt(sess.vmaxLast, 0), 560, 420, 46, C.text, 'left', true);
+                var vm = dfmt('speed', sess.vmaxLast, 0);
+                text(ctx, vm, 560, 420, 46, C.text, 'left', true);
                 if (sess.vmaxLast !== null) {
                     ctx.font = G.font(46, true);
-                    text(ctx, 'km/h', 560 + ctx.measureText(fmt(sess.vmaxLast, 0)).width + 8, 428, 20, C.dim, 'left', false);
+                    text(ctx, ul('speed'), 560 + ctx.measureText(vm).width + 8, 428, 20, C.dim, 'left', false);
                 }
             },
             animating: function () { return !!sess.lapStart; },
@@ -325,20 +365,26 @@
     // ------------------------------------------------------------------ SESSION: maxima since reset
     function sessionPage() {
         var defs = [
-            ['maxSpeed', 'TOP SPEED', 'km/h', 0],
+            ['maxSpeed', 'TOP SPEED', ul('speed'), 0],
             ['maxRpm', 'MAX RPM', '', 0],
             ['best', 'BEST LAP', '', 2],
             ['maxLat', 'MAX LATERAL G', '', 2],
             ['maxBrk', 'MAX BRAKE G', '', 2],
-            ['maxCoolant', 'MAX COOLANT', '°C', 0]
+            ['maxCoolant', 'MAX COOLANT', ul('coolant'), 0]
         ];
+        function tileFormat(key) {
+            if (key === 'best') return function (x) { return fmtLap(x, 2); };
+            if (key === 'maxSpeed') return function (x) { return dfmt('speed', x, 0); };
+            if (key === 'maxCoolant') return function (x) { return dfmt('coolant', x, 0); };
+            return null;
+        }
         var tiles = [], i, d, w = 248, h = 186;
         for (i = 0; i < defs.length; i++) {
             d = defs[i];
             tiles.push({ key: d[0], t: new G.Tile({ x: 16 + (i % 3) * (w + 12), y: 14 + Math.floor(i / 3) * (h + 10),
                 w: w, h: h, label: d[1], unit: d[2], dec: d[3],
                 color: d[0] === 'maxCoolant' ? coolantCol : plain,
-                format: d[0] === 'best' ? function (x) { return fmtLap(x, 2); } : null }) });
+                format: tileFormat(d[0]) }) });
         }
         var BTN = { x: 584, y: 404, w: 200, h: 48 };
         return {
@@ -370,7 +416,10 @@
     var dyno = new W.MeterPower.Dyno();
 
     function powerPage() {
-        var X0 = 312, X1 = 776, Y0 = 44, Y1 = 384, R0 = 2000, R1 = 7500, V1 = 180;
+        // Factory figures: the car profile's rated power and torque, else the ND1 1.5 (131 PS at 7000, 150 Nm at 4800).
+        var F = CAR.power || { ps: 131, psRpm: 7000, nm: 150, nmRpm: 4800 },
+            X0 = 312, X1 = 776, Y0 = 44, Y1 = 384, R0 = 2000, R1 = Math.ceil(RPM.limit / 500) * 500,
+            V1 = CAR.power ? Math.max(180, Math.ceil(Math.max(F.ps, F.nm) * 1.15 / 50) * 50) : 180;
         function px(r) { return X0 + (r - R0) / (R1 - R0) * (X1 - X0); }
         function py(val) { return Y1 - G.clamp(val, 0, V1) / V1 * (Y1 - Y0); }
         function curve(ctx, pts, key, col, w, alpha) {
@@ -406,15 +455,15 @@
                 text(ctx, 'PS', X0 + 8, 18, 18, C.red, 'left', true);
                 text(ctx, 'Nm', X0 + 44, 18, 18, C.blue, 'left', true);
                 text(ctx, 'o = factory', X0 + 84, 18, 14, C.dim, 'left', false);
-                ring(ctx, 7000, 131, C.red, '131', true);
-                ring(ctx, 4800, 150, C.blue, '150', false);
+                ring(ctx, F.psRpm, F.ps, C.red, String(Math.round(F.ps)), true);
+                ring(ctx, F.nmRpm, F.nm, C.blue, String(Math.round(F.nm)), false);
             },
             draw: function (ctx, now) {
                 var L = dyno.live, last = dyno.pulls[0], prev = dyno.pulls[1], c = dyno.cur, col = L.wot ? C.text : C.dim, k, b;
-                text(ctx, L.ps === undefined ? '--' : fmt(Math.max(0, L.ps), 0), 16, 100, 84, col, 'left', true);
-                text(ctx, 'PS', 250, 116, 22, C.dim, 'right', true);
-                text(ctx, L.nm === undefined ? '--' : fmt(Math.max(0, L.nm), 0), 16, 246, 84, col, 'left', true);
-                text(ctx, 'Nm', 250, 262, 22, C.dim, 'right', true);
+                text(ctx, L.ps === undefined ? '--' : dfmt('power', Math.max(0, L.ps), 0), 16, 100, 84, col, 'left', true);
+                text(ctx, ul('power'), 250, 116, 22, C.dim, 'right', true);
+                text(ctx, L.nm === undefined ? '--' : dfmt('torque', Math.max(0, L.nm), 0), 16, 246, 84, col, 'left', true);
+                text(ctx, ul('torque'), 250, 262, 22, C.dim, 'right', true);
                 if (L.wot) {
                     G.roundRect(ctx, 16, 336, 236, 36, 8);
                     ctx.fillStyle = C.green; ctx.fill();
@@ -422,8 +471,8 @@
                 }
                 if (last) {
                     text(ctx, 'last pull  ·  gear ' + last.gear, 16, 396, 15, C.dim, 'left', true);
-                    text(ctx, fmt(last.peakPs.ps, 0) + ' PS @ ' + fmt(last.peakPs.rpm, 0) + '   ' +
-                        fmt(last.peakNm.nm, 0) + ' Nm @ ' + fmt(last.peakNm.rpm, 0), 16, 420, 17, C.text, 'left', true);
+                    text(ctx, dfmt('power', last.peakPs.ps, 0) + ' ' + ul('power') + ' @ ' + fmt(last.peakPs.rpm, 0) + '   ' +
+                        dfmt('torque', last.peakNm.nm, 0) + ' ' + ul('torque') + ' @ ' + fmt(last.peakNm.rpm, 0), 16, 420, 17, C.text, 'left', true);
                 }
                 ctx.save();
                 ctx.beginPath(); ctx.rect(X0, Y0 - 10, X1 - X0, Y1 - Y0 + 10); ctx.clip();   // pulls can start below 2000 rpm
@@ -472,7 +521,7 @@
     // The cyberpunk sets (cyber.js, y2077.js) get the shared state through this object.
     var API = {
         v: v, num: num, fmt: fmt, G: G, RPM: RPM, sess: sess, pedal: pedal, gms: [dyn.gm],
-        felt: query().gm !== 'car', dyno: dyno, gear: derivedGear, gearTable: gearTable, gearText: gearText, fmtLap: fmtLap, fmtDelta: fmtDelta
+        felt: query().gm !== 'car', dyno: dyno, gear: derivedGear, du: du, ul: ul, units: UNITS, gearTable: gearTable, gearText: gearText, fmtLap: fmtLap, fmtDelta: fmtDelta
     };
     function resetG() { for (var k = 0; k < API.gms.length; k++) API.gms[k].reset(); }
     (function () {

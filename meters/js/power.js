@@ -11,8 +11,11 @@
     'use strict';
 
     var g = 9.80665;
-    // ND1 1.5 roadster with driver. ?mass=<kg> overrides, e.g. with a passenger.
+    // ND1 1.5 roadster with driver, or the car profile's kerb mass plus 75 kg for the driver.
+    // ?mass=<kg> overrides, e.g. with a passenger.
     var CAR = { mass: 1050, cda: 0.55, crr: 0.012, rho: 1.2, eff: 0.85 };
+    var P = W.MeterCarProfile;
+    if (P && typeof P.mass === 'number' && P.mass > 500 && P.mass < 3000) CAR.mass = Math.round(P.mass + 75);
     var m = /[?&]mass=(\d+)/.exec(W.location.search);
     if (m) CAR.mass = +m[1];
 

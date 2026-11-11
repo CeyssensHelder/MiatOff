@@ -52,11 +52,10 @@ Built (PR #11): a local editor for custom Meters pages, a Designer tab in the ap
 User report: "Is there anyway to make an option for the meters to feature imperial units like miles per hour and
 farenheit for us Americans?"
 
-Covered for custom pages: the Meters Designer sets units and RPM thresholds per page. The built-in styles (Street,
-Track, Cyberpunk, 2077, 2077 NIGHT) still have them hard-coded in `meters/js/app.js`, `cyber.js`, `y2077.js` and
-`gauges.js`.
-
-- [ ] Let the built-in styles use the same settings as the custom pages (units, RPM thresholds), converted in one place.
+- [x] Let the built-in styles use the same settings as the custom pages (units, RPM thresholds), converted in one place
+  (`meters/js/units.js`): the designer's car setup goes to the builder and onto the stick as `js/car-profile.js`, and
+  Street, Track, Cyberpunk, 2077 and 2077 NIGHT take their rev warnings, gearing, power figures and units from it.
+  Not tried in a car.
 
 ## Mazda Home menu customisation
 

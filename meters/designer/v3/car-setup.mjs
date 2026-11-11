@@ -203,6 +203,14 @@ export function applyPreset(project, preset, choices) {
     if (v.units[k] !== unit) setUnits(project, k, unit);
   return c;
 }
+// Short name of the profile's car, e.g. "ND1 2.0 manual (US)".
+export function carLabel(v) {
+  const preset = presetById(v.preset);
+  return (
+    (preset?.label ?? `${v.generation} ${v.engine} ${v.transmission}`) +
+    ` (${v.market}${v.body === "RF" ? ", RF" : ""})`
+  ).slice(0, 60);
+}
 // A hand edit of a field that came from a preset: it is no longer the sourced value.
 export function markEdited(vehicle, path) {
   if (!vehicle.preset) return;
@@ -403,6 +411,7 @@ export class CarSetup {
     this.firstRun = false;
     this.$("setup-dialog").close();
     this.api.notify("Vehicle settings set for " + preset.label + ".");
+    this.api.applied?.();
   }
   remember(preset, choices = null) {
     this.api.preferences.set({

@@ -17,6 +17,7 @@ import kits  # noqa: E402
 import meters_library as ml  # noqa: E402
 
 PAGES = "miatoff-app/app/meters/js/custom-pages.js"
+CAR = "miatoff-app/app/meters/js/car-profile.js"
 PIXEL = ("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")
 
 
@@ -96,6 +97,52 @@ class CustomPagesBuildTests(unittest.TestCase):
         for bad in ({**good, "ratios": [3.0, -1.0]}, {**good, "ratios": [3.0, True]}, {**good, "ratios": "3,1"},
                     {**good, "finalDrive": float("nan")}, {**good, "circumference": float("inf")}, {"ratios": [3.0]}):
             self.assertEqual(kits.car_gearing(bad), {})
+
+    def car_vehicle(self, **change):
+        vehicle = deepcopy(self.pages[0]["vehicle"])
+        vehicle.update(change)
+        return vehicle
+
+    def test_default_car_profile_is_in_the_payload_with_a_manifest_line(self):
+        default = (ROOT / "meters/js/car-profile.js").read_bytes().replace(b"\r\n", b"\n")
+        self.assertIn(b"window.MeterCarProfile = null;", default)
+        self.assertEqual(bs.payload()[CAR], default)
+        self.assertEqual(bs.car_profile_js(None), default)
+        self.assertEqual(bs.payload(car=None), bs.payload())
+        self.assertIn(f"{hashlib.sha256(default).hexdigest()}  app/meters/js/car-profile.js\n", bs.payload()["miatoff-app/MANIFEST"].decode())
+        self.assertEqual(bs.kits.METERS_FILES["app/meters/js/car-profile.js"], "meters/js/car-profile.js")
+
+    def test_generated_car_profile_is_deterministic_and_in_the_manifest(self):
+        profile = ml.car_profile(self.car_vehicle(), "ND1 1.5 test")
+        data = bs.car_profile_js(profile)
+        self.assertEqual(data, bs.car_profile_js(deepcopy(profile)))
+        data.decode("ascii")
+        self.assertTrue(data.startswith(b"window.MeterCarProfile = {") and data.endswith(b"};\n"))
+        self.assertEqual(json.loads(data.decode().split(" = ", 1)[1].rstrip(";\n")), profile)
+        self.assertEqual(data, ("window.MeterCarProfile = " + json.dumps(profile, sort_keys=True, separators=(",", ":")) + ";\n").encode())
+        self.assertEqual(bs.car_profile_js({"b": 1, "a": "\u00e9"}), b'window.MeterCarProfile = {"a":"\\u00e9","b":1};\n')
+        plain, with_car = bs.payload(), bs.payload(car=profile)
+        self.assertEqual(with_car[CAR], data)
+        self.assertNotEqual(plain["miatoff-app/MANIFEST"], with_car["miatoff-app/MANIFEST"])
+        self.assertIn(f"{hashlib.sha256(data).hexdigest()}  app/meters/js/car-profile.js\n", with_car["miatoff-app/MANIFEST"].decode())
+        rest = lambda p: {k: v for k, v in p.items() if k not in (CAR, "miatoff-app/MANIFEST", "PAYLOAD.SHA256")}
+        self.assertEqual(rest(plain), rest(with_car))
+        with tempfile.TemporaryDirectory() as folder:
+            bs.build(Path(folder), car=profile)
+            self.assertTrue(bs.check(Path(folder), car=profile))
+            self.assertFalse(bs.check(Path(folder)))
+            self.assertEqual((Path(folder) / "miatoff-app/app/meters/js/car-profile.js").read_bytes(), data)
+
+    def test_car_profile_leaves_out_incomplete_gearing(self):
+        full = ml.car_profile(self.car_vehicle(), "x")
+        self.assertEqual((full["ratios"], full["finalDrive"], full["circumference"]), ([5.087, 2.991, 2.035, 1.594, 1.286, 1], 2.866, 1.89))
+        for change in ({"ratios": []}, {"ratios": [3.0, None]}, {"finalDrive": None}, {"circumference": None}, {"finalDrive": 0}):
+            profile = ml.car_profile(self.car_vehicle(**change), "x")
+            for key in ("ratios", "finalDrive", "circumference"):
+                self.assertNotIn(key, profile, str(change))
+            text = bs.car_profile_js(profile).decode("ascii")
+            self.assertNotIn("ratios", text)
+            self.assertIn('"rpm":{', text)
 
     def test_non_ascii_names_are_escaped(self):
         setups = deepcopy(self.pages[:1])
