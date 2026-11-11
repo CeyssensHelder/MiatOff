@@ -33,12 +33,12 @@ Built (PR #11): a local editor for custom Meters pages, a Designer tab in the ap
 *Applications → Meters → CUSTOM*, installed and updated through the normal Meters payload (`custom-pages.js` in the
 `MANIFEST`, REPAIR for an update). Tried on our car with three simple pages. See [docs/15](docs/15-meters-designer.md).
 
-- [ ] **First-run setup.** The first time the designer opens, ask which car the user has (ND1 or ND2, 1.5 or 2.0,
-  region, gearbox) and which units to use (metric or imperial: speed, temperature, distance, consumption). Fill in the
-  vehicle settings from that (rev limit and shift RPM, gear ratios, final drive, tyre size, units), so most users never
-  have to type them. Allow changing it later. Today a vehicle choice does not supply verified specifications (the
-  default profile is labelled "legacy ND1 1.5 assumptions"), so each preset needs sourced numbers, and anything not
-  verified stays marked as an assumption.
+- [x] **First-run setup** (branch `feature/first-run-setup`): the Meters designer asks for region, car, gearbox, body,
+  tyre and units the first time, and fills the vehicle profile from six presets in `meters/designer/v3/presets.mjs`
+  ([docs/18](docs/18-vehicle-presets.md)); *Project → Car setup* changes it later. Not tried in a car.
+- [ ] Car setup, open data points: no manufacturer source for the 1.5 gear ratios, final drive and running mass, or for any
+  fuel cut (limiter = redline for now); no preset for the JP-only 1.5 automatic; the EU/UK automatic ratios are taken from
+  the US/JP sheets; the 2024 update is not covered.
 - [ ] Known issues seen on our car ([docs/15](docs/15-meters-designer.md#known-issues)): gauges lag up to about a second
   when stationary (the built-in pages too), one unexplained RPM jump (about 1,900 to 3,000), and the consumption scale
   (`Drv1AvlFuelE`) not yet compared with the car's own figure.

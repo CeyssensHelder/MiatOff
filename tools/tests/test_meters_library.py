@@ -76,6 +76,27 @@ class LibraryTests(unittest.TestCase):
             ok["themes"][0]["style"]["font"] = name
             ml.validate_setup(ok)
 
+    def test_optional_vehicle_preset_tyre_and_assumed_fields(self):
+        for key in ("preset", "tyre", "assumed"):
+            self.setup["vehicle"].pop(key, None)
+        ml.validate_setup(self.setup)  # documents saved before these fields existed
+        for patch in [{"preset": None, "tyre": None}, {"preset": "nd1-15-eu", "tyre": "195/50R16",
+                      "assumed": ["rpm.limit", "mass"]}, {"assumed": []}, {"assumed": ["mass"] * 30}]:
+            ok = deepcopy(self.setup)
+            ok["vehicle"].update(patch)
+            ml.validate_setup(ok)
+        for patch, message in [({"preset": 5}, "preset"), ({"preset": ""}, "preset"), ({"preset": "Upper"}, "preset"),
+                               ({"preset": "a" * 41}, "preset"), ({"tyre": 195}, "tyre"),
+                               ({"tyre": "195/50r16"}, "tyre"), ({"tyre": "195/50R16\n"}, "tyre"),
+                               ({"tyre": "19/50R16"}, "tyre"), ({"assumed": "mass"}, "assumed"),
+                               ({"assumed": [5]}, "assumed"), ({"assumed": ["rpm_limit"]}, "assumed"),
+                               ({"assumed": ["a" * 41]}, "assumed"), ({"assumed": ["mass"] * 31}, "assumed")]:
+            bad = deepcopy(self.setup)
+            bad["vehicle"].update(patch)
+            with self.assertRaises(ValueError, msg=str(patch)) as raised:
+                ml.validate_setup(bad)
+            self.assertIn(message, str(raised.exception))
+
     def test_send_idempotency_update_and_persistent_include_choice(self):
         self.assertTrue(self.library.save(self.setup)["changed"])
         row = self.library.list()[0]

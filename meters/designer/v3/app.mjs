@@ -16,6 +16,13 @@ import {
 import * as L from "./layout.mjs";
 import * as R from "./renderer.mjs";
 import { Simulator } from "./simulation.mjs";
+import {
+  CarSetup,
+  applyPreset,
+  presetById,
+  savedChoice,
+  markEdited,
+} from "./car-setup.mjs";
 const $ = (s) => document.getElementById(s),
   testMode = new URLSearchParams(location.search).get("test") === "1";
 const namespace = testMode
@@ -56,7 +63,7 @@ let store,
 const sim = new Simulator(),
   canvas = $("canvas"),
   ctx = canvas.getContext("2d");
-let ui, editorInspector;
+let ui, editorInspector, carSetup;
 let restoreInputs = false;
 function status(text, error = false) {
   if (error && /Save failed/.test(text)) ui?.saveStatus(text, true);
@@ -106,6 +113,20 @@ function normalizeView() {
   store.view.selection = (store.view.selection ?? []).filter((k) =>
     page().widgets.some((w) => w.id === k),
   );
+}
+// A new project starts from the car the user chose in the car setup, if any.
+function freshProject() {
+  const project = M.defaults(),
+    saved = ui && savedChoice(ui.preferences),
+    preset = presetById(saved?.preset);
+  if (preset)
+    try {
+      applyPreset(project, preset, saved);
+      M.validate(project);
+    } catch {
+      return M.defaults();
+    }
+  return project;
 }
 function attach(project) {
   store = new CommandStore(project, {
@@ -332,7 +353,7 @@ async function showRecovery(message, original, isConflict = false) {
       await persistence.prepareReplacement();
       recovery = conflict = false;
       box.hidden = true;
-      attach(M.defaults());
+      attach(freshProject());
       await flushSave();
     } catch (e) {
       status(e.message, true);
@@ -346,7 +367,7 @@ async function boot() {
     rawBackup = loaded?.raw;
     const p = loaded
       ? M.validate(await decodeAssets(M.migrate(loaded.raw)))
-      : M.defaults();
+      : freshProject();
     attach(p);
     if (!loaded || loaded.legacy || loaded.raw.version < 3) await flushSave();
     else
@@ -519,6 +540,7 @@ function update(check = true) {
   inspector();
   components();
   ui.refresh();
+  if ($("vehicle").dataset.ratios) syncVehicleControls();
   $("undo").disabled = !store.undoStack.length;
   $("redo").disabled = !store.redoStack.length;
   for (const key of [
@@ -1487,8 +1509,27 @@ function manualControls() {
     $("manual-inputs").append(row);
   }
 }
+// Keep the Vehicle and units rows in step with the project after undo, import, restore or car setup.
+function syncVehicleControls() {
+  const host = $("vehicle"),
+    v = store.project.vehicle;
+  if (host.dataset.ratios !== String(v.ratios.length)) {
+    host.replaceChildren();
+    vehicleControls();
+    return;
+  }
+  for (const input of host.querySelectorAll("[data-vehicle]")) {
+    if (input === document.activeElement) continue;
+    const value = input.dataset.vehicle
+      .split(".")
+      .reduce((o, k) => o?.[k], v);
+    input.value = value ?? "";
+    input.placeholder = value === null ? "Not verified" : "";
+  }
+}
 function vehicleControls() {
   const host = $("vehicle");
+  host.dataset.ratios = String(store.project.vehicle.ratios.length);
   const add = (label, path, level, choices = null) => {
     const row = document.createElement("label"),
       input = document.createElement(choices ? "select" : "input"),
@@ -1524,6 +1565,7 @@ function vehicleControls() {
               : input.type === "number"
                 ? Number(input.value)
                 : input.value;
+        markEdited(store.project.vehicle, path);
       });
       if (result === undefined) {
         error.textContent = ui.lastError;
@@ -1989,6 +2031,16 @@ await boot();
 galleries();
 manualControls();
 vehicleControls();
+carSetup = new CarSetup({
+  command: (name, fn) => command(name, fn, { inline: true }),
+  lastError: () => ui.lastError,
+  vehicle: () => store.project.vehicle,
+  preferences: ui.preferences,
+  openDialog: (id) => ui.openDialog(id),
+  notify: (text) => status(text),
+});
+$("car-setup-open").onclick = () => carSetup.open();
+$("vehicle-choose-car").onclick = () => carSetup.open();
 actions();
 pointerActions();
 ui.init();
@@ -2047,5 +2099,14 @@ export async function setDesignerActive(active) {
   } else {
     lastFrame = 0;
     invalidate();
+    maybeFirstRun();
   }
+}
+// The first time the Meters designer is shown, ask for the car. Tests opt in with &setup=1.
+function maybeFirstRun() {
+  const params = new URLSearchParams(location.search);
+  if (testMode && params.get("setup") !== "1") return;
+  if (recovery || conflict || savedChoice(ui.preferences)) return;
+  if (document.querySelector("dialog[open]")) return;
+  carSetup.open({ firstRun: true });
 }

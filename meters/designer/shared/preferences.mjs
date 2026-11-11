@@ -20,6 +20,23 @@ export class EditorPreferences {
           this.value.leftTab = raw.leftTab;
         if (raw.sections && typeof raw.sections === "object")
           this.value.sections = raw.sections;
+        // Meters designer car setup: done once, then new designs start from the chosen preset.
+        const car = raw.carSetup,
+          short = (x) => (typeof x === "string" && x.length <= 40 ? x : null);
+        if (car && typeof car === "object" && car.done === true)
+          this.value.carSetup = {
+            done: true,
+            preset: short(car.preset),
+            market: short(car.market),
+            body: short(car.body),
+            tyre: short(car.tyre),
+            units:
+              car.units && typeof car.units === "object"
+                ? Object.fromEntries(
+                    Object.entries(car.units).filter(([, u]) => short(u)),
+                  )
+                : {},
+          };
         for (const k of ["leftWidth", "rightWidth"])
           if (Number.isFinite(raw[k]) && raw[k] >= 220 && raw[k] <= 420)
             this.value[k] = raw[k];

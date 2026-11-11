@@ -701,6 +701,25 @@ export function validate(s) {
       ),
     "Invalid gear ratios",
   );
+  requireValue(
+    v.preset == null ||
+      (typeof v.preset === "string" && /^[a-z0-9-]{1,40}$/.test(v.preset)),
+    "Invalid vehicle preset",
+  );
+  requireValue(
+    v.tyre == null ||
+      (typeof v.tyre === "string" && /^\d{3}\/\d{2}R\d{2}$/.test(v.tyre)),
+    "Invalid tyre size",
+  );
+  requireValue(
+    v.assumed == null ||
+      (Array.isArray(v.assumed) &&
+        v.assumed.length <= 30 &&
+        v.assumed.every(
+          (n) => typeof n === "string" && n.length <= 40 && /^[A-Za-z.]+$/.test(n),
+        )),
+    "Invalid assumed fields",
+  );
   const rpm = v.rpm;
   requireValue(
     rpm &&

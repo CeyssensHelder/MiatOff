@@ -356,6 +356,14 @@ def validate_setup(doc):
         require(v.get(key) is None or number(v[key], 0, 100000), "Invalid vehicle " + key)
     require(isinstance(v.get("ratios"), list) and len(v["ratios"]) <= 10 and
             all(n is None or number(n, .000001, 20) for n in v["ratios"]), "Invalid gear ratios")
+    require(v.get("preset") is None or (isinstance(v["preset"], str) and re.fullmatch(r"[a-z0-9-]{1,40}", v["preset"])),
+            "Invalid vehicle preset")
+    require(v.get("tyre") is None or (isinstance(v["tyre"], str) and re.fullmatch(r"\d{3}/\d{2}R\d{2}", v["tyre"], re.ASCII)),
+            "Invalid tyre size")
+    assumed = v.get("assumed")
+    require(assumed is None or (isinstance(assumed, list) and len(assumed) <= 30 and
+            all(isinstance(n, str) and len(n) <= 40 and re.fullmatch(r"[A-Za-z.]+", n) for n in assumed)),
+            "Invalid assumed fields")
     return doc
 
 

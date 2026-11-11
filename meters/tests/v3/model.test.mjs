@@ -168,6 +168,49 @@ test("real legacy v2 starters migrate preserving layout, vehicle and explicit ov
     assert.equal(raw.version, 2);
   }
 });
+test("optional vehicle preset, tyre and assumed fields are validated and migrated unchanged", () => {
+  const withVehicle = (patch) => {
+    const s = M.defaults();
+    Object.assign(s.vehicle, patch);
+    return s;
+  };
+  M.validate(M.defaults()); // documents without the fields stay valid
+  for (const patch of [
+    {},
+    { preset: null, tyre: null },
+    { preset: "nd1-15-eu", tyre: "195/50R16", assumed: ["rpm.limit", "mass"] },
+    { assumed: [] },
+    { assumed: Array(30).fill("mass") },
+  ])
+    M.validate(withVehicle(patch));
+  const kept = withVehicle({
+    preset: "nd1-15-eu",
+    tyre: "195/50R16",
+    assumed: ["rpm.limit"],
+  });
+  kept.version = 2;
+  const m = M.migrate(kept);
+  assert.equal(m.vehicle.preset, "nd1-15-eu");
+  assert.equal(m.vehicle.tyre, "195/50R16");
+  assert.deepEqual(m.vehicle.assumed, ["rpm.limit"]);
+  const bad = [
+    [{ preset: 5 }, /Invalid vehicle preset/],
+    [{ preset: "" }, /Invalid vehicle preset/],
+    [{ preset: "Upper" }, /Invalid vehicle preset/],
+    [{ preset: "a".repeat(41) }, /Invalid vehicle preset/],
+    [{ tyre: 195 }, /Invalid tyre size/],
+    [{ tyre: "195/50r16" }, /Invalid tyre size/],
+    [{ tyre: "195/50R16\n" }, /Invalid tyre size/],
+    [{ tyre: "19/50R16" }, /Invalid tyre size/],
+    [{ assumed: "mass" }, /Invalid assumed fields/],
+    [{ assumed: [5] }, /Invalid assumed fields/],
+    [{ assumed: ["rpm_limit"] }, /Invalid assumed fields/],
+    [{ assumed: ["a".repeat(41)] }, /Invalid assumed fields/],
+    [{ assumed: Array(31).fill("mass") }, /Invalid assumed fields/],
+  ];
+  for (const [patch, message] of bad)
+    assert.throws(() => M.validate(withVehicle(patch)), message);
+});
 test("future versions, invalid bindings, fractions, flags and references fail explicitly", () => {
   for (const change of [
     (s) => (s.version = 99),
