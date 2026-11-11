@@ -10,6 +10,32 @@
       .brand strong {
         white-space: nowrap;
       }
+      /* The switch sits at the same place in both modes: the brand keeps one width instead of taking the free
+         space, and the actions take it (they sit at the right edge). */
+      @media (min-width: 768px) {
+        .studio-header {
+          gap: 16px;
+        }
+        /* The longest title (MiatOff Meters Designer) next to the icon. */
+        .studio-header > .brand {
+          flex: none;
+          width: 228px;
+          min-width: 0;
+        }
+        .studio-header > nav {
+          margin-left: auto;
+        }
+        .studio-header > nav button {
+          white-space: nowrap;
+        }
+      }
+      /* When the header wraps, the first row is as tall in both modes (the Meters editing-detail control's height),
+         so the switch stays at the same place. */
+      @media (min-width: 768px) and (max-width: 1199px) {
+        .studio-header > .brand {
+          min-height: 55px;
+        }
+      }
       .mode-switch {
         display: flex;
         flex: none;
@@ -36,9 +62,9 @@
       #home-studio {
         position: fixed;
         left: 0;
-        top: 68px;
+        top: 76px;
         width: 100%;
-        height: calc(100dvh - 68px);
+        height: calc(100dvh - 76px);
         border: 0;
         background: #0b1018;
       }
@@ -49,7 +75,7 @@
       /* A switch error stays readable above the Home frame. */
       body[data-designer-mode="home"] > #notice:not([hidden]) {
         position: fixed;
-        top: 68px;
+        top: 76px;
         left: 0;
         right: 0;
         z-index: 10;
@@ -59,10 +85,10 @@
         > :not(.brand):not(.mode-switch):not(.home-actions) {
         display: none !important;
       }
-      /* At least the Meters header's height, more when the Home actions wrap (the frame follows it). */
+      /* The Meters header's height, more when the Home actions wrap (the frame follows it). */
       body[data-designer-mode="home"] .studio-header {
         height: auto;
-        min-height: 68px;
+        min-height: 76px;
       }
       .home-actions {
         display: flex;
@@ -90,26 +116,23 @@
           margin-left: auto;
         }
       }
+      /* Phones, both modes: the title and the switch on the first row, the actions on the second, then (Meters)
+         the editing-detail control. */
       @media (max-width: 767px) {
-        .studio-header {
-          grid-template-columns: minmax(0, 1fr) auto;
-        }
-        .mode-switch {
-          grid-column: 1/-1;
-          grid-row: 3;
+        .studio-header > .mode-switch {
+          grid-column: 2;
+          grid-row: 1;
           justify-self: end;
+          align-self: center;
+        }
+        .studio-header > nav {
+          grid-column: 1/-1;
+          grid-row: 2;
+          justify-self: end;
+          flex-wrap: wrap;
         }
         .detail-control {
-          grid-row: 2;
-        }
-        body[data-designer-mode="home"] .mode-switch {
-          grid-row: 1;
-          grid-column: 2;
-        }
-        body[data-designer-mode="home"] .home-actions {
-          grid-column: 1/-1;
-          grid-row: 2;
-          flex-wrap: wrap;
+          grid-row: 3;
         }
         body[data-designer-mode="home"] #home-save-status {
           display: none;

@@ -150,15 +150,11 @@
             ><button id="home">Home</button>
           </div>
         </div>
-        <div class="workspace-footer">
-          <p id="route" role="status">
-            Drag to move, the lower-right corner resizes, Shift-click selects
-            more. Arrow keys nudge; Shift nudges eight pixels.
-          </p>
-          <details class="checks">
-            <summary id="check-count">Design checks</summary>
-            <ul id="checks"></ul>
-          </details>
+        <div class="simulation-strip">
+          <span id="route" class="simulation-label" role="status"
+            >Drag to move, the lower-right corner resizes, Shift-click selects
+            more. Arrow keys nudge; Shift nudges eight pixels.</span
+          ><button id="issues-open" class="issue-count">Design checks</button>
         </div>
       </section>
       <aside class="inspector-panel" aria-label="Properties">
@@ -207,6 +203,14 @@
         </p>
       </aside>
     </main>
+    <dialog id="issues-dialog" class="wide-dialog">
+      <div class="dialog-heading">
+        <h2>Design checks</h2>
+        <button data-close aria-label="Close design checks">×</button>
+      </div>
+      <div id="layout-report" aria-live="polite"></div>
+      <p class="hint">Checks do not establish driving safety.</p>
+    </dialog>
     <input id="file" type="file" accept="application/json,.json" hidden />
     <script type="module" src="app.mjs"></script>
   </body>

@@ -448,8 +448,17 @@ test("One header: the Meters | Home menu switch and each mode's actions in the s
   // The Home page's own action row stays hidden inside the designer.
   await expect(f.locator(".home-toolbar")).toBeHidden();
   await expect(page.locator("#home-undo")).toBeDisabled();
+  // The same design checks as Meters: a button on the strip, the issues in a dialog.
+  await expect(f.locator("#issues-open")).toHaveText("Design checks");
   await f.locator("#add").click();
   await expect(f.locator("#items .choose")).toHaveCount(6);
+  await expect(f.locator("#issues-open")).toHaveText("1 design issue");
+  await expect(f.locator("#issues-open")).toHaveClass(/has-issues/);
+  await f.locator("#issues-open").click();
+  await expect(f.locator("#issues-dialog .issue")).toHaveText(/^overlap: Applications ↔ New shortcut$/);
+  await f.locator("#issues-dialog .issue").click();
+  await expect(f.locator("#issues-dialog")).not.toBeVisible();
+  await expect(f.locator("#inspector-subtitle")).toHaveText("2 items selected");
   await expect(page.locator("#home-undo")).toBeEnabled();
   await expect(page.locator("#home-save-status")).toContainText(/Saved|Unsaved/);
   // Undo from the keyboard with the focus on the shared header.
@@ -460,7 +469,12 @@ test("One header: the Meters | Home menu switch and each mode's actions in the s
   await expect(page.locator("#home-try")).toHaveText("Back to design");
   await expect(f.locator("#navigation")).toBeVisible();
   await page.locator("#home-try").click();
+  // The switch and the header keep their place and height in both modes.
+  const box = async () => [await page.locator(".mode-switch").boundingBox(), await page.locator(".studio-header").boundingBox()];
+  const home = await box();
   await page.locator("#mode-meters").click();
   await expect(page.locator("#mode-meters")).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#send-builder")).toBeVisible();
+  const meters = await box();
+  expect([home[0].x, home[0].y, home[1].height]).toEqual([meters[0].x, meters[0].y, meters[1].height]);
 });

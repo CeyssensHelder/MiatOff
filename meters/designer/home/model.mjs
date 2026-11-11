@@ -193,14 +193,23 @@ export function clean(p) {
   for (const k of Object.keys(p.assets)) if (!refs.has(k)) delete p.assets[k];
   return validate(p);
 }
+// Design checks, as in the Meters designer: { kind, message, itemIds }.
 export function checks(p, ctx) {
   const issues = [];
   for (const w of p.items.filter((w) => !w.hidden)) {
     if (w.y < 64 || w.y + w.h > 438)
-      issues.push(w.label + ": overlaps reserved screen area");
+      issues.push({
+        kind: "screen-area",
+        message: `${w.label} reaches the status bar or the bottom strip`,
+        itemIds: [w.id],
+      });
     ctx.font = `${look(p).labelSize}px "${look(p).font}", Arial`;
     if (ctx.measureText(w.label).width > w.w - 8)
-      issues.push(w.label + ": caption will be clipped");
+      issues.push({
+        kind: "text-clipping",
+        message: `${w.label}: the name does not fit`,
+        itemIds: [w.id],
+      });
     for (const other of p.items)
       if (
         !other.hidden &&
@@ -210,7 +219,11 @@ export function checks(p, ctx) {
         w.y < other.y + other.h &&
         w.y + w.h > other.y
       )
-        issues.push(w.label + " overlaps " + other.label);
+        issues.push({
+          kind: "overlap",
+          message: `${w.label} ↔ ${other.label}`,
+          itemIds: [w.id, other.id],
+        });
   }
   return issues;
 }

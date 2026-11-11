@@ -292,15 +292,26 @@ function refresh() {
     : selection.length > 1
       ? `${selection.length} items selected`
       : `${w.label} · opens ${M.destinations.find((d) => d.id === w.opens)?.label ?? w.opens}`;
+  // Design checks: a count on the strip, the list in the dialog (as in Meters).
   const issues = M.checks(p, ctx);
-  $("checks").replaceChildren(
-    ...issues.map((text) => {
-      const li = document.createElement("li");
-      li.textContent = text;
-      return li;
-    }),
-  );
-  $("check-count").textContent = "Design checks (" + issues.length + ")";
+  $("issues-open").textContent = issues.length
+    ? `${issues.length} design ${issues.length === 1 ? "issue" : "issues"}`
+    : "Design checks";
+  $("issues-open").classList.toggle("has-issues", !!issues.length);
+  const report = $("layout-report");
+  report.replaceChildren();
+  if (!issues.length) report.textContent = "No measured layout issues";
+  for (const issue of issues) {
+    const b = document.createElement("button");
+    b.className = "issue";
+    b.textContent = issue.kind + ": " + issue.message;
+    b.onclick = () => {
+      store.view.selection = issue.itemIds;
+      $("issues-dialog").close();
+      refresh();
+    };
+    report.append(b);
+  }
   draw();
   chrome();
 }
@@ -400,6 +411,9 @@ $("try").onclick = () => {
   );
   refresh();
 };
+$("issues-open").onclick = () => $("issues-dialog").showModal();
+for (const b of document.querySelectorAll("[data-close]"))
+  b.onclick = () => b.closest("dialog").close();
 $("previous").onclick = () => navigate(-1);
 $("next").onclick = () => navigate(1);
 $("select").onclick = open;

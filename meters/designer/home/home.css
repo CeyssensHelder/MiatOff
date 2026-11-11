@@ -140,24 +140,9 @@ canvas {
 #navigation[hidden] {
   display: none;
 }
-.workspace-footer {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-  font-size: 12px;
-  color: var(--muted);
-}
-.workspace-footer p {
-  margin: 0;
-}
-.checks summary {
-  cursor: pointer;
-  white-space: nowrap;
-}
-#checks {
-  font-size: 12px;
-  padding-left: 18px;
+#route {
+  flex: 1;
+  min-width: 0;
 }
 button:disabled {
   opacity: 0.4;
