@@ -694,7 +694,11 @@
         return true;
     }
     function select() {
-        if (mode === 'style') { openPick(STYLES[styleSel].key, 0); return true; }
+        if (mode === 'style') {
+            var key = STYLES[styleSel].key;
+            openPick(key, key === setName ? cur : 0);   // the style shown last opens on its last page
+            return true;
+        }
         if (mode === 'pick') { useSet(pickSet, pickSel); return true; }
         return false;   // not used inside a gauge
     }
@@ -932,19 +936,22 @@
     // ------------------------------------------------------------------ go
     D.start(q.src || 'sim');
     $('src').innerHTML = D.sourceName;
-    // Start where the driver left off; the very first time, in the style menu.
+    // Start in the style menu, with the style used last time highlighted: press opens its page list on the page used
+    // last, press again opens that page. A link that names a style (?set=, e.g. for tests) opens it directly.
     (function () {
-        var set = SETS[q.set] ? q.set : null, page = parseInt(q.page, 10) || 0;
-        if (!set) {
-            try {
-                if (SETS[W.localStorage.getItem('miatoff.set')]) {
-                    set = W.localStorage.getItem('miatoff.set');
-                    page = parseInt(W.localStorage.getItem('miatoff.page'), 10) || 0;
-                }
-            } catch (e) { /* no storage */ }
-        }
+        var set = SETS[q.set] ? q.set : null, page = parseInt(q.page, 10) || 0, lastSet, lastPage;
         if (q.menu !== undefined) set = null;
-        if (set) useSet(set, page); else openStyle();
+        if (set) { useSet(set, page); return; }
+        try {
+            lastSet = W.localStorage.getItem('miatoff.set');
+            lastPage = parseInt(W.localStorage.getItem('miatoff.page'), 10) || 0;
+            if (SETS[lastSet]) {
+                setName = lastSet;
+                pages = SETS[lastSet];
+                cur = lastPage >= 0 && lastPage < pages.length ? lastPage : 0;
+            }
+        } catch (e) { /* no storage */ }
+        openStyle();
     })();
     // Bundled fonts load after the first paint: redraw the static layers once they are likely in.
     function refreshStatic() {
