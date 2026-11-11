@@ -97,7 +97,7 @@ that show the unit is recognised.
 ### Your own Meters pages
 
 1. In the app, open **Design your Meters** and press **Open designer**. It opens in your web browser on this PC.
-2. Design your pages and press **Send to builder**. Back in the builder, tick up to eight pages.
+2. Design your pages and press **Send to MiatOff**. Back in the app, tick up to eight pages.
 3. Under **Choose tweaks**, set Meters to *Install* (or *Update* if it is already on the car) and prepare the stick.
 4. In the car, accept the step (**INSTALL**, or **REPAIR** for an update). The pages are under *Applications → Meters → CUSTOM*.
 
@@ -105,7 +105,7 @@ To change them later, repeat from step 2. Start with one simple page. More in [d
 
 ### Your own Home menu
 
-1. In the app, open **Design your menu**. Pick a built-in menu under **Your menus**, or press **Open menu designer**,
+1. In the app, open **Design your menu**. Pick a built-in menu under **Your menus**, or press **Open designer**,
    design one and press **Send to MiatOff**. **Preview** shows a menu as the car draws it.
 2. Choose the menu. Under **Choose tweaks > Interface**, set **Custom menu** to *Install* and Meters to *Install*
    (or *Update*), then prepare the stick.

@@ -1,126 +1,177 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-body {
-  overflow: auto;
-  display: block;
-}
+/* The Home designer uses the Meters studio layout (studio-v3.css): tool panel, workspace, Properties. */
+
+/* Its own action row, only when the page is opened on its own; inside the designer the shared header has them. */
 .home-toolbar {
   display: flex;
+  flex: none;
   gap: 6px;
-  flex-wrap: wrap;
-  padding: 10px;
-  border-bottom: 1px solid #354158;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
 }
-.home-workspace {
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr) 280px;
-  gap: 12px;
-  padding: 12px;
+body.embedded .home-toolbar {
+  display: none;
 }
-.home-workspace aside {
+#save-status {
+  margin-right: auto;
+  text-align: left;
+}
+#notice {
+  margin: 0;
+}
+#notice:empty {
+  display: none;
+}
+
+.panel-section {
+  padding: 16px 14px;
+  border-bottom: 1px solid var(--line);
+}
+details.panel-section > summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+.panel-section h2 {
+  font-size: 13px;
+}
+.library-panel select,
+.inspector-panel select,
+.select-label input:not([type="checkbox"]) {
   display: block;
-  position: static;
-  overflow: auto;
-  max-height: calc(100dvh - 100px);
-  padding: 12px;
-}
-.home-workspace label {
-  display: block;
-  margin: 10px 0;
-}
-.home-workspace input:not([type="checkbox"]),
-.home-workspace select {
-  max-width: 100%;
   width: 100%;
+  margin-top: 6px;
+  color: var(--ink);
 }
-.home-stage {
-  min-width: 0;
+.library-panel > .panel-section > select {
+  margin-top: 0;
 }
-#canvas-wrap {
-  overflow: auto;
+.select-label input[type="color"] {
+  padding: 2px;
+  height: 36px;
 }
-canvas {
-  display: block;
-  width: 100%;
-  aspect-ratio: 5/3;
-  touch-action: none;
-  background: #17191d;
+.select-label input[type="file"] {
+  font-size: 12px;
+}
+.page-actions {
+  margin-bottom: 0;
 }
 .coordinates {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 0 8px;
 }
+.coordinates .select-label {
+  margin-bottom: 10px;
+}
+.check-label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  margin: 2px 0;
+}
+.check-label input {
+  min-height: 0;
+}
+.inspector-panel h3 {
+  font-size: 13px;
+  margin: 18px 0 10px;
+}
+.inspector-panel button {
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
 .item-row {
   display: flex;
-  gap: 4px;
-  margin: 6px 0;
+  gap: 2px;
+  margin: 4px 0;
+  align-items: center;
 }
 .item-row .choose {
   flex: 1;
   text-align: left;
   overflow-wrap: anywhere;
+  border: 1px solid var(--line);
+  background: #101824;
+}
+.item-row button:not(.choose) {
+  padding: 4px 8px;
 }
 .choose[aria-pressed="true"] {
-  outline: 2px solid #65e1c3;
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 var(--accent);
 }
-#notice {
-  color: #ffc080;
-  padding: 0 12px;
+
+.home-stage {
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* The canvas sits in the Meters screen frame (.screen in studio-v3.css). Fit: the whole 800 x 480 screen in the
+   space there is, in width and in height, centred; 100% (.actual, as in Meters): actual pixels, scrolled when
+   larger, without cutting off an edge. */
+#canvas-wrap {
+  flex: 1;
+  container-type: size;
+  display: grid;
+  place-items: safe center;
+}
+#canvas-wrap canvas {
+  width: min(100cqw, 100cqh * 5 / 3);
+  max-width: none;
+  height: auto;
+  aspect-ratio: 5/3;
+  background: #17191d;
+}
+#canvas-wrap.actual canvas {
+  width: 800px;
+  min-width: 800px;
+  height: 480px;
 }
 #navigation {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 #navigation[hidden] {
   display: none;
 }
-#checks {
-  font-size: 12px;
+#route {
+  flex: 1;
+  min-width: 0;
 }
 button:disabled {
   opacity: 0.4;
 }
-.home-workspace p {
-  font-size: 12px;
-  color: #aab9cd;
-}
-@media (max-width: 1000px) {
-  .home-workspace {
-    grid-template-columns: 200px minmax(0, 1fr);
+
+/* Narrower windows: the panels go below the canvas. (Meters hides its panels there and opens them as sheets.) */
+@media (max-width: 1199px) {
+  body {
+    height: auto;
+    overflow: auto;
   }
-  .inspector-panel {
-    grid-column: 1/-1;
-  }
-  .home-workspace aside {
-    max-height: none;
-  }
-}
-@media (max-width: 600px) {
-  .home-workspace {
+  main.home-workspace {
     display: flex;
     flex-direction: column;
   }
-  .home-stage {
+  .workspace {
     order: -1;
   }
-  .home-toolbar button {
-    min-height: 40px;
+  #canvas-wrap {
+    flex: none;
+    height: min(60vh, calc((100vw - 32px) * 3 / 5));
   }
-  .home-workspace aside {
-    width: 100%;
+  main.home-workspace > aside {
+    display: block;
+    overflow: visible;
+    border: 0;
+    border-top: 1px solid var(--line);
   }
-}
-
-.home-stage {
-  display: block;
-  padding: 0;
-  overflow: visible;
-}
-.home-workspace aside {
-  width: auto;
-  min-width: 0;
-}
-#starter {
-  width: auto;
-  max-width: 220px;
 }

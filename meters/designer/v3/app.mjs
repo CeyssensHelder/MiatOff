@@ -1130,7 +1130,7 @@ function actions() {
     const feedback = $("builder-feedback");
     feedback.hidden = false;
     feedback.classList.remove("error");
-    feedback.textContent = "Sending all Custom pages to MiatOff builder…";
+    feedback.textContent = "Sending all Custom pages to MiatOff…";
     buttons.forEach((button) => (button.disabled = true));
     try {
       const setup = builderSnapshot(store.project);
@@ -1142,7 +1142,7 @@ function actions() {
           return window.confirm(removalMessage(removed));
         },
       });
-      feedback.textContent = `All ${result.pages} Custom pages sent to MiatOff builder. Choose which pages to include in its Custom meters list.`;
+      feedback.textContent = `All ${result.pages} Custom pages sent to MiatOff. Choose which ones go on the stick under Design your Meters > Your pages.`;
     } catch (error) {
       if (error.cancelled) {
         feedback.textContent = error.message;

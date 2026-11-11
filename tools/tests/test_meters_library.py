@@ -480,7 +480,7 @@ class GuiTests(unittest.TestCase):
             for child in widget.winfo_children():
                 found += buttons(child)
             return found
-        self.assertIn("Open menu designer", buttons(app.menu_tab))
+        self.assertIn("Open designer", buttons(app.menu_tab))
         self.assertNotIn("Mazda Home", buttons(app.designer_tab))
         app.copy_designer_url("home")
         self.assertTrue(app.clipboard_get().endswith("/designer/index.html?mode=home"))

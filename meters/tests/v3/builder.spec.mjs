@@ -110,10 +110,10 @@ test.describe("local builder handoff with a temporary library", () => {
   }
   async function send(page) {
     await page
-      .getByRole("button", { name: "Send to MiatOff builder", exact: true })
+      .getByRole("button", { name: "Send to MiatOff", exact: true })
       .click();
     await expect(page.locator("#builder-feedback")).toContainText(
-      "sent to MiatOff builder",
+      "sent to MiatOff.",
     );
     await expect(page.locator("#builder-feedback")).not.toHaveClass(/error/);
   }
@@ -285,7 +285,7 @@ test.describe("local builder handoff with a temporary library", () => {
       }),
     );
     await page
-      .getByRole("button", { name: "Send to MiatOff builder", exact: true })
+      .getByRole("button", { name: "Send to MiatOff", exact: true })
       .click();
     await expect(page.locator("#builder-feedback")).toHaveClass(/error/);
     await expect(page.locator("#builder-feedback")).toContainText(
@@ -341,7 +341,7 @@ test.describe("local builder handoff with a temporary library", () => {
     // Dismiss: nothing is sent, the builder list is unchanged, the draft is unchanged.
     other.dialogAnswer = false;
     await other
-      .getByRole("button", { name: "Send to MiatOff builder", exact: true })
+      .getByRole("button", { name: "Send to MiatOff", exact: true })
       .click();
     await expect(other.locator("#builder-feedback")).toContainText(
       "cancelled",

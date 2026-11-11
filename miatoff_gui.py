@@ -785,20 +785,18 @@ class App(tk.Tk):
         page = self.page(self.designer_tab, "designer", "Design your Meters",
                          "Make your own gauge pages in your web browser, then choose which ones go on the stick.")
         one = self.card(page, "Open the designer")
-        self.paragraph(one, "The designer opens in your web browser on this computer. It saves your work automatically in that "
-                            "browser, for the address below, so always open it from here. Keep this window open while you "
-                            "design: closing MiatOff stops the designer.", pady=(0, 10))
+        self.paragraph(one, "The designer opens in your web browser on this computer and saves your work in that browser, so always open it from here. Keep this window open while you design: closing MiatOff stops the designer. In the designer, Send to MiatOff adds your pages below.", pady=(0, 10))
         row = tk.Frame(one, bg=CARD)
         row.pack(anchor="w", padx=20, pady=(0, 8))
         ttk.Button(row, text="Open designer", style="Accent.TButton", command=self.open_designer).pack(side="left")
         ttk.Button(row, text="Copy address", style="Plain.TButton", command=self.copy_designer_url).pack(side="left", padx=8)
         self.designer_status = self.paragraph(one, "Not started.", font=SMALL)
         custom = self.card(page, "Your pages")
-        self.paragraph(custom, "In the editor, press Send to builder to sync every page in Custom here. Choose up to eight pages "
-                               "to include in your export. Updates keep your include choices. There are no theme groups.", pady=(0, 10))
+        self.paragraph(custom, "Choose the pages that go on the stick, up to eight. Send to MiatOff in the designer brings every "
+                               "Custom page here; sending again updates them and keeps your choices.", pady=(0, 10))
         self.custom_list = tk.Frame(custom, bg=CARD)
         self.custom_list.pack(fill="x", padx=20)
-        self.custom_empty = WrapLabel(self.custom_list, text="No custom meters sent yet. Open the designer to get started.", bg=CARD, fg=MUTED, font=BODY)
+        self.custom_empty = WrapLabel(self.custom_list, text="No pages sent yet. Open the designer to get started.", bg=CARD, fg=MUTED, font=BODY)
         self.custom_empty.pack(fill="x", pady=10)
         actions = tk.Frame(custom, bg=CARD)
         actions.pack(fill="x", padx=20, pady=10)
@@ -811,15 +809,15 @@ class App(tk.Tk):
         # Shown while Meters is not set to Install: only then do the selected pages go on the stick.
         self.meters_hint = tk.Frame(custom, bg=WARN_BG)
         WrapLabel(self.meters_hint, bg=WARN_BG, fg=WARN, font=SMALL,
-                  text="Meters is not set to Install. To put the selected pages on a stick, set Meters to Install "
-                       "(Update, once a check shows Meters installed) under Choose tweaks.").pack(side="left", fill="x", expand=True, padx=12, pady=8)
+                  text="To put the chosen pages on the stick, set Meters to Install under Choose tweaks (it shows "
+                       "Update once a check finds Meters on the car).").pack(side="left", fill="x", expand=True, padx=12, pady=8)
         ttk.Button(self.meters_hint, text="Go to Choose tweaks", style="Small.TButton",
                    command=lambda: self.tabs.select(self.choose_tab)).pack(side="right", padx=12, pady=8)
         self.vars["meters"].trace_add("write", lambda *_: self._update_meters_hint())
         self._update_meters_hint()
         self.custom_notice = WrapLabel(custom, bg=CARD, fg=WARN, font=SMALL)
         removed = self.card(page, "Removed pages")
-        self.paragraph(removed, "When Send to builder is used from an editor draft that lacks some pages, the designer asks first "
+        self.paragraph(removed, "When Send to MiatOff is used from a designer draft that lacks some pages, the designer asks first "
                                 "and then moves those pages here. Restore puts a page back in the list above, not selected. A "
                                 "restored page that is not in the editor draft will be offered for removal again on the next Send.", pady=(0, 10))
         self.removed_list = tk.Frame(removed, bg=CARD)
@@ -828,12 +826,11 @@ class App(tk.Tk):
         self.removed_empty.pack(fill="x", pady=4)
         self.removed_status = self.paragraph(removed, "", font=SMALL)
         two = self.card(page, "Good to know")
-        self.paragraph(two, "Selected pages (at most eight) are built into the Meters install on the stick and show on the "
-                            "car under Applications > Meters > CUSTOM, with live data. To change them later, make a new "
-                            "stick with Meters set to Install (shown as Update once a check finds Meters installed) and "
-                            "press REPAIR in the car. Nothing has been tested in a real car yet. Export selected meters "
-                            "saves a design backup file that the car does not read. Browser drafts and this local library "
-                            "are separate; use Export > Back up entire project in the editor for a complete backup.")
+        self.paragraph(two, "In the car the chosen pages are under Applications > Meters > CUSTOM, with live data. To change "
+                            "them, make a new stick with Meters set to Install (Update) and press REPAIR in the car. Export "
+                            "selected meters saves a backup file the car does not read; for a complete backup use Export > "
+                            "Back up entire project in the designer.")
+        self.paragraph(two, "Try new pages parked first.", fg=WARN)
         self.refresh_custom_meters()
         self.after(1000, self._poll_custom_meters)
 
@@ -843,22 +840,20 @@ class App(tk.Tk):
         self.home_menus = meters_library.HomeMenus(self.meters_library)
         self.home_choice = tk.StringVar(self, value="")
         self.home_rows, self._home_signature = [], None
-        page = self.page(self.menu_tab, "menu", "Design your Home menu",
-                         "Make your own Mazda Home screen in your web browser, then choose the menu that goes on the stick.")
-        one = self.card(page, "Open the menu designer")
-        self.paragraph(one, "The menu designer opens in your web browser on this computer and saves your work in that "
-                            "browser, so always open it from here. Keep this window open while you design: closing "
-                            "MiatOff stops the designer. Press Send to MiatOff in the designer to add a menu below.", pady=(0, 10))
+        page = self.page(self.menu_tab, "menu", "Design your menu",
+                         "Make your own Mazda Home screen in your web browser, then choose which one goes on the stick.")
+        one = self.card(page, "Open the designer")
+        self.paragraph(one, "The designer opens in your web browser on this computer and saves your work in that browser, so always open it from here. Keep this window open while you design: closing MiatOff stops the designer. In the designer, Send to MiatOff adds your menu below.", pady=(0, 10))
         row = tk.Frame(one, bg=CARD)
         row.pack(anchor="w", padx=20, pady=(0, 8))
-        ttk.Button(row, text="Open menu designer", style="Accent.TButton",
+        ttk.Button(row, text="Open designer", style="Accent.TButton",
                    command=lambda: self.open_designer("home")).pack(side="left")
         ttk.Button(row, text="Copy address", style="Plain.TButton",
                    command=lambda: self.copy_designer_url("home")).pack(side="left", padx=8)
         self.menu_status = self.paragraph(one, "Not started.", font=SMALL)
         menus = self.card(page, "Your menus")
-        self.paragraph(menus, "Choose the menu that Custom menu installs. Built-in menus are ready to use; menus you send "
-                              "from the designer are added here (sending one with the same name replaces it).", pady=(0, 10))
+        self.paragraph(menus, "Choose the menu that goes on the stick. The built-in menus are ready to use. Send to MiatOff in "
+                              "the designer brings your menu here; sending one with the same name updates it.", pady=(0, 10))
         self.home_list = tk.Frame(menus, bg=CARD)
         self.home_list.pack(fill="x", padx=20)
         actions = tk.Frame(menus, bg=CARD)
@@ -868,20 +863,20 @@ class App(tk.Tk):
         # Shown until Custom menu and Meters are both set to Install: only then does the menu go on the car.
         self.home_hint = tk.Frame(menus, bg=WARN_BG)
         WrapLabel(self.home_hint, bg=WARN_BG, fg=WARN, font=SMALL,
-                  text="To put this menu on the car, set Custom menu to Install under Choose tweaks, with Meters set to "
-                       "Install (Update, once a check shows Meters installed).").pack(side="left", fill="x", expand=True, padx=12, pady=8)
+                  text="To put the chosen menu on the stick, set Custom menu and Meters to Install under Choose tweaks "
+                       "(Meters shows Update once a check finds it on the car).").pack(side="left", fill="x", expand=True, padx=12, pady=8)
         ttk.Button(self.home_hint, text="Go to Choose tweaks", style="Small.TButton",
                    command=lambda: self.tabs.select(self.choose_tab)).pack(side="right", padx=12, pady=8)
         for key in ("meters", stickflow.HOME_KEY):
             self.vars[key].trace_add("write", lambda *_: self._update_home_hint())
         two = self.card(page, "Good to know")
-        self.paragraph(two, "In the car the menu replaces how Mazda's Home screen looks and the order the Commander knob goes "
+        self.paragraph(two, "In the car the chosen menu replaces Mazda's Home screen and the order the Commander knob goes "
                             "through it. Applications, Entertainment, Communication, Navigation and Settings use Mazda's own "
-                            "routes; without your own picture they show Mazda's own buttons. FM, DAB, Bluetooth, Android Auto, "
-                            "CarPlay and Meters open their list for a moment and then that item, as a tap would; when it is "
-                            "not available the list stays open. If anything is not as expected, Mazda's own Home stays.")
-        self.paragraph(two, "To go back to Mazda's Home, set Custom menu to Mazda's Home under Choose tweaks (with Meters set "
-                            "to Install), or remove Meters. Try a new menu parked first.", fg=WARN)
+                            "routes; FM, DAB, Bluetooth, Android Auto, CarPlay and Meters open their list for a moment and then "
+                            "that item, as a tap would. If anything is not as expected, Mazda's own Home stays. To change the "
+                            "menu, make a new stick with Custom menu and Meters set to Install and press REPAIR in the car; "
+                            "Custom menu > Mazda's Home brings back Mazda's own.")
+        self.paragraph(two, "Try a new menu parked first.", fg=WARN)
         self.refresh_home_menus()
         self._update_home_hint()
 
@@ -918,8 +913,8 @@ class App(tk.Tk):
                                    command=lambda k=row["id"]: self.preview_home_menu(k)).pack(side="right", padx=(8, 0))
                     self.home_rows.append(frame)
             name = next((r["name"] for r in rows if r["id"] == chosen), None)
-            self.home_status.configure(text=(f"Custom menu installs: {name}." if name else "No menu chosen yet.")
-                                       + " Saved on this computer.", fg=MUTED)
+            self.home_status.configure(text=(f"Chosen: {name}." if name else "No menu chosen yet.")
+                                       + " Your choice is saved on this computer.", fg=MUTED)
             self._refresh_home_pick(rows, chosen)
         except Exception as error:
             self._home_signature = None
@@ -1092,7 +1087,7 @@ class App(tk.Tk):
                 self.custom_rows[key][1].configure(text=f"{row['name']}\n{row['widgets']} instruments")
             selected = sum(bool(row["selected"]) for row in rows)
             self.custom_export.configure(state="normal" if selected else "disabled")
-            self.custom_status.configure(text=f"{selected} of {len(rows)} Custom pages selected. Selection is saved on this computer.", fg=MUTED)
+            self.custom_status.configure(text=f"{selected} of {len(rows)} pages chosen. Your choice is saved on this computer.", fg=MUTED)
         except Exception as error:
             self._library_signature = None
             self.custom_export.configure(state="disabled")
