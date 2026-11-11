@@ -30,6 +30,7 @@ export class EditorPreferences {
             market: short(car.market),
             body: short(car.body),
             tyre: short(car.tyre),
+            margin: Number.isInteger(car.margin) ? car.margin : null,
             units:
               car.units && typeof car.units === "object"
                 ? Object.fromEntries(

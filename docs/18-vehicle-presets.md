@@ -119,15 +119,18 @@ the six presets. Its gear ratios and final drive are unsourced here (a secondary
 
 ## RPM fields in `presets.mjs`
 
-- `red`: the manufacturer redline from the table above.
-- `limit` and `shift`: **unsourced (assumption)**, both set equal to `red` (no source gives the fuel cut). `amber` is
-  `red - 500`. `max` is the next 1000 at least 500 above `limit` (8000 for every preset).
-- The legacy profile in `signals.mjs` uses 7000 as the 1.5 redline with a ~7500 fuel cut ("owner reports"). Mazda UK says
-  the 1.5 redline is 7,500 rpm, which matches the owner-reported cut; keep this in mind when reconciling.
+- `rpm.limit`: the manufacturer redline from the table above, taken as the point where the engine stops pulling (the
+  limiter). It is the only RPM value a preset carries. The exact fuel-cut rpm is not published; owners of the 1.5 report
+  about 7,500, which matches Mazda UK's redline.
+- The dashboard thresholds are a display choice, not a specification. The car setup derives them from the limit and a
+  warning margin chosen in the dialog (default 500 rpm), so the gauges warn before the cut: `red` = limit - margin,
+  `shift` = red + 40% of the margin (rounded to 50), `amber` = red - 500, `max` = the next 1000 at least 500 above the
+  limit. For a 7,500 rpm car with the default margin: amber 6,500, red 7,000, shift 7,200, limit 7,500, gauge 8,000,
+  the same as the legacy profile.
 
 ## Conflicts and gaps
 
-1. 1.5 redline: Mazda UK 7,500 rpm (S11) against 7000 in the legacy profile.
+1. 1.5 redline: Mazda UK 7,500 rpm (S11). The legacy profile called 7000 its "redline", but that is its red warning; its limiter is 7,500, which agrees.
 2. 1.5 mass: 990 kg (Mazda Japan lower bound), 975 kg (secondary, 1,050 minus driver), 1,032 kg (UK ND2 maximum).
 3. 1.5 gear ratios and final drive (both generations): no manufacturer source found; the secondary table shows the
    manual 6MT figures.

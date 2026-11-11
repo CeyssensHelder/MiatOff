@@ -11,6 +11,8 @@ import {
   choicesFromVehicle,
   markEdited,
   presetValues,
+  warningRpm,
+  MARGINS,
   SPEC_FIELDS,
 } from "../../designer/v3/car-setup.mjs";
 
@@ -32,11 +34,8 @@ test("presets are well formed and their sourced fields name a source", () => {
     assert.ok(p.markets.length && p.markets.every((m) => MARKETS.includes(m)));
     assert.ok(p.bodies.length && p.bodies.every((b) => ["roadster", "RF"].includes(b)));
     for (const t of p.tyres) assert.ok(circumferenceFor(t), p.id + " tyre " + t);
-    const r = p.rpm;
-    assert.ok(
-      0 < r.amber && r.amber <= r.red && r.red <= r.shift && r.shift <= r.limit && r.limit <= r.max && r.max <= 15000,
-      p.id + " rpm order",
-    );
+    assert.deepEqual(Object.keys(p.rpm), ["limit"], p.id + " carries only the limiter");
+    assert.ok(Number.isInteger(p.rpm.limit) && p.rpm.limit > 5000, p.id + " limit");
     assert.equal(p.ratios.length, 6, p.id + " has six gears");
     const cited = new Set(p.sources.flatMap((s) => s.fields));
     for (const f of p.verified) {
@@ -67,6 +66,26 @@ test("each preset applied to a default project still validates", () => {
         for (const f of SPEC_FIELDS)
           assert.equal(v.assumed.includes(f), !values[f].sourced, `${p.id} ${f}`);
       }
+});
+
+test("dashboard warnings come before the limiter so there is time to react", () => {
+  assert.deepEqual(warningRpm(7500), { max: 8000, amber: 6500, red: 7000, shift: 7200, limit: 7500 });
+  assert.deepEqual(warningRpm(6800, 0), { max: 8000, amber: 6300, red: 6800, shift: 6800, limit: 6800 });
+  for (const limit of [6800, 7500])
+    for (const m of MARGINS) {
+      const r = warningRpm(limit, m);
+      assert.ok(0 < r.amber && r.amber <= r.red && r.red <= r.shift && r.shift <= r.limit && r.limit <= r.max && r.max <= 15000);
+      assert.equal(r.limit - r.red, m);
+    }
+  const project = M.defaults(),
+    p = PRESETS.find((x) => x.rpm.limit === 7500);
+  applyPreset(project, p, { market: p.markets[0], margin: 750 });
+  assert.deepEqual(project.vehicle.rpm, warningRpm(7500, 750));
+  assert.equal(project.vehicle.assumed.includes("rpm.red"), false, "warnings are a choice, not an assumption");
+  assert.equal(choicesFromVehicle(project.vehicle).margin, 750);
+  assert.equal(choicesFromVehicle(M.defaults().vehicle).margin, 500, "legacy profile: red 7000, limit 7500");
+  markEdited(project.vehicle, "rpm.red");
+  assert.doesNotMatch(project.vehicle.provenance, /edited by hand/);
 });
 
 test("choices only offer what exists for the region", () => {

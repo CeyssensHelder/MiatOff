@@ -900,6 +900,9 @@ dialog label > select {
 #setup-summary .assumed {
   color: var(--amber);
 }
+#setup-summary .choice {
+  color: var(--muted);
+}
 .setup-actions {
   justify-content: flex-end;
   margin-top: 18px;

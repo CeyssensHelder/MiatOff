@@ -1592,10 +1592,10 @@ function vehicleControls() {
     add(P.readingName(key) + " units", "units." + key, 0, choices);
   for (const [key, label] of [
     ["max", "Gauge maximum"],
-    ["amber", "Amber warning"],
-    ["red", "Redline"],
-    ["shift", "Shift warning"],
-    ["limit", "Estimated limiter"],
+    ["amber", "Amber from"],
+    ["red", "Red from"],
+    ["shift", "Shift lights flash at"],
+    ["limit", "Limiter (redline)"],
   ])
     add(label + " (RPM)", "rpm." + key, 1);
   for (let i = 0; i < store.project.vehicle.ratios.length; i++)

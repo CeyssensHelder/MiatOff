@@ -3,12 +3,9 @@
 import { PRESETS, MARKETS, MARKET_UNITS } from "./presets.mjs";
 import { unitChoices, setUnits, toUnit } from "./signals.mjs";
 
-// Vehicle fields a preset can supply, in display order. Anything not backed by a source stays "assumed".
+// Vehicle specifications a preset can supply, in display order. Anything not backed by a source stays "assumed".
+// rpm.limit is the published redline, where the engine stops pulling.
 export const SPEC_FIELDS = [
-  "rpm.max",
-  "rpm.amber",
-  "rpm.red",
-  "rpm.shift",
   "rpm.limit",
   "ratios",
   "finalDrive",
@@ -21,12 +18,16 @@ export const SPEC_FIELDS = [
 ];
 // Simulation-only physics values: no preset sources them.
 const MODEL_FIELDS = ["cda", "crr", "eff"];
+// Dashboard warnings: a display choice worked out from the limit and the warning margin, not a specification.
+export const WARNING_FIELDS = ["rpm.red", "rpm.shift", "rpm.amber", "rpm.max"];
+export const MARGINS = [0, 250, 500, 750, 1000];
+export const DEFAULT_MARGIN = 500;
 const FIELD_LABELS = {
   "rpm.max": "Gauge maximum",
-  "rpm.amber": "Amber warning",
-  "rpm.red": "Redline",
-  "rpm.shift": "Shift warning",
-  "rpm.limit": "Limiter",
+  "rpm.amber": "Amber from",
+  "rpm.red": "Red from",
+  "rpm.shift": "Shift lights flash at",
+  "rpm.limit": "Limiter (redline)",
   ratios: "Gear ratios",
   finalDrive: "Final drive",
   circumference: "Rolling circumference",
@@ -49,6 +50,18 @@ export function circumferenceFor(tyre) {
   if (!m) return null;
   const diameter = Number(m[3]) * 25.4 + (2 * Number(m[1]) * Number(m[2])) / 100;
   return Math.round(Math.PI * diameter) / 1000;
+}
+// Turn red `margin` rpm before the limiter so there is time to react; the shift lights flash a little later,
+// amber starts 500 rpm before red. 7500 with the default 500: amber 6500, red 7000, shift 7200, gauge 8000.
+export function warningRpm(limit, margin = DEFAULT_MARGIN) {
+  const red = limit - margin;
+  return {
+    max: Math.ceil((limit + 500) / 1000) * 1000,
+    amber: Math.max(500, red - 500),
+    red,
+    shift: red + Math.round((margin * 0.4) / 50) * 50,
+    limit,
+  };
 }
 const unique = (items) => [...new Set(items)];
 export function presetsFor(market) {
@@ -94,6 +107,7 @@ export function resolveChoices(choices) {
   for (const [k, list] of Object.entries(unitChoices))
     if (!list.includes(units[k])) units[k] = MARKET_UNITS[c.market][k];
   c.units = units;
+  c.margin = MARGINS.includes(Number(c.margin)) ? Number(c.margin) : DEFAULT_MARGIN;
   return { choices: c, options, preset };
 }
 // Choices that describe a vehicle profile, for prefilling the dialog.
@@ -107,17 +121,17 @@ export function choicesFromVehicle(v) {
     body: v.body === "rf" ? "RF" : v.body,
     tyre: v.tyre ?? null,
     units: { ...v.units },
+    margin: v.rpm.limit - v.rpm.red,
   };
 }
 // What a preset would put in the profile: value plus whether a source backs it.
 export function presetValues(preset, { body, tyre }) {
   const sourced = new Set(preset.verified ?? []),
     out = {};
-  for (const k of ["max", "amber", "red", "shift", "limit"])
-    out["rpm." + k] = {
-      value: preset.rpm?.[k] ?? null,
-      sourced: sourced.has("rpm." + k) || sourced.has("rpm"),
-    };
+  out["rpm.limit"] = {
+    value: preset.rpm?.limit ?? null,
+    sourced: sourced.has("rpm.limit"),
+  };
   out.ratios = {
     value: preset.ratios ?? null,
     sourced: sourced.has("ratios") && (preset.ratios ?? []).every((r) => r),
@@ -169,9 +183,9 @@ export function applyPreset(project, preset, choices) {
     v.year = from;
   for (const field of SPEC_FIELDS) {
     const { value, sourced } = values[field];
-    if (field.startsWith("rpm.")) {
-      if (Number.isInteger(value)) v.rpm[field.slice(4)] = value;
-    } else if (field === "ratios") {
+    if (field === "rpm.limit")
+      v.rpm = warningRpm(Number.isInteger(value) ? value : v.rpm.limit, c.margin);
+    else if (field === "ratios") {
       if (Array.isArray(value) && value.length)
         v.ratios = value.map((r, i) => r ?? v.ratios[i] ?? null);
     } else if (Number.isFinite(value)) v[field] = value;
@@ -247,6 +261,19 @@ export class CarSetup {
       label.append(select);
       host.append(label);
     }
+    $("setup-margin").replaceChildren(
+      ...MARGINS.map(
+        (m) =>
+          new Option(
+            m === 0 ? "At the limiter" : m + " rpm before the limiter",
+            String(m),
+          ),
+      ),
+    );
+    $("setup-margin").onchange = () => {
+      this.choices.margin = Number($("setup-margin").value);
+      this.render();
+    };
     $("setup-form").onsubmit = (e) => {
       e.preventDefault();
       if (this.step === 1) {
@@ -319,6 +346,7 @@ export class CarSetup {
     fill("tyre", options.tyre);
     for (const [k, u] of Object.entries(choices.units))
       $("setup-unit-" + k).value = u;
+    $("setup-margin").value = String(choices.margin);
     $("setup-car").hidden = this.step !== 1;
     $("setup-intro").hidden = this.step !== 1;
     $("setup-units").hidden = this.step !== 2;
@@ -333,18 +361,28 @@ export class CarSetup {
     }
     $("setup-error").textContent = "";
     const values = presetValues(preset, choices),
-      rows = SPEC_FIELDS.map((f) => {
+      warnings = warningRpm(
+        values["rpm.limit"].value ?? this.api.vehicle().rpm.limit,
+        choices.margin,
+      ),
+      row = (f, value, kind) => {
         const tr = document.createElement("tr"),
           name = document.createElement("th"),
-          value = document.createElement("td"),
+          cell = document.createElement("td"),
           tag = document.createElement("td");
         name.textContent = FIELD_LABELS[f];
-        value.textContent = fmt(f, values[f].value, choices.units);
-        tag.textContent = values[f].sourced ? "sourced" : "assumed";
-        tag.className = values[f].sourced ? "sourced" : "assumed";
-        tr.append(name, value, tag);
+        cell.textContent = fmt(f, value, choices.units);
+        tag.textContent = kind;
+        tag.className = kind === "your margin" ? "choice" : kind;
+        tr.append(name, cell, tag);
         return tr;
-      });
+      },
+      rows = SPEC_FIELDS.flatMap((f) => [
+        row(f, values[f].value, values[f].sourced ? "sourced" : "assumed"),
+        ...(f === "rpm.limit"
+          ? WARNING_FIELDS.map((w) => row(w, warnings[w.slice(4)], "your margin"))
+          : []),
+      ]);
     $("setup-summary-body").replaceChildren(...rows);
     $("setup-summary-caption").textContent =
       preset.label + " · " + (MARKET_NAMES[choices.market] ?? choices.market);
@@ -376,6 +414,7 @@ export class CarSetup {
             body: choices.body,
             tyre: choices.tyre,
             units: { ...choices.units },
+            margin: choices.margin,
           }
         : { done: true, preset: null },
     });

@@ -19,19 +19,23 @@ test("first run asks for the car, applies a US preset, and does not ask again", 
   const preset = await page.evaluate(async () => {
     const S = await import("./v3/car-setup.mjs");
     const c = S.resolveChoices({ market: "US" });
-    return { id: c.preset.id, ratios: c.preset.ratios, redline: c.preset.rpm.red };
+    return { id: c.preset.id, ratios: c.preset.ratios, limit: c.preset.rpm.limit };
   });
   await page.locator("#setup-next").click();
   await expect(page.locator("#setup-title")).toHaveText("Units and summary");
   await expect(page.locator("#setup-unit-speed")).toHaveValue("mph");
   await expect(page.locator("#setup-unit-temperature")).toHaveValue("F");
   await expect(page.locator("#setup-summary-body tr")).toHaveCount(13);
+  await expect(page.locator("#setup-margin")).toHaveValue("500");
+  await page.locator("#setup-margin").selectOption("750");
+  await expect(page.locator("#setup-summary-body")).toContainText("Red from" + (preset.limit - 750) + " rpm");
   await page.locator("#setup-next").click();
   await expect(dialog(page)).toBeHidden();
   const v = await vehicle(page);
   expect(v.preset).toBe(preset.id);
   expect(v.units.speed).toBe("mph");
-  expect(v.rpm.red).toBe(preset.redline);
+  expect(v.rpm.limit).toBe(preset.limit);
+  expect(v.rpm.red).toBe(preset.limit - 750);
   expect(v.ratios).toEqual(preset.ratios.map((r, i) => r ?? v.ratios[i]));
   // The Vehicle and units rows follow the new profile.
   await page.locator("#project-open").click();
