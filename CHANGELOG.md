@@ -29,15 +29,14 @@ and choose per tweak to install, remove or leave it.
 Every change is hash-guarded, backed up and can be removed again; see the README's
 [Is it safe?](https://github.com/CeyssensHelder/MiatOff/blob/master/README.md#is-it-safe).
 
-### Tested in our car (2017 EU ND1)
+### Tested in a car
 
-The dump, touch in Android Auto, boot trim, the startup warning, the shorter list delay, Meters, three custom Meters
+On our 2017 EU ND1: the dump, touch in Android Auto, boot trim, the startup warning, the shorter list delay, Meters, three custom Meters
 pages and the Home menu. A contributor ran the check, the install and the wireless CarPlay edits on an EU ND2 (RF, 2.0,
-2022).
+2022), and tested the camera safety text and the parking sensor graphics (our car has no reversing camera).
 
 ### Not tested by us
 
-- The camera safety text and the parking sensor graphics (our car has no reversing camera).
 - The car setup in a car: other engines, gearboxes and imperial units are tested on the PC only.
 - The macOS and Linux downloads.
 

@@ -39,8 +39,7 @@ You choose per tweak: **Install**, **Remove** or **Leave as-is**. The tool never
 Check your firmware under *Settings → System → About → Version Information*. Stay on **74.00.324A** and do **not**
 upgrade to 74.00.331: it breaks wireless CarPlay more often and cannot be rolled back.
 
-Not tested by us, because our car has no reversing camera: the camera safety text and the parking sensor graphics. What
-was tested for each release is in [CHANGELOG.md](CHANGELOG.md).
+What was tested for each release is in [CHANGELOG.md](CHANGELOG.md).
 
 Another car or firmware? Run the check (below) and open an issue with only `SUMMARY.txt` from the dump. See
 [CONTRIBUTING.md](CONTRIBUTING.md).
