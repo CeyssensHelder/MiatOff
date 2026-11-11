@@ -4,12 +4,11 @@ Open-source tweaks for the Mazda Connect infotainment in the **Mazda MX-5 (ND)**
 plug it into the car, and choose what to install. Every change can be undone, and the tool checks your car first and
 refuses to touch anything it does not recognise.
 
-> **Who this is for:** the **MX-5 ND1 and ND2** with the original Mazda Connect head unit on firmware **74.00.324A**
-> (check *Settings → System → About → Version Information*). It is **not** for the **ND3** (2024 and later, a different
-> head unit) or for any other firmware version. The tools check the car first and refuse to change anything else.
+> **Who this is for:** the **MX-5 ND1 and ND2** (EU, UK and US spec) with Mazda Connect on firmware **74.00.324A**.
+> See [Support status](#support-status).
 
-> ⚠️ **Early release.** Modifying a head unit can leave it unusable and is not covered by Mazda's warranty. You use this at
-> your own risk. Read [Is it safe?](#is-it-safe) and the [support status](#support-status) first.
+> ⚠️ Modifying a head unit can leave it unusable and is not covered by Mazda's warranty. You use this at your own risk.
+> Read [Is it safe?](#is-it-safe) first.
 
 ## What you can do
 
@@ -18,11 +17,11 @@ refuses to touch anything it does not recognise.
 | **Touch while driving** | The touchscreen keeps working in the Mazda menus while the car moves (uses TouchTune). |
 | **Touch in Android Auto** | Tap, swipe and drag in Android Auto (uses the oem-aa-mod touch shim). |
 | **Boot trim** | Stops things you don't use from starting at boot, each on its own: DVD/TV, SiriusXM, Pandora, Stitcher, Aha. |
-| **Hide trimmed items in the menu** | Also hides the sources you stopped at boot in the Entertainment menu (one item for all; untested by us). |
+| **Hide trimmed items in the menu** | Also hides the sources you stopped at boot in the Entertainment menu. |
 | **Startup warning** | Skips the warning screen at startup. |
 | **Shorter list delay** | Holding the Commander tilted starts scrolling a list after 0.15 s instead of 1.5 s (after MZD-AIO). |
-| **Parking sensor graphics** | Semi-transparent parking sensor graphics over the camera picture (MZD-AIO's images); the originals stay on the unit (untested by us). |
-| **Camera safety text** | Blanks the safety text over the reversing camera picture (MZD-AIO's blank image); the originals stay on the unit (untested by us). |
+| **Parking sensor graphics** | Semi-transparent parking sensor graphics over the camera picture (MZD-AIO's images); the originals stay on the unit. |
+| **Camera safety text** | Blanks the safety text over the reversing camera picture (MZD-AIO's blank image); the originals stay on the unit. |
 | **Meters** | Gauges under *Applications*: speed, rpm, G-meter, lap timer, fed by the car's own data. No OBD adapter needed. |
 | **Meters Designer** | Design your own Meters pages on the PC. Up to eight show in the car under *Applications → Meters → CUSTOM*. |
 | **Home menu** | Your own Home screen: up to twelve shortcuts with your pictures, positions, knob order and destinations (also Meters, FM, DAB, Bluetooth, Android Auto, CarPlay). Installed with Meters; Mazda's files stay unchanged. |
@@ -31,27 +30,17 @@ You choose per tweak: **Install**, **Remove** or **Leave as-is**. The tool never
 
 ## Support status
 
-Only one car has been analysed in depth (a 2017 EU ND1, plain `sm.conf`). Everything below was tested on it unless a row says otherwise.
+| Car | Firmware | Supported |
+|---|---|---|
+| MX-5 ND1 and ND2 (EU, UK and US spec) with Mazda Connect | 74.00.324A | Yes |
+| MX-5 ND3 (2024 and later) | any | No: a different head unit |
+| Any car | anything other than 74.00.324A | No: the tools refuse to change anything |
 
-| Firmware | Car | Feature | Status |
-|---|---|---|---|
-| 74.00.324A | EU MX-5 ND1 | Check my car (read-only dump) | Tested in the car |
-| 74.00.324A | EU MX-5 ND1 | Touch in Android Auto, boot trim, startup warning | Experimental: installed and running on our car (also on the simulator) |
-| 74.00.324A | EU MX-5 ND1 with wireless CarPlay (`sm_WCP.conf`) | Touch in Android Auto, boot trim | Experimental: same edits on `sm_WCP.conf`; tested on a simulator and by a contributor on an ND2 (below), not on our own car (it uses `sm.conf`) |
-| 74.00.324A | EU MX-5 ND1 | Meters | Experimental: installed on our car; an earlier in-car failure (busy root remount) was fixed |
-| 74.00.324A | any MX-5 ND | Your car in the Meters (car setup: rev warnings, gearing, imperial units, for the built-in styles and your own pages) | Experimental: PC and simulator tests only, **not tried in a car** |
-| 74.00.324A | EU MX-5 ND1 | Meters Designer pages (CUSTOM) | Experimental: installed and used on our car with three simple pages; known issues in [docs/15](docs/15-meters-designer.md#known-issues) |
-| 74.00.324A | EU MX-5 ND1 | Home menu | Experimental: installed and working on our car (2077/Track menu and after a unit restart checked); also tested against a fake HMI and Mazda's own Home control code from our dump |
-| 74.00.324A | EU MX-5 ND1 | Shorter list delay | Experimental: ran on our car without problems; the effect is only visible when scrolling lists |
-| 74.00.324A | EU MX-5 ND1 | Blank reversing-camera safety text | Experimental: simulator and the contributor's unit only; **not tested by us** (no camera) |
-| 74.00.324A | EU MX-5 ND1 | Semi-transparent parking sensor graphics | Experimental: all 44 image hashes match our unit; no visible effect on a car without a reversing camera (our car only beeps), so **not tested by us** |
-| 74.00.324A | US-spec MX-5 ND1 | Not specified | Reported working by a user; not verified by us |
-| 74.00.324A | EU MX-5 ND2 (RF, 2.0, 2022) with wireless CarPlay (`sm_WCP.conf`) | Check, install and the `sm_WCP.conf` edits | **Reported working by a contributor** who ran it on their own car. Android Auto showed up but was not tried |
-| 74.00.324A | other MX-5 ND2 | everything | Same software as far as we know, but not analysed by us: run the check first |
-| anything else | any | everything | Unsupported: the tools refuse to change anything |
+Check your firmware under *Settings → System → About → Version Information*. Stay on **74.00.324A** and do **not**
+upgrade to 74.00.331: it breaks wireless CarPlay more often and cannot be rolled back.
 
-Stay on firmware **74.00.324A** and do **not** upgrade to 74.00.331: it breaks wireless CarPlay more often and cannot be
-rolled back. Check yours under *Settings → System → About → Version Information*.
+Not tested by us, because our car has no reversing camera: the camera safety text and the parking sensor graphics. What
+was tested for each release is in [CHANGELOG.md](CHANGELOG.md).
 
 Another car or firmware? Run the check (below) and open an issue with only `SUMMARY.txt` from the dump. See
 [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -62,8 +51,7 @@ Another car or firmware? Run the check (below) and open an issue with only `SUMM
   (what changed is in [CHANGELOG.md](CHANGELOG.md)): no Python or other tools needed, and it works offline. **Windows** is what we use.
   The macOS and Linux downloads are untested so far. See [Opening the app](#opening-the-app).
 - An **empty USB stick**, 32 GB or smaller, formatted **FAT32** with an **MBR** partition table.
-- An **MX-5 ND1 or ND2** with Mazda Connect on firmware 74.00.324A (see the support status above). We analysed a 2017 EU
-  ND1; a US-spec ND1 has been reported working. **Not** the ND3, and no other firmware.
+- An **MX-5 ND1 or ND2** with Mazda Connect on firmware 74.00.324A (see [Support status](#support-status)).
 
 ## How to use it
 

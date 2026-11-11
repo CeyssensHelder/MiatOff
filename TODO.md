@@ -1,7 +1,7 @@
 # TODO
 
-Features and fixes still to build. What is built and how far it is tested is in the README's
-[support status](README.md#support-status). Every change to the unit stays surgical and hash-guarded (see
+Features and fixes still to build. What is built is in the [README](README.md); what was tested for each release is
+in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and hash-guarded (see
 [AGENTS.md](AGENTS.md)).
 
 ## Features

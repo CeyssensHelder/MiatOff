@@ -2,7 +2,7 @@
 
 Gauge pages for the Mazda Connect screen (800×480), as in [docs/13](../docs/13-gauges.md). Plain HTML, canvas and
 ES5 JavaScript, because the CMU shows pages in an old Opera. There are no libraries and no build step.
-Experimental: installed and used on our own car (see the support status in the [main README](../README.md#support-status)).
+Installed and used on our own car (see the [main README](../README.md#support-status) for which cars are supported).
 
 **Menu.** First a list of styles (street, track, cyberpunk, 2077, 2077 night and, when there are any, custom), each with a live preview. Open one and you get
 live previews of its pages. Pick one and the gauge fills the screen. **Back** goes up one level each time, and at

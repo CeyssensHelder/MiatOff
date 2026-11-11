@@ -33,7 +33,7 @@ Every change is hash-guarded, backed up and can be removed again; see the README
 
 The dump, touch in Android Auto, boot trim, the startup warning, the shorter list delay, Meters, three custom Meters
 pages and the Home menu. A contributor ran the check, the install and the wireless CarPlay edits on an EU ND2 (RF, 2.0,
-2022). The [support status](https://github.com/CeyssensHelder/MiatOff/blob/master/README.md#support-status) lists what was tested where.
+2022).
 
 ### Not tested by us
 
