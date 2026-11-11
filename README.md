@@ -20,12 +20,9 @@ refuses to touch anything it does not recognise.
 | **Boot trim** | Stops things you don't use from starting at boot, each on its own: DVD/TV, SiriusXM, Pandora, Stitcher, Aha. |
 | **Hide trimmed items in the menu** | Also hides the sources you stopped at boot in the Entertainment menu (one item for all; untested by us). |
 | **Startup warning** | Skips the warning screen at startup. |
-| **Shorter list delay** | Lists scroll sooner and faster when you hold the Commander tilted. |
-| **Camera safety text** | Blanks the safety text over the reversing camera picture (untested by us). |
-| **Parking sensor graphics** | Makes the on-screen parking sensor graphics semi-transparent (needs a reversing camera view; untested by us). |
 | **Shorter list delay** | Holding the Commander tilted starts scrolling a list after 0.15 s instead of 1.5 s (after MZD-AIO). |
-| **Parking sensor graphics** | Semi-transparent parking sensor graphics over the camera picture (MZD-AIO's images); the originals stay on the unit. |
-| **Camera safety text** | Blanks the safety text over the reversing camera picture (MZD-AIO's blank image); the originals stay on the unit. |
+| **Parking sensor graphics** | Semi-transparent parking sensor graphics over the camera picture (MZD-AIO's images); the originals stay on the unit (untested by us). |
+| **Camera safety text** | Blanks the safety text over the reversing camera picture (MZD-AIO's blank image); the originals stay on the unit (untested by us). |
 | **Meters** | Gauges under *Applications*: speed, rpm, G-meter, lap timer, fed by the car's own data. No OBD adapter needed. |
 | **Meters Designer** | Design your own Meters pages on the PC. Up to eight show in the car under *Applications → Meters → CUSTOM*. |
 | **Home menu** | Your own Home screen: up to twelve shortcuts with your pictures, positions, knob order and destinations (also Meters, FM, DAB, Bluetooth, Android Auto, CarPlay). Installed with Meters; Mazda's files stay unchanged. |
@@ -62,7 +59,7 @@ Another car or firmware? Run the check (below) and open an issue with only `SUMM
 ## What you need
 
 - A **Windows, macOS or Linux PC**. Download the app from [Releases](https://github.com/CeyssensHelder/MiatOff/releases)
-  (when a preview is published): no Python or other tools needed, and it works offline. **Windows** is what we use.
+  (what changed is in [CHANGELOG.md](CHANGELOG.md)): no Python or other tools needed, and it works offline. **Windows** is what we use.
   The macOS and Linux downloads are untested so far. See [Opening the app](#opening-the-app).
 - An **empty USB stick**, 32 GB or smaller, formatted **FAT32** with an **MBR** partition table.
 - An **MX-5 ND1 or ND2** with Mazda Connect on firmware 74.00.324A (see the support status above). We analysed a 2017 EU
@@ -120,7 +117,7 @@ Custom menu to *Mazda's Home* (with Meters set to *Install*) and repeat, or remo
 
 ### Opening the app
 
-The downloads are previews and are not signed yet, so your computer warns you the first time. Only open a file you
+The downloads are not signed yet, so your computer warns you the first time. Only open a file you
 downloaded from this project's Releases page; `SHA256SUMS.txt` there lists the checksum of each download.
 
 - **Windows:** if SmartScreen says it protected your PC, choose **More info**, then **Run anyway**.
