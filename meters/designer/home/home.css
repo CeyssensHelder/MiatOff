@@ -114,12 +114,19 @@ details.panel-section > summary {
   flex-direction: column;
   gap: 8px;
 }
+/* Fit: the whole 800 x 480 screen in the space there is, in width and in height, centred (as Meters).
+   100%: actual pixels, scrolled when larger (the inline width set by the Fit / 100% button). */
 #canvas-wrap {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
+  container-type: size;
+  display: grid;
+  place-items: safe center;
 }
 canvas {
   display: block;
-  width: 100%;
+  width: min(100cqw, 100cqh * 5 / 3);
   aspect-ratio: 5/3;
   touch-action: none;
   background: #17191d;
@@ -168,6 +175,10 @@ button:disabled {
   }
   .workspace {
     order: -1;
+  }
+  #canvas-wrap {
+    flex: none;
+    height: min(60vh, calc((100vw - 32px) * 3 / 5));
   }
   main.home-workspace > aside {
     display: block;

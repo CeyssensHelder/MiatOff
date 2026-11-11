@@ -105,7 +105,7 @@ To change them later, repeat from step 2. Start with one simple page. More in [d
 
 ### Your own Home menu
 
-1. In the app, open **Design your menu**. Pick a built-in menu under **Your menus**, or press **Open menu designer**,
+1. In the app, open **Design your menu**. Pick a built-in menu under **Your menus**, or press **Open designer**,
    design one and press **Send to MiatOff**. **Preview** shows a menu as the car draws it.
 2. Choose the menu. Under **Choose tweaks > Interface**, set **Custom menu** to *Install* and Meters to *Install*
    (or *Update*), then prepare the stick.

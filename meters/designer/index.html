@@ -59,9 +59,10 @@
         > :not(.brand):not(.mode-switch):not(.home-actions) {
         display: none !important;
       }
+      /* At least the Meters header's height, more when the Home actions wrap (the frame follows it). */
       body[data-designer-mode="home"] .studio-header {
-        height: 68px;
-        min-height: 0;
+        height: auto;
+        min-height: 68px;
       }
       .home-actions {
         display: flex;
@@ -112,9 +113,6 @@
         }
         body[data-designer-mode="home"] #home-save-status {
           display: none;
-        }
-        body[data-designer-mode="home"] .studio-header {
-          height: auto;
         }
         .brand {
           min-width: 0;

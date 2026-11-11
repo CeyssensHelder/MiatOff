@@ -6,7 +6,7 @@ Both modes share that header: the main actions sit in the same places (Undo, Red
 Export, and the save status), and the Home designer uses the Meters layout: a tool panel on the left, the canvas
 with its toolbar (+ Add item, Duplicate, Delete, layers, snap, fit) and Properties on the right; below 1200 px
 its panels follow the canvas. Ctrl+Z / Ctrl+Y on the header reach the mode that is shown. In the desktop app, Home
-has its own page, **Design your Home menu**, beside **Design your Meters** (`python miatoff_gui.py --menu`); both
+has its own page, **Design your menu**, beside **Design your Meters** (`python miatoff_gui.py --menu`); both
 use the one local designer. Keep the same port to return to browser drafts. The header shows the MiatOff app
 icon (drawn inline, as in `packaging/make_icon.py`) and names the mode: MiatOff Meters Designer or MiatOff
 Home Designer. The three desktop shell baselines were regenerated for this header and reviewed: only the
