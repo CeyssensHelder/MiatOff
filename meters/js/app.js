@@ -24,15 +24,23 @@
         return o;
     }
     // The ND1 manual reports TransmissionGearPosition 0, so derive the gear from rpm per km/h.
-    // 1.5 6MT ratios, final drive 2.866, 195/50R16 (1.89 m around).
-    var RPM_PER_KMH = [0, 5.087, 2.991, 2.035, 1.594, 1.286, 1.000];
-    for (var g0 = 1; g0 < RPM_PER_KMH.length; g0++) RPM_PER_KMH[g0] *= 2.866 * 60 / (1.89 * 3.6);
-    function derivedGear() {
+    // gearTable gives [0, rpm per km/h in 1st, 2nd, ...] for gear ratios, final drive and rolling circumference (m).
+    function gearTable(ratios, finalDrive, circumference) {
+        var t = [0], per = finalDrive * 60 / (circumference * 3.6), k;
+        for (k = 0; k < ratios.length; k++) t.push(ratios[k] * per);
+        return t;
+    }
+    // Built-in styles, and custom pages without complete gearing: 1.5 6MT ratios, final drive 2.866,
+    // 195/50R16 (1.89 m around).
+    var RPM_PER_KMH = gearTable([5.087, 2.991, 2.035, 1.594, 1.286, 1.000], 2.866, 1.89);
+    // A gear the car reports wins; otherwise the closest gear of `table` (default RPM_PER_KMH) within 12 %.
+    function derivedGear(table) {
         if (D.target.gear !== undefined) return v.gear;
         var sp = D.target.speed, r = D.target.rpm, best, err = 0.12, k, e;
         if (!(sp > 5) || !(r > 0) || v.clutch) return undefined;
-        for (k = 1; k < RPM_PER_KMH.length; k++) {
-            e = Math.abs(r / sp / RPM_PER_KMH[k] - 1);
+        table = table || RPM_PER_KMH;
+        for (k = 1; k < table.length; k++) {
+            e = Math.abs(r / sp / table[k] - 1);
             if (e < err) { err = e; best = k; }
         }
         return best;
@@ -464,7 +472,7 @@
     // The cyberpunk sets (cyber.js, y2077.js) get the shared state through this object.
     var API = {
         v: v, num: num, fmt: fmt, G: G, RPM: RPM, sess: sess, pedal: pedal, gms: [dyn.gm],
-        felt: query().gm !== 'car', dyno: dyno, gear: derivedGear, gearText: gearText, fmtLap: fmtLap, fmtDelta: fmtDelta
+        felt: query().gm !== 'car', dyno: dyno, gear: derivedGear, gearTable: gearTable, gearText: gearText, fmtLap: fmtLap, fmtDelta: fmtDelta
     };
     function resetG() { for (var k = 0; k < API.gms.length; k++) API.gms[k].reset(); }
     (function () {

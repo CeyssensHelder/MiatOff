@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 sys.path.insert(0, str(ROOT / "aa-touch-stick"))
 import build_stick as bs  # noqa: E402
+import kits  # noqa: E402
 import meters_library as ml  # noqa: E402
 
 PAGES = "miatoff-app/app/meters/js/custom-pages.js"
@@ -63,8 +64,38 @@ class CustomPagesBuildTests(unittest.TestCase):
                          ["background", "name", "style", "vehicle", "widgets"])
         for page in pages:
             self.assertNotIn("id", page["widgets"][0])
-            self.assertEqual(sorted(page["vehicle"]), ["rpm", "units"])
+            # The starters carry the full ND1 1.5 gearing, so the car works out the gear from it.
+            self.assertEqual(sorted(page["vehicle"]), ["circumference", "finalDrive", "ratios", "rpm", "units"])
+            self.assertEqual(page["vehicle"]["ratios"], [5.087, 2.991, 2.035, 1.594, 1.286, 1])
+            self.assertEqual((page["vehicle"]["finalDrive"], page["vehicle"]["circumference"]), (2.866, 1.89))
             self.assertIn("font", page["style"])
+
+    def test_gearing_reaches_the_car_only_when_complete(self):
+        def car_vehicle(change):
+            setup = deepcopy(self.pages[0])
+            change(setup["vehicle"])
+            text = bs.custom_pages_js(bundle_of([setup])).decode("ascii")
+            return json.loads(text.split("window.MeterCustomPages = ")[1].split(";\nwindow.MeterCustomImages")[0])[0]["vehicle"]
+
+        own = car_vehicle(lambda v: v.update(ratios=[3.5, 2.1, 1.4, 1.0, 0.8], finalDrive=4.1, circumference=1.95))
+        self.assertEqual((own["ratios"], own["finalDrive"], own["circumference"]), ([3.5, 2.1, 1.4, 1.0, 0.8], 4.1, 1.95))
+        incomplete = [
+            lambda v: v.update(ratios=[]),
+            lambda v: v["ratios"].__setitem__(2, None),
+            lambda v: v.update(finalDrive=None),
+            lambda v: v.update(circumference=None),
+            lambda v: v.update(finalDrive=0),
+            lambda v: v.update(circumference=0),
+        ]
+        for change in incomplete:
+            self.assertEqual(sorted(car_vehicle(change)), ["rpm", "units"])
+        # The rule itself, also for values the library would refuse and for the tyre the gearing came from.
+        good = {"ratios": [3.0, 1.0], "finalDrive": 3.5, "circumference": 1.9}
+        self.assertEqual(kits.car_gearing(good), good)
+        self.assertEqual(kits.car_gearing({**good, "tyre": "205/45R17"})["tyre"], "205/45R17")
+        for bad in ({**good, "ratios": [3.0, -1.0]}, {**good, "ratios": [3.0, True]}, {**good, "ratios": "3,1"},
+                    {**good, "finalDrive": float("nan")}, {**good, "circumference": float("inf")}, {"ratios": [3.0]}):
+            self.assertEqual(kits.car_gearing(bad), {})
 
     def test_non_ascii_names_are_escaped(self):
         setups = deepcopy(self.pages[:1])

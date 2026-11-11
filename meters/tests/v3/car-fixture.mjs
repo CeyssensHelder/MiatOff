@@ -138,6 +138,27 @@ export function matrixProjects() {
   });
 }
 
+// Gear test pages: one big gear number per page. `own` has gearing unlike the ND1 1.5, `bare` has no final drive
+// (incomplete gearing: the car keeps its built-in ND1 table), `stock` keeps the default ND1 1.5 profile.
+export const OWN_GEARING = { ratios: [3.5, 2.1, 1.4, 1.0, 0.8], finalDrive: 4.1, circumference: 1.95 };
+export function gearProjects() {
+  const make = (name, change) => {
+    const theme = M.starter("Street");
+    const w = M.widget("number", "plain");
+    M.bind(w, "gear");
+    Object.assign(w, { x: 20, y: 20, w: 300, h: 300, size: 200 });
+    theme.pages = [{ id: M.id("page"), name, widgets: [w], groups: [], overlaps: [] }];
+    const vehicle = M.vehicle();
+    change(vehicle);
+    return project([theme], {}, vehicle);
+  };
+  return [
+    make("own", (v) => Object.assign(v, structuredClone(OWN_GEARING))),
+    make("bare", (v) => (v.finalDrive = null)),
+    make("stock", () => {}),
+  ];
+}
+
 // Run the Python builder step: projects in, the car's custom-pages.js and the validated setups out.
 export async function carPages(projects) {
   const folder = await mkdtemp(join(tmpdir(), "miatoff-car-"));

@@ -171,6 +171,15 @@
     };
     var VEHICLE = { rpm: { max: 8000, amber: 6500, red: 7000, shift: 7200, limit: 7500 },
         units: { speed: 'km/h', distance: 'km', temperature: 'C', power: 'PS', torque: 'Nm', consumption: 'L/100km' } };
+    // The page's gearing when all of it is there (every ratio, final drive, rolling circumference above 0), else null:
+    // the gear then comes from app.js's built-in ND1 1.5 table, as on the built-in styles.
+    function gearing(v) {
+        var r = v.ratios, k;
+        if (!r || typeof r.length !== 'number' || !r.length) return null;
+        for (k = 0; k < r.length; k++) if (!finite(r[k]) || !(r[k] > 0)) return null;
+        if (!finite(v.finalDrive) || !(v.finalDrive > 0) || !finite(v.circumference) || !(v.circumference > 0)) return null;
+        return { ratios: r, finalDrive: v.finalDrive, circumference: v.circumference };
+    }
 
     // ------------------------------------------------------------------ canvas primitives
     // Rounded rectangle from quarter circles: the old Opera has no roundRect, and its arcTo left steps in the corners.
@@ -1044,6 +1053,7 @@
         page = {
             name: String(setup.name || 'PAGE').toUpperCase().substr(0, 40),
             vehicle: vehicle,
+            gearing: gearing(vehicle),
             list: list,
             split: split,
             need: need,
@@ -1114,14 +1124,17 @@
     W.MeterSets = W.MeterSets || {};
     W.MeterSets.custom = function (A) {
         var data = W.MeterCustomPages, pages = [], need = 0, i, setup, page, hist = [], lastSample = 0, peakG = 0, sessStart = -1,
-            lastNow = -1, state = null, felt = A.felt !== false;
+            lastNow = -1, lastTable = null, shownTable = null, state = null, felt = A.felt !== false;
 
-        function live(now) {
+        // The live reading for a page whose gear table is `table` (null: app.js's built-in one).
+        function live(now, table) {
             var v = A.v, L = A.dyno.live, s = A.sess, sg = felt ? -1 : 1, st;
-            if (now === lastNow && state) return state;
+            shownTable = table;
+            if (now === lastNow && table === lastTable && state) return state;
             lastNow = now;
+            lastTable = table;
             st = {
-                time: now / 1000, speed: nul(v.speed), rpm: nul(v.rpm), gear: nul(A.gear()), coolant: nul(v.coolant), iat: nul(v.iat),
+                time: now / 1000, speed: nul(v.speed), rpm: nul(v.rpm), gear: nul(A.gear(table)), coolant: nul(v.coolant), iat: nul(v.iat),
                 outside: nul(v.outside), fuel: nul(v.fuel), trip: nul(v.trip), consumption: nul(v.econ), throttle: nul(v.throttle),
                 gLat: v.gLat === undefined ? null : sg * v.gLat, gLong: v.gLong === undefined ? null : -sg * v.gLong,
                 power: L.ps === undefined ? null : Math.max(0, L.ps), torque: L.nm === undefined ? null : Math.max(0, L.nm),
@@ -1137,6 +1150,7 @@
         }
 
         // About 10 samples a second, kept for the longest chart window (and the G-meter trail) of any page.
+        // The gear in the history uses the gearing of the page drawn last.
         function sample(now) {
             var t = now / 1000, v = A.v, L = A.dyno.live, rec, g;
             if (A.sess.start !== sessStart) { sessStart = A.sess.start; peakG = 0; }
@@ -1145,7 +1159,7 @@
             g = Math.sqrt(num(v.gLat) * num(v.gLat) + num(v.gLong) * num(v.gLong));
             if (g > peakG) peakG = g;
             rec = {
-                time: t, speed: nul(v.speed), rpm: nul(v.rpm), gear: nul(A.gear()), coolant: nul(v.coolant), iat: nul(v.iat),
+                time: t, speed: nul(v.speed), rpm: nul(v.rpm), gear: nul(A.gear(shownTable)), coolant: nul(v.coolant), iat: nul(v.iat),
                 outside: nul(v.outside), fuel: nul(v.fuel), trip: nul(v.trip), consumption: nul(v.econ), throttle: nul(v.throttle),
                 gLat: v.gLat === undefined ? null : (felt ? -1 : 1) * v.gLat, gLong: v.gLong === undefined ? null : (felt ? 1 : -1) * v.gLong,
                 power: L.ps === undefined ? null : Math.max(0, L.ps), torque: L.nm === undefined ? null : Math.max(0, L.nm)
@@ -1181,6 +1195,10 @@
         function wrap(setupItem) {
             var page = makePage(setupItem), drawStatic = page.drawStatic;
             page.api = A;
+            // Built once: rpm per km/h in each gear of this page's car, or null for the built-in ND1 table.
+            page.gearTable = page.gearing && A.gearTable ?
+                A.gearTable(page.gearing.ratios, page.gearing.finalDrive, page.gearing.circumference) : null;
+            page.state = function (now) { return live(now, page.gearTable); };
             page.drawStatic = function (c) {
                 if (!page.failed) {
                     c.save();
@@ -1192,7 +1210,7 @@
             page.draw = function (c, now) {
                 if (!page.failed) {
                     c.save();
-                    try { page.drawWith(c, live(now)); } catch (e) { page.failed = true; page.flashing = false; }
+                    try { page.drawWith(c, page.state(now)); } catch (e) { page.failed = true; page.flashing = false; }
                     c.restore();
                 }
                 if (page.failed) broken(c);
@@ -1201,7 +1219,7 @@
             page.drawChanged = !page.split ? null : function (c, now) {
                 if (!page.failed) {
                     c.save();
-                    try { page.changedWith(c, live(now)); } catch (e) { page.failed = true; page.flashing = false; }
+                    try { page.changedWith(c, page.state(now)); } catch (e) { page.failed = true; page.flashing = false; }
                     c.restore();
                 }
                 if (page.failed) broken(c);
