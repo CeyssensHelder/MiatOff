@@ -25,6 +25,7 @@ public source code, from a commercial vendor, or an unconfirmed forum report.
 | 15 | [15-meters-designer.md](15-meters-designer.md) | Standalone Meters Designer: editing, v3 migration, recovery and browser acceptance |
 | 16 | [16-mazda-menu-customisation.md](16-mazda-menu-customisation.md) | Home-menu feasibility and native integration research |
 | 17 | [17-unified-designer.md](17-unified-designer.md) | Shared Meters/Home studio, documents and verification |
+| 18 | [18-vehicle-presets.md](18-vehicle-presets.md) | MX-5 ND1/ND2 specifications and sources behind the designer's car setup |
 | — | [sources.md](sources.md) | All sources |
 
 ## For AI assistants

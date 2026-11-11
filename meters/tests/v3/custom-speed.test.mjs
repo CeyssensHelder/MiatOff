@@ -43,6 +43,7 @@ function load(widgets = WIDGETS) {
   window.MeterCustomPages = [{ name: "T", style: { effect: "neon", radius: 14 }, vehicle: {}, background: { kind: "solid" }, widgets }];
   window.MeterCustomImages = {};
   const context = vm.createContext({ window, document, Image: function () {} });
+  vm.runInContext(readFileSync(new URL("../../js/units.js", import.meta.url), "utf8"), context);
   vm.runInContext(source, context);
   const v = { speed: 80, rpm: 3000, coolant: 90, fuel: 50 },
     api = {

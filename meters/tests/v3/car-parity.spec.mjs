@@ -32,6 +32,7 @@ test("car renderer matches the designer renderer for starters and the instrument
   page.on("pageerror", (error) => errors.push(String(error)));
   await page.goto(served.url + "/parity.html");
   await page.addScriptTag({ content: data.script });
+  await page.addScriptTag({ url: "/js/units.js" });
   await page.addScriptTag({ url: "/js/custom.js" });
   const result = await page.evaluate(
     async ({ setups, channel, maxBad }) => {

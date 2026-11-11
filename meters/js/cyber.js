@@ -42,11 +42,11 @@
     // ================================================================== CYBER DRIVE
     function drive(A) {
         var cx = 290, cy = 286, r0 = 172, r1 = 208, A0 = 150, SPAN = 240, N = 48, step = SPAN / N;
-        function ang(r) { return A0 + SPAN * Math.max(0, Math.min(8000, r)) / 8000; }
+        function ang(r) { return A0 + SPAN * Math.max(0, Math.min(A.RPM.max, r)) / A.RPM.max; }
         // The arc runs from 150° to 390°, so its lowest points are the two ends (sin 30° = 0.5 below the centre).
         var tachLit = FX.layer(cx - r1 - GM, cy - r1 - GM, 2 * (r1 + GM), r1 * 1.5 + 2 * GM, function (c) {
             for (var i = 0; i < N; i++) {
-                c.fillStyle = rpmCol((i + 0.5) * 8000 / N, A);
+                c.fillStyle = rpmCol((i + 0.5) * A.RPM.max / N, A);
                 FX.glow(c, c.fillStyle, 9);
                 FX.sector(c, cx, cy, r0, r1, A0 + i * step + 0.65, A0 + (i + 1) * step - 0.65);
                 c.fill();
@@ -64,7 +64,7 @@
                 header(c, 'CYBER-MIATA');
                 FX.text(c, 'NODE MX-5 ND ▸ LINK OK', 784, 16, 12, FX.MONO, CY, 'right', 0.8);
                 for (i = 0; i < N; i++) {
-                    mid = (i + 0.5) * 8000 / N;
+                    mid = (i + 0.5) * A.RPM.max / N;
                     c.fillStyle = mid >= A.RPM.red ? '#2a0f2a' : OFF; c.strokeStyle = OFFL; c.lineWidth = 1;
                     FX.sector(c, cx, cy, r0, r1, A0 + i * step + 0.65, A0 + (i + 1) * step - 0.65);
                     c.fill(); c.stroke();
@@ -72,12 +72,12 @@
                 c.strokeStyle = CY; c.globalAlpha = 0.35; c.lineWidth = 1.5;
                 for (a = 0; a < 360; a += 2.4) { c.beginPath(); c.arc(cx, cy, 160, a * Math.PI / 180, (a + 0.6) * Math.PI / 180); c.stroke(); }
                 c.globalAlpha = 1;
-                for (k = 0; k <= 8; k++) {
-                    a = (A0 + SPAN * k / 8) * Math.PI / 180;
+                for (k = 0; k * 1000 <= A.RPM.max; k++) {
+                    a = (A0 + SPAN * k * 1000 / A.RPM.max) * Math.PI / 180;
                     FX.text(c, String(k), cx + 236 * Math.cos(a), cy + 236 * Math.sin(a) + 7, 20, FX.MONO,
-                        k >= 7 ? YE : (k >= 6 ? MG : CY), 'center', 0.85);
+                        k >= Math.floor(A.RPM.red / 1000) ? YE : (k >= Math.floor(A.RPM.amber / 1000) ? MG : CY), 'center', 0.85);
                 }
-                FX.spaced(c, 'KM/H', cx, 352, 18, FX.MONO, CY, 8, 'center');
+                FX.spaced(c, A.ul('speed').toUpperCase(), cx, 352, 18, FX.MONO, CY, 8, 'center');
                 FX.spaced(c, 'x1000 R/MIN', cx, 430, 12, FX.MONO, DIM, 3, 'center');
                 c.fillStyle = '#0d0a1c'; c.strokeStyle = CY; c.lineWidth = 1.5; c.globalAlpha = 1;
                 FX.chamfer(c, 540, 52, 244, 196, 20); c.fill(); c.globalAlpha = 0.7; c.stroke(); c.globalAlpha = 1;
@@ -102,15 +102,16 @@
                 c.moveTo(cx + 150 * Math.cos(a), cy + 150 * Math.sin(a)); c.lineTo(cx + 218 * Math.cos(a), cy + 218 * Math.sin(a)); c.stroke();
                 c.globalAlpha = 1; c.lineWidth = 3; c.stroke(); c.lineCap = 'butt';
                 FX.spaced(c, 'RPM ' + A.fmt(v.rpm, 0), cx, 196, 16, FX.MONO, MG, 3, 'center');
-                FX.gtext(c, A.fmt(v.speed, 0), cx, 318, FX.fit(c, A.fmt(v.speed, 0), 132, FX.SANS, 270), TXT, fringe());
+                var spd = A.fmt(A.du('speed', v.speed), 0);
+                FX.gtext(c, spd, cx, 318, FX.fit(c, spd, 132, FX.SANS, 270), TXT, fringe());
                 FX.gtext(c, A.gearText(A.gear()), 662, 222, 176, rpm >= A.RPM.red ? MG : YE, fringe('#0d0a1c'));
-                FX.text(c, A.fmt(v.coolant, 0) + '°C', 784, 296, 40, FX.SANS, v.coolant >= 105 ? MG : CY, 'right');
+                FX.text(c, A.fmt(A.du('coolant', v.coolant), 0) + A.ul('coolant'), 784, 296, 40, FX.SANS, v.coolant >= 105 ? MG : CY, 'right');
                 FX.text(c, A.fmt(v.fuel, 0) + '%', 784, 376, 40, FX.SANS, MG, 'right');
                 cool.draw(c, (A.num(v.coolant) - 40) / 80);
                 fuel.draw(c, A.num(v.fuel) / 100);
                 // short enough to stay left of the page dots
-                FX.text(c, '> THR ' + A.fmt(v.throttle, 0) + '%  > IAT ' + A.fmt(v.iat, 0) + '°C  > OUT ' +
-                    A.fmt(v.outside, 1) + '°C', 20, 467, 13, FX.MONO, CY, 'left', 0.75);
+                FX.text(c, '> THR ' + A.fmt(v.throttle, 0) + '%  > IAT ' + A.fmt(A.du('iat', v.iat), 0) + A.ul('iat') + '  > OUT ' +
+                    A.fmt(A.du('outside', v.outside), 1) + A.ul('outside'), 20, 467, 13, FX.MONO, CY, 'left', 0.75);
             },
             animating: function () { return FX.glitching(); }
         };
@@ -231,11 +232,11 @@
                 FX.backdrop(c, BG, GRID);
                 c.fillStyle = OFF; c.strokeStyle = OFFL; c.lineWidth = 1;
                 for (i = 0; i < N; i++) { bar(c, i); c.fill(); c.stroke(); }
-                for (k = LO / 1000; k <= 7; k++) {
+                for (k = LO / 1000; k * 1000 <= HI - 500; k++) {
                     x = X0 + (k * 1000 - LO) / (HI - LO) * (784 - X0);
-                    FX.text(c, String(k), x, 140, 14, FX.MONO, k >= 7 ? MG : DIM, 'center');
+                    FX.text(c, String(k), x, 140, 14, FX.MONO, k >= Math.floor(A.RPM.red / 1000) ? MG : DIM, 'center');
                 }
-                FX.spaced(c, 'KM/H', 132, 334, 16, FX.MONO, CY, 6, 'center', 0.8);
+                FX.spaced(c, A.ul('speed').toUpperCase(), 132, 334, 16, FX.MONO, CY, 6, 'center', 0.8);
                 FX.spaced(c, 'RPM', 668, 334, 16, FX.MONO, MG, 6, 'center', 0.8);
                 c.fillStyle = '#0d0a1c'; c.strokeStyle = CY; c.lineWidth = 1.5;
                 FX.chamfer(c, 16, 398, 768, 64, 18); c.fill(); c.globalAlpha = 0.6; c.stroke(); c.globalAlpha = 1;
@@ -245,7 +246,8 @@
                 var v = A.v, s = A.sess, rpm = A.num(v.rpm), k = Math.floor(Math.max(0, Math.min(1, (rpm - LO) / (HI - LO))) * N), d = s.delta;
                 if (k) FX.blit(c, lit, 0, 0, X0 + (k - 1) * STEP + W + 2, 136);   // not into the next bar
                 FX.gtext(c, A.gearText(A.gear()), 400, 382, 280, rpm >= A.RPM.red ? MG : TXT, fringe());
-                FX.gtext(c, A.fmt(v.speed, 0), 132, 300, FX.fit(c, A.fmt(v.speed, 0), 92, FX.SANS, 220), CY, fringe());
+                var spd = A.fmt(A.du('speed', v.speed), 0);
+                FX.gtext(c, spd, 132, 300, FX.fit(c, spd, 92, FX.SANS, 220), CY, fringe());
                 FX.text(c, A.fmt(v.rpm, 0), 668, 300, FX.fit(c, A.fmt(v.rpm, 0), 76, FX.SANS, 230), FX.SANS, MG, 'center');
                 FX.text(c, (s.laps + 1 < 10 ? '0' : '') + (s.laps + 1), 84, 438, 18, FX.MONO, DIM, 'left');
                 var lt = s.lapStart ? A.fmtLap(now - s.lapStart, 1) : 'TAP AT LINE';

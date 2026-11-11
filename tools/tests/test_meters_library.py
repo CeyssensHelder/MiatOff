@@ -76,6 +76,27 @@ class LibraryTests(unittest.TestCase):
             ok["themes"][0]["style"]["font"] = name
             ml.validate_setup(ok)
 
+    def test_optional_vehicle_preset_tyre_and_assumed_fields(self):
+        for key in ("preset", "tyre", "assumed"):
+            self.setup["vehicle"].pop(key, None)
+        ml.validate_setup(self.setup)  # documents saved before these fields existed
+        for patch in [{"preset": None, "tyre": None}, {"preset": "nd1-15-eu", "tyre": "195/50R16",
+                      "assumed": ["rpm.limit", "mass"]}, {"assumed": []}, {"assumed": ["mass"] * 30}]:
+            ok = deepcopy(self.setup)
+            ok["vehicle"].update(patch)
+            ml.validate_setup(ok)
+        for patch, message in [({"preset": 5}, "preset"), ({"preset": ""}, "preset"), ({"preset": "Upper"}, "preset"),
+                               ({"preset": "a" * 41}, "preset"), ({"tyre": 195}, "tyre"),
+                               ({"tyre": "195/50r16"}, "tyre"), ({"tyre": "195/50R16\n"}, "tyre"),
+                               ({"tyre": "19/50R16"}, "tyre"), ({"assumed": "mass"}, "assumed"),
+                               ({"assumed": [5]}, "assumed"), ({"assumed": ["rpm_limit"]}, "assumed"),
+                               ({"assumed": ["a" * 41]}, "assumed"), ({"assumed": ["mass"] * 31}, "assumed")]:
+            bad = deepcopy(self.setup)
+            bad["vehicle"].update(patch)
+            with self.assertRaises(ValueError, msg=str(patch)) as raised:
+                ml.validate_setup(bad)
+            self.assertIn(message, str(raised.exception))
+
     def test_send_idempotency_update_and_persistent_include_choice(self):
         self.assertTrue(self.library.save(self.setup)["changed"])
         row = self.library.list()[0]
@@ -183,6 +204,101 @@ class LibraryTests(unittest.TestCase):
             urlopen(Request(base + "/api/builder/pages", data=b'{"version":9}', headers=headers))
         self.assertEqual(error.exception.code, 422)
         self.assertEqual(len(ml.PageLibrary(self.library.path).list()), 2)
+
+
+class CarProfileTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.base_vehicle = fixtures()["setups"][0]["vehicle"]
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.library = ml.PageLibrary(Path(self.temp.name) / "library.sqlite3")
+        self.car = ml.CarProfile(self.library)
+        self.vehicle = deepcopy(self.base_vehicle)
+
+    def test_round_trip_clear_and_the_last_built_flag(self):
+        self.assertIsNone(self.car.get())
+        self.assertIsNone(self.car.built())
+        self.assertFalse(self.car.stale())  # no car, nothing built: the built-in default on both sides
+        profile = self.car.set(self.vehicle, "  ND1 test  ")
+        self.assertEqual(profile["label"], "ND1 test")
+        self.assertEqual(self.car.get(), profile)
+        self.assertEqual(ml.CarProfile(ml.PageLibrary(self.library.path)).get(), profile)  # survives reopening
+        self.assertEqual(sorted(profile), sorted(["label", "preset", "generation", "engine", "transmission", "market", "tyre", "rpm",
+                                                  "ratedPower", "powerRpm", "ratedTorque", "torqueRpm", "mass", "units",
+                                                  "ratios", "finalDrive", "circumference"]))
+        self.assertEqual(sorted(profile["rpm"]), ["amber", "limit", "max", "red", "shift"])
+        self.assertTrue(self.car.stale())
+        self.car.mark_built(profile)
+        self.assertEqual(self.car.built(), profile)
+        self.assertFalse(self.car.stale())
+        for key in ("amber", "shift", "red"):
+            self.vehicle["rpm"][key] -= 100
+        changed = self.car.set(self.vehicle, "ND1 test")
+        self.assertNotEqual(changed, profile)
+        self.assertTrue(self.car.stale())
+        self.car.clear()
+        self.assertIsNone(self.car.get())
+        self.assertTrue(self.car.stale())  # the last stick still carries the old car
+        self.car.mark_built(None)
+        self.assertFalse(self.car.stale())
+        self.assertEqual(ml.car_profile(self.vehicle, None)["label"], ml.CAR_DEFAULT_LABEL)
+
+    def test_validate_vehicle_rejects_a_bad_profile(self):
+        self.assertIs(ml.validate_vehicle(self.vehicle), self.vehicle)
+        for change, message in [({"generation": "NA"}, "identity"), ({"rpm": {**self.vehicle["rpm"], "red": 99}}, "RPM"),
+                                ({"units": {**self.vehicle["units"], "speed": "knots"}}, "units"), ({"mass": -1}, "mass"),
+                                ({"ratios": "x"}, "ratios"), ({"tyre": "big"}, "tyre"), ({"preset": "UP"}, "preset"),
+                                ({"assumed": [1]}, "assumed")]:
+            bad = {**self.vehicle, **change}
+            with self.assertRaises(ValueError, msg=str(change)) as raised:
+                ml.validate_vehicle(bad)
+            self.assertIn(message, str(raised.exception))
+            with self.assertRaises(ValueError):
+                self.car.set(bad, "x")
+        with self.assertRaises(ValueError):
+            ml.validate_vehicle(None)
+        with self.assertRaises(ValueError):
+            self.car.set(self.vehicle, "x" * 61)
+        self.assertIsNone(self.car.get())  # a refused profile stores nothing
+
+    def test_api_car_route_guards_and_stores(self):
+        class Quiet(md.Handler):
+            def log_message(self, *_args):
+                pass
+        server = md.Server(("127.0.0.1", 0), partial(Quiet, directory=str(md.ROOT)), self.library.path)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        base = f"http://127.0.0.1:{server.server_port}"
+        with urlopen(base + "/api/builder/session") as response:
+            token = json.load(response)["token"]
+        headers = {"Content-Type": "application/json", "Origin": base, "X-MiatOff-Token": token}
+        body = ml.encode({"vehicle": self.vehicle, "label": "ND1 2.0 manual (US)"})
+        no_token = {k: v for k, v in headers.items() if k != "X-MiatOff-Token"}
+        for altered in ({**headers, "X-MiatOff-Token": "bad"}, {**headers, "Origin": "http://evil.example"},
+                        {**headers, "Host": "evil.example"}, no_token):
+            with self.assertRaises(HTTPError) as error:
+                urlopen(Request(base + "/api/builder/car", data=body, headers=altered))
+            self.assertEqual(error.exception.code, 403)
+        self.assertIsNone(self.car.get())
+        with self.assertRaises(HTTPError) as error:
+            urlopen(Request(base + "/api/builder/car", data=body, headers={**headers, "Content-Type": "text/plain"}))
+        self.assertEqual(error.exception.code, 415)
+        for bad in (b"{not json", b"[]", ml.encode({"vehicle": {**self.vehicle, "generation": "NA"}, "label": "x"}),
+                    ml.encode({"label": "x"}), ml.encode({"vehicle": self.vehicle, "label": "x" * 61})):
+            with self.assertRaises(HTTPError) as error:
+                urlopen(Request(base + "/api/builder/car", data=bad, headers=headers))
+            self.assertEqual(error.exception.code, 400, bad[:30])
+            self.assertIn("error", json.load(error.exception))
+        self.assertIsNone(self.car.get())
+        with urlopen(Request(base + "/api/builder/car", data=body, headers=headers)) as response:
+            answer = json.load(response)
+        self.assertTrue(answer["ok"])
+        self.assertEqual(answer["profile"]["label"], "ND1 2.0 manual (US)")
+        self.assertEqual(self.car.get(), answer["profile"])
 
 
 class PageLibraryTests(unittest.TestCase):
@@ -570,7 +686,7 @@ class GuiTests(unittest.TestCase):
         app.drive.current(0)
 
     def run_action(self, gui, app, action, builder):
-        def kit(custom=None, home=None):
+        def kit(custom=None, home=None, car=None):
             builder.custom = custom
             builder.home = home
             return builder

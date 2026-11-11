@@ -28,6 +28,7 @@ class Server(ThreadingHTTPServer):
     def __init__(self, address, handler, library_path=None):
         self.library = meters_library.PageLibrary(library_path)
         self.home_menus = meters_library.HomeMenus(self.library)
+        self.car_profile = meters_library.CarProfile(self.library)
         self.test_library = library_path is not None
         self.library_id = hashlib.sha256(str(self.library.path.resolve()).encode()).hexdigest()
         self.handoff_token = secrets.token_urlsafe(32)
@@ -126,7 +127,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.json_response({"error": "Open the designer from this PC's MiatOff builder and retry."}, 403)
             return
         route = urlsplit(self.path).path
-        if route not in ("/api/builder/pages", "/api/builder/pages/plan", "/api/builder/home"):
+        if route not in ("/api/builder/pages", "/api/builder/pages/plan", "/api/builder/home", "/api/builder/car"):
             self.json_response({"error": "Unknown builder endpoint"}, 404)
             return
         if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
@@ -147,6 +148,18 @@ class Handler(SimpleHTTPRequestHandler):
             if route == "/api/builder/home":
                 self.json_response(self.server.home_menus.save(setup))
                 return
+            if route == "/api/builder/car":
+                # Test drafts and the test library: the designer refuses to send a test draft to anything but a
+                # temporary test library (testLibrary in /api/builder/session), as for the pages and the Home menu.
+                try:
+                    if not isinstance(setup, dict):
+                        raise ValueError("Send an object with vehicle and label")
+                    profile = self.server.car_profile.set(setup.get("vehicle"), setup.get("label"))
+                except (ValueError, KeyError, TypeError, AttributeError) as error:
+                    self.json_response({"error": "Car not saved: " + str(error)}, 400)
+                    return
+                self.json_response({"ok": True, "profile": profile})
+                return
             if route.endswith("/plan"):
                 # Dry run: report which pages a send would remove; nothing is written.
                 self.json_response(self.server.library.plan_sync(setup))
@@ -156,6 +169,9 @@ class Handler(SimpleHTTPRequestHandler):
         except meters_library.RemovalNotConfirmed as error:
             self.json_response({"error": str(error), "code": "removal-unconfirmed", "removed": error.removed}, 409)
         except (ValueError, KeyError, TypeError, AttributeError, RecursionError) as error:
+            if route == "/api/builder/car":  # not valid JSON
+                self.json_response({"error": "Car not saved: " + str(error)}, 400)
+                return
             self.json_response({"error": ("Menu" if route == "/api/builder/home" else "Theme") + " not sent: " + str(error)}, 422)
         except Exception as error:
             self.json_response({"error": "Could not save to the builder library: " + str(error)}, 500)

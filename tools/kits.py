@@ -25,6 +25,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 from functools import lru_cache
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 import sys
@@ -62,6 +63,8 @@ METERS_FILES = {
     "app/meters/js/fx.js": "meters/js/fx.js",
     "app/meters/js/cyber.js": "meters/js/cyber.js",
     "app/meters/js/y2077.js": "meters/js/y2077.js",
+    "app/meters/js/car-profile.js": "meters/js/car-profile.js",
+    "app/meters/js/units.js": "meters/js/units.js",
     "app/meters/js/custom-pages.js": "meters/js/custom-pages.js",
     "app/meters/js/custom.js": "meters/js/custom.js",
     "app/meters/js/app.js": "meters/js/app.js",
@@ -79,21 +82,26 @@ METERS_FILES = {
 
 
 CUSTOM_PAGES_REL = "app/meters/js/custom-pages.js"
+CAR_PROFILE_REL = "app/meters/js/car-profile.js"
 CUSTOM_PAGES_LIMIT = 6 * 1024 * 1024  # bytes of generated JavaScript; the car loads it with the page
 CUSTOM_PAGES_MAX = 8                  # pages in the car's CUSTOM group
 # Widget fields the car does not need (the editor's own bookkeeping).
 CUSTOM_DROP = ("id", "locked", "role", "legacyScaleSource")
 
 
+car_gearing = meters_library.car_gearing
+
+
 def car_page(setup: dict, images: dict) -> dict:
     """One validated single-page setup, reduced to what the car draws: night look, page, vehicle settings."""
     theme = setup["themes"][0]
     page = theme["pages"][0]
+    vehicle = setup["vehicle"]
     out = {
         "name": page["name"],
         "style": {**theme["style"], **page.get("style", {})},
         "widgets": [{k: v for k, v in w.items() if k not in CUSTOM_DROP} for w in page["widgets"]],
-        "vehicle": {"rpm": setup["vehicle"]["rpm"], "units": setup["vehicle"]["units"]},
+        "vehicle": {"rpm": vehicle["rpm"], "units": vehicle["units"], **car_gearing(vehicle)},
     }
     background = page.get("background") or theme.get("background")
     if background:
@@ -140,10 +148,19 @@ def custom_pages_js(custom=None) -> bytes:
     return custom_pages_from_setups([item["setup"] for item in bundle["items"]])
 
 
-def meters_files(custom=None, home=None) -> dict:
+def car_profile_js(profile=None) -> bytes:
+    """js/car-profile.js for a car profile (meters_library.car_profile): ASCII, fixed key order, so the same profile
+    always gives the same bytes. No profile gives the repository's default file (the car's built-in ND1 1.5)."""
+    if not profile:
+        return stickkit.lf_bytes(ROOT / "meters" / "js" / "car-profile.js")
+    dump = json.dumps(profile, ensure_ascii=True, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    return f"window.MeterCarProfile = {dump};\n".encode("ascii")
+
+
+def meters_files(custom=None, home=None, car=None) -> dict:
     """miatoff-app/ on the stick: the files (LF endings) plus their MANIFEST. `custom` is an optional selection
     bundle of designer pages that replaces js/custom-pages.js; `home` an optional Home menu design, which adds
-    its runtime, design and pictures (home_menu.car_files)."""
+    its runtime, design and pictures (home_menu.car_files); `car` an optional car profile for js/car-profile.js."""
     page = (ROOT / "meters" / "index.html").read_text(encoding="utf-8")
     loaded = re.findall(r'<script src="([^"]+)"', page) + re.findall(r'url\(([^)]+)\)', page)
     for name in loaded:
@@ -154,6 +171,8 @@ def meters_files(custom=None, home=None) -> dict:
         # Fonts are binary; everything else is text with LF endings.
         if rel == CUSTOM_PAGES_REL:
             data = custom_pages_js(custom)
+        elif rel == CAR_PROFILE_REL:
+            data = car_profile_js(car)
         else:
             data = (ROOT / src).read_bytes() if src.endswith(".ttf") else stickkit.lf_bytes(ROOT / src)
         files["miatoff-app/" + rel] = data
@@ -259,7 +278,7 @@ def dump_kit() -> stickkit.Kit:
     )
 
 
-def _make_install_kit(custom=None, home=None) -> stickkit.Kit:
+def _make_install_kit(custom=None, home=None, car=None) -> stickkit.Kit:
     conf = stickkit.lf_bytes(INSTALL_STICK / "libpatch.conf")
     if sha256(conf) != pinned("CONF_SHA256"):
         raise StickError("ERROR: stick/libpatch.conf does not match CONF_SHA256 in aa-touch.sh")
@@ -274,7 +293,7 @@ def _make_install_kit(custom=None, home=None) -> stickkit.Kit:
             "LICENSE": (INSTALL_DIR / "LICENSE").read_bytes(),
             "NOTICE": stickkit.lf_bytes(INSTALL_STICK / "NOTICE"),
             **touchtune_files(),
-            **meters_files(custom, home),
+            **meters_files(custom, home, car),
             **safety_files(),
             **sensor_files(),
         },
@@ -286,11 +305,12 @@ def _default_install_kit() -> stickkit.Kit:
     return _make_install_kit()
 
 
-def install_kit(custom=None, home=None) -> stickkit.Kit:
-    """The install stick; custom is an optional selection bundle of designer pages, home an optional Home menu."""
-    if (not custom or not custom.get("items")) and home is None:
+def install_kit(custom=None, home=None, car=None) -> stickkit.Kit:
+    """The install stick; custom is an optional selection bundle of designer pages, home an optional Home menu,
+    car an optional car profile."""
+    if (not custom or not custom.get("items")) and home is None and not car:
         return _default_install_kit()
-    return _make_install_kit(custom if custom and custom.get("items") else None, home)
+    return _make_install_kit(custom if custom and custom.get("items") else None, home, car or None)
 
 
 def run_builder(kit_factory, doc: str, argv: list) -> None:

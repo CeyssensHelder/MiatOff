@@ -20,7 +20,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import kits  # noqa: E402
-from kits import (CUSTOM_PAGES_LIMIT, INSTALL_STICK as STICK, custom_pages_from_setups, custom_pages_js,  # noqa: E402,F401
+from kits import (CUSTOM_PAGES_LIMIT, INSTALL_STICK as STICK, car_profile_js, custom_pages_from_setups, custom_pages_js,  # noqa: E402,F401
                   pinned)  # (re-exported for tests)
 import stickkit  # noqa: E402,F401
 from stickkit import StickError, long_path, posix_cksum, sha256  # noqa: E402,F401  (re-exported for tests)
@@ -36,20 +36,20 @@ def launcher_name() -> str:
     return kits.install_kit().launcher_name()
 
 
-def kit_for(custom=None, home=None) -> stickkit.Kit:
-    return kits.install_kit(custom, home)
+def kit_for(custom=None, home=None, car=None) -> stickkit.Kit:
+    return kits.install_kit(custom, home, car)
 
 
-def payload(custom=None, home=None) -> dict:
-    return kit_for(custom, home).payload()
+def payload(custom=None, home=None, car=None) -> dict:
+    return kit_for(custom, home, car).payload()
 
 
-def check(target: Path, custom=None) -> bool:
-    return kit_for(custom).check(Path(target))
+def check(target: Path, custom=None, home=None, car=None) -> bool:
+    return kit_for(custom, home, car).check(Path(target))
 
 
-def build(target: Path, custom=None, home=None) -> None:
-    kit_for(custom, home).build(Path(target))
+def build(target: Path, custom=None, home=None, car=None) -> None:
+    kit_for(custom, home, car).build(Path(target))
 
 
 def load_selection(path: str) -> dict:

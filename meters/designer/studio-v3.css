@@ -865,6 +865,51 @@ dialog label > select {
   border-left: 2px solid var(--accent);
   padding-left: 12px;
 }
+.setup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0 18px;
+}
+#setup-summary {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 8px;
+}
+#setup-summary caption {
+  text-align: left;
+  color: var(--muted);
+  padding-bottom: 6px;
+}
+#setup-units label {
+  margin: 8px 0;
+}
+#setup-summary th,
+#setup-summary td {
+  text-align: left;
+  padding: 2px 8px 2px 0;
+  border-bottom: 1px solid var(--line);
+  font-weight: normal;
+}
+#setup-summary th {
+  color: var(--muted);
+}
+#setup-summary .sourced {
+  color: var(--accent);
+}
+#setup-summary .assumed {
+  color: var(--amber);
+}
+#setup-summary .choice {
+  color: var(--muted);
+}
+.setup-actions {
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+.setup-actions #setup-skip {
+  margin-right: auto;
+}
 .issue {
   display: block;
   width: 100%;

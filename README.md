@@ -42,8 +42,9 @@ Only one car has been analysed in depth (a 2017 EU ND1, plain `sm.conf`). Everyt
 | 74.00.324A | EU MX-5 ND1 | Touch in Android Auto, boot trim, startup warning | Experimental: installed and running on our car (also on the simulator) |
 | 74.00.324A | EU MX-5 ND1 with wireless CarPlay (`sm_WCP.conf`) | Touch in Android Auto, boot trim | Experimental: same edits on `sm_WCP.conf`; tested on a simulator and by a contributor on an ND2 (below), not on our own car (it uses `sm.conf`) |
 | 74.00.324A | EU MX-5 ND1 | Meters | Experimental: installed on our car; an earlier in-car failure (busy root remount) was fixed |
+| 74.00.324A | any MX-5 ND | Your car in the Meters (car setup: rev warnings, gearing, imperial units, for the built-in styles and your own pages) | Experimental: PC and simulator tests only, **not tried in a car** |
 | 74.00.324A | EU MX-5 ND1 | Meters Designer pages (CUSTOM) | Experimental: installed and used on our car with three simple pages; known issues in [docs/15](docs/15-meters-designer.md#known-issues) |
-| 74.00.324A | EU MX-5 ND1 | Home menu | Experimental: installed and working on our car in a first test; also tested against a fake HMI and Mazda's own Home control code from our dump |
+| 74.00.324A | EU MX-5 ND1 | Home menu | Experimental: installed and working on our car (2077/Track menu and after a unit restart checked); also tested against a fake HMI and Mazda's own Home control code from our dump |
 | 74.00.324A | EU MX-5 ND1 | Shorter list delay | Experimental: ran on our car without problems; the effect is only visible when scrolling lists |
 | 74.00.324A | EU MX-5 ND1 | Blank reversing-camera safety text | Experimental: simulator and the contributor's unit only; **not tested by us** (no camera) |
 | 74.00.324A | EU MX-5 ND1 | Semi-transparent parking sensor graphics | Experimental: all 44 image hashes match our unit; no visible effect on a car without a reversing camera (our car only beeps), so **not tested by us** |
@@ -96,7 +97,9 @@ that show the unit is recognised.
 
 ### Your own Meters pages
 
-1. In the app, open **Design your Meters** and press **Open designer**. It opens in your web browser on this PC.
+1. In the app, open **Design your Meters** and press **Open designer**. It opens in your web browser on this PC. The
+   first time, it asks which MX-5 you have and which units you use (*Project → Car setup* changes it later). The Meters
+   use that car for the rev warnings, the gear and the units, in the built-in styles too.
 2. Design your pages and press **Send to MiatOff**. Back in the app, tick up to eight pages.
 3. Under **Choose tweaks**, set Meters to *Install* (or *Update* if it is already on the car) and prepare the stick.
 4. In the car, accept the step (**INSTALL**, or **REPAIR** for an update). The pages are under *Applications → Meters → CUSTOM*.

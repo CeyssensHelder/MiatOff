@@ -502,6 +502,7 @@
           ><button data-forward="redo">Redo</button>
         </div>
         <button id="import">Import JSON</button
+        ><button id="car-setup-open">Car setup</button
         ><button id="vehicle-open">Vehicle and units</button
         ><button id="checkpoint">Named checkpoint</button
         ><button id="revisions">Recovery revisions</button
@@ -557,7 +558,49 @@
         <button data-close aria-label="Close vehicle settings">×</button>
       </div>
       <p id="vehicle-summary" class="hint"></p>
+      <button id="vehicle-choose-car">Choose a car…</button>
       <div id="vehicle"></div>
+    </dialog>
+    <dialog id="setup-dialog" class="wide-dialog">
+      <form id="setup-form">
+        <div class="dialog-heading">
+          <h2 id="setup-title">Your car</h2>
+          <button type="button" data-close aria-label="Close car setup">
+            ×
+          </button>
+        </div>
+        <p id="setup-intro" class="hint"></p>
+        <div id="setup-car" class="setup-grid">
+          <label>Region<select id="setup-market"></select></label>
+          <label>Generation<select id="setup-generation"></select></label>
+          <label>Engine<select id="setup-engine"></select></label>
+          <label>Gearbox<select id="setup-transmission"></select></label>
+          <label>Body<select id="setup-body"></select></label>
+          <label>Tyre size<select id="setup-tyre"></select></label>
+        </div>
+        <div id="setup-units" hidden>
+          <div id="setup-unit-fields" class="setup-grid"></div>
+          <label
+            >Turn the gauges red<select id="setup-margin"></select
+          ></label>
+          <table id="setup-summary">
+            <caption id="setup-summary-caption"></caption>
+            <tbody id="setup-summary-body"></tbody>
+          </table>
+          <p class="hint">
+            The limiter is Mazda's published redline, where the engine stops
+            pulling; the warnings come earlier so you have time to shift.
+            “Assumed” values have no public source yet; check them against your
+            car.
+          </p>
+        </div>
+        <p id="setup-error" class="field-error" role="alert"></p>
+        <div class="button-row setup-actions">
+          <button type="button" id="setup-skip">Keep the default settings</button
+          ><button type="button" id="setup-back" hidden>Back</button
+          ><button type="submit" id="setup-next" class="primary">Next</button>
+        </div>
+      </form>
     </dialog>
     <dialog id="simulation-dialog" class="wide-dialog">
       <div class="dialog-heading">

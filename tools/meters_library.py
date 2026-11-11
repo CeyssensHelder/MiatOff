@@ -155,6 +155,71 @@ def image_size(data):
     raise ValueError("Expected a normalized PNG or JPEG image")
 
 
+def _positive(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
+
+
+def car_gearing(vehicle):
+    """The gearing the car uses to work out the gear: ratios, final drive and rolling circumference (and the tyre
+    they came from), only when all of it is there. Anything missing leaves the car on its built-in ND1 table."""
+    ratios = vehicle.get("ratios")
+    if not (isinstance(ratios, list) and ratios and all(_positive(r) for r in ratios)
+            and _positive(vehicle.get("finalDrive")) and _positive(vehicle.get("circumference"))):
+        return {}
+    out = {"ratios": list(ratios), "finalDrive": vehicle["finalDrive"], "circumference": vehicle["circumference"]}
+    if vehicle.get("tyre") is not None:
+        out["tyre"] = vehicle["tyre"]
+    return out
+
+
+CAR_LABEL_MAX = 60
+CAR_DEFAULT_LABEL = "My car"
+
+
+def car_profile(vehicle, label=None):
+    """The reduced car profile the Meters on the car use (js/car-profile.js), from the designer's project.vehicle.
+    Raises ValueError for an invalid vehicle or label. The gearing keys are present only when it is complete."""
+    validate_vehicle(vehicle)
+    require(label is None or isinstance(label, str), "Invalid car label")
+    label = (label or "").strip() or CAR_DEFAULT_LABEL
+    require(len(label) <= CAR_LABEL_MAX, f"The car label is longer than {CAR_LABEL_MAX} characters")
+    out = {"label": label}
+    for key in ("preset", "generation", "engine", "transmission", "market", "tyre"):
+        out[key] = vehicle.get(key)
+    out["rpm"] = {key: vehicle["rpm"][key] for key in ("max", "amber", "red", "shift", "limit")}
+    for key in ("ratedPower", "powerRpm", "ratedTorque", "torqueRpm", "mass"):
+        out[key] = vehicle.get(key)
+    out["units"] = dict(vehicle["units"])
+    out.update({k: v for k, v in car_gearing(vehicle).items() if k in ("ratios", "finalDrive", "circumference")})
+    return out
+
+
+def validate_vehicle(v):
+    """Check the vehicle profile of a setup (identity, rpm, units, numbers, gearing, preset, tyre). Returns it."""
+    require(isinstance(v, dict), "Invalid vehicle identity")
+    require(v.get("generation") in ("ND1", "ND2") and v.get("engine") in ("1.5", "2.0") and
+            v.get("body") in ("roadster", "RF", "rf") and v.get("transmission") in ("manual", "automatic")
+            and number(v.get("year"), 1989, 2100, True) and text(v.get("market"), 40), "Invalid vehicle identity")
+    rpm = [v.get("rpm", {}).get(key) for key in ("amber", "red", "shift", "limit", "max")]
+    require(all(number(n, 1, 15000, True) for n in rpm) and rpm == sorted(rpm), "Invalid RPM settings")
+    for key, choices in {"speed": UNITS["speed"], "distance": UNITS["trip"], "temperature": ["C", "F"],
+                         "power": UNITS["power"], "torque": UNITS["torque"], "consumption": UNITS["consumption"]}.items():
+        require(v.get("units", {}).get(key) in choices, "Invalid vehicle units")
+    for key in ("mass", "cda", "crr", "eff", "finalDrive", "circumference", "ratedPower", "ratedTorque", "powerRpm", "torqueRpm"):
+        require(v.get(key) is None or number(v[key], 0, 100000), "Invalid vehicle " + key)
+    require(isinstance(v.get("ratios"), list) and len(v["ratios"]) <= 10 and
+            all(n is None or number(n, .000001, 20) for n in v["ratios"]), "Invalid gear ratios")
+    require(v.get("preset") is None or (isinstance(v["preset"], str) and re.fullmatch(r"[a-z0-9-]{1,40}", v["preset"])),
+            "Invalid vehicle preset")
+    require(v.get("tyre") is None or (isinstance(v["tyre"], str) and re.fullmatch(r"\d{3}/\d{2}R\d{2}", v["tyre"], re.ASCII)),
+            "Invalid tyre size")
+    assumed = v.get("assumed")
+    require(assumed is None or (isinstance(assumed, list) and len(assumed) <= 30 and
+            all(isinstance(n, str) and len(n) <= 40 and re.fullmatch(r"[A-Za-z.]+", n) for n in assumed)),
+            "Invalid assumed fields")
+    return v
+
+
 def validate_setup(doc):
     """Validate the single-theme editor snapshot accepted by the local handoff.
 
@@ -334,15 +399,7 @@ def validate_setup(doc):
     require(references == set(assets), "Send exactly the images referenced by this theme")
     require(doc.get("library") == [] and doc.get("initialTheme") == theme["id"]
             and number(doc.get("initialPage"), 0, len(pages) - 1, True), "Invalid theme snapshot")
-    v = doc.get("vehicle", {})
-    require(v.get("generation") in ("ND1", "ND2") and v.get("engine") in ("1.5", "2.0") and
-            v.get("body") in ("roadster", "RF", "rf") and v.get("transmission") in ("manual", "automatic")
-            and number(v.get("year"), 1989, 2100, True) and text(v.get("market"), 40), "Invalid vehicle identity")
-    rpm = [v.get("rpm", {}).get(key) for key in ("amber", "red", "shift", "limit", "max")]
-    require(all(number(n, 1, 15000, True) for n in rpm) and rpm == sorted(rpm), "Invalid RPM settings")
-    for key, choices in {"speed": UNITS["speed"], "distance": UNITS["trip"], "temperature": ["C", "F"],
-                         "power": UNITS["power"], "torque": UNITS["torque"], "consumption": UNITS["consumption"]}.items():
-        require(v.get("units", {}).get(key) in choices, "Invalid vehicle units")
+    v = validate_vehicle(doc.get("vehicle", {}))
     for page in pages:
         for widget in page["widgets"]:
             if widget["scale"]["mode"] == "custom":
@@ -352,10 +409,6 @@ def validate_setup(doc):
                 if category == "temperature":
                     expected = "°" + expected
                 require(widget["scale"]["unit"] == expected, "Custom scale does not match the preview's units")
-    for key in ("mass", "cda", "crr", "eff", "finalDrive", "circumference", "ratedPower", "ratedTorque", "powerRpm", "torqueRpm"):
-        require(v.get(key) is None or number(v[key], 0, 100000), "Invalid vehicle " + key)
-    require(isinstance(v.get("ratios"), list) and len(v["ratios"]) <= 10 and
-            all(n is None or number(n, .000001, 20) for n in v["ratios"]), "Invalid gear ratios")
     return doc
 
 
@@ -731,6 +784,57 @@ class HomeMenus:
     def mark_built(self, key):
         with self.library.connect() as db:
             db.execute("INSERT OR REPLACE INTO library_meta VALUES ('home-built', ?)", (key or "",))
+
+
+# ---------------------------------------------------------------- Car profile
+# The car set up in the designer (Project > Car setup), reduced by car_profile(). One profile; the builder puts it
+# in the Meters payload (js/car-profile.js). "car-built" is what the last Meters stick carried.
+def _car_json(profile):
+    return json.dumps(profile, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+
+
+class CarProfile:
+    def __init__(self, library):
+        self.library = library
+
+    def _read(self, key):
+        with self.library.connect() as db:
+            row = db.execute("SELECT value FROM library_meta WHERE key=?", (key,)).fetchone()
+        if not row or not row["value"]:
+            return None
+        try:
+            value = json.loads(row["value"])
+        except ValueError:
+            return None
+        return value if isinstance(value, dict) else None
+
+    def set(self, vehicle, label=None):
+        """Validate, reduce and store the profile. Returns it."""
+        profile = car_profile(vehicle, label)
+        with self.library.connect() as db:
+            db.execute("INSERT OR REPLACE INTO library_meta VALUES ('car-profile', ?)", (_car_json(profile),))
+        return profile
+
+    def get(self):
+        """The stored profile, or None (none set, or the stored text is unusable)."""
+        return self._read("car-profile")
+
+    def clear(self):
+        with self.library.connect() as db:
+            db.execute("DELETE FROM library_meta WHERE key='car-profile'")
+
+    def built(self):
+        """The profile the last Meters stick carried, or None (none, or never built)."""
+        return self._read("car-built")
+
+    def mark_built(self, profile):
+        """Remember what a stick carries (None: the built-in default)."""
+        with self.library.connect() as db:
+            db.execute("INSERT OR REPLACE INTO library_meta VALUES ('car-built', ?)", (_car_json(profile) if profile else "",))
+
+    def stale(self):
+        """True when the stored profile is not what the last stick carried (the car needs a Meters update)."""
+        return self.get() != self.built()
 
 
 def validate_selection(bundle):

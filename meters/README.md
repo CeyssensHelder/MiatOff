@@ -6,7 +6,7 @@ Experimental: installed and used on our own car (see the support status in the [
 
 **Menu.** First a list of styles (street, track, cyberpunk, 2077, 2077 night and, when there are any, custom), each with a live preview. Open one and you get
 live previews of its pages. Pick one and the gauge fills the screen. **Back** goes up one level each time, and at
-the style list it leaves the app. The app reopens on the last gauge, and starts in the style list the very first time.
+the style list it leaves the app. The app always starts in the style list, with the style used last time highlighted: press twice to get back to the page you used last.
 
 | Control | Style list / previews | Gauge |
 |---|---|---|

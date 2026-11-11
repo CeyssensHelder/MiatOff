@@ -498,11 +498,24 @@ class Car:
 SHIM = "data_persist/oem-aa-mod/libpatch-blmjciaapa.so"
 
 
-def fresh(base: Path, name: str, custom=None, home=None) -> Car:
+def fresh(base: Path, name: str, custom=None, home=None, car_profile=None) -> Car:
     car = Car(base / name)
     make_fixture(car.root)
-    bs.build(car.stick, custom, home)
+    bs.build(car.stick, custom, home, car_profile)
     return car
+
+
+def car_profile_of(red: int) -> dict:
+    """A car profile (as the designer's Car setup gives it) with the given red line, for a stick with a car."""
+    sys.path.insert(0, str(HERE.parents[1] / "tools"))
+    import meters_library as ml
+    vehicle = {"generation": "ND1", "engine": "1.5", "body": "roadster", "transmission": "manual", "year": 2017,
+               "market": "EU", "preset": None, "tyre": None, "mass": 1000, "ratedPower": None, "ratedTorque": None,
+               "powerRpm": None, "torqueRpm": None, "ratios": [], "finalDrive": None, "circumference": None,
+               "rpm": {"amber": red - 400, "red": red, "shift": red, "limit": red + 200, "max": red + 500},
+               "units": {"speed": "km/h", "distance": "km", "temperature": "C", "power": "PS", "torque": "Nm",
+                         "consumption": "L/100km"}}
+    return ml.car_profile(vehicle, f"Test car {red}")
 
 
 def custom_bundle(count: int) -> dict:
@@ -1220,6 +1233,41 @@ def main():
             damaged.write_bytes(damaged.read_bytes() + b" ")
             r = car.run("meters_on")
             check(r.returncode != 0 and car.digest() == stock_digest, "damaged custom pages file on the stick: refused")
+
+            # The car profile travels in the same payload (js/car-profile.js): it is in the manifest, a changed profile
+            # is "partial" and REPAIR installs it, a tampered file is refused.
+            check("miatoff-app/app/meters/js/car-profile.js" in payload and
+                  any(l.endswith("  app/meters/js/car-profile.js") for l in payload["miatoff-app/MANIFEST"].decode().splitlines()),
+                  "the Meters manifest lists car-profile.js")
+            profile = car_profile_of(7000)
+            car_payload = bs.payload(car=profile)
+            car = fresh(base, "meters-car", None, None, profile)
+            stock_digest = car.digest()
+            r = car.run("meters_on")
+            car_on_car = car.root / app_dir / "meters/js/car-profile.js"
+            check(r.returncode == 0 and car.state("meters:") == "on" and
+                  car_on_car.read_bytes() == car_payload["miatoff-app/app/meters/js/car-profile.js"] and
+                  b"Test car 7000" in car_on_car.read_bytes(),
+                  f"Meters with a car profile installs it ({r.returncode}, {car.state('meters:')})")
+            shutil.rmtree(car.stick / "miatoff-app")
+            for name, data in bs.payload(car=car_profile_of(7200)).items():
+                if name.startswith("miatoff-app/"):
+                    target = car.stick / name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(data)
+            car.run("cancel")
+            check(car.state("meters:") == "partial", f"a changed car profile is recognised as partial ({car.state('meters:')})")
+            r = car.run("meters_on")
+            check(r.returncode == 0 and car.state("meters:") == "on" and b"Test car 7200" in car_on_car.read_bytes(),
+                  "REPAIR installs the changed car profile")
+            r = car.run("meters_off")
+            check(r.returncode == 0 and car.digest() == stock_digest, "car profile: REMOVE gives byte-exact stock")
+            car = fresh(base, "meters-car-bad", None, None, profile)
+            stock_digest = car.digest()
+            damaged = car.stick / "miatoff-app/app/meters/js/car-profile.js"
+            damaged.write_bytes(damaged.read_bytes() + b" ")
+            r = car.run("meters_on")
+            check(r.returncode != 0 and car.digest() == stock_digest, "damaged car-profile.js on the stick: refused")
 
             # A Home menu travels in the same payload: its script and design in the userscript folder, its pictures
             # in app/home. Install, change to a menu with pictures (the car sees an older Meters), go back to no

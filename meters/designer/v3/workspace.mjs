@@ -348,6 +348,6 @@ export class Workspace {
       }
     }
     $("vehicle-summary").textContent =
-      `${c.vehicle.generation} · ${c.vehicle.engine} L · ${c.vehicle.year} ${c.vehicle.market}. ${c.vehicle.provenance ?? "Specifications require verification."}`;
+      `${c.vehicle.generation} · ${c.vehicle.engine} L ${c.vehicle.transmission} · ${c.vehicle.year} ${c.vehicle.market}${c.vehicle.tyre ? " · " + c.vehicle.tyre : ""}. ${c.vehicle.provenance ?? "Specifications require verification."}`;
   }
 }

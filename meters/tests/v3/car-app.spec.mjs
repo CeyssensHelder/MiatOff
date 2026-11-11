@@ -101,3 +101,25 @@ test("without custom pages the group is not in the menu", async ({ page }) => {
     await plain.close();
   }
 });
+
+test("the app starts in the style menu; two presses reopen the style and page used last", async ({ page }) => {
+  // Use 2077 on its second page, as a drive would leave it.
+  let errors = await open(page, "set=y2077&page=1");
+  expect(await mode(page)).toBe("set-y2077");
+  // Opening the app again (the car's URL names no style) shows the style menu, not 2077.
+  await page.goto(`${served.url}/index.html?src=sim`);
+  await page.waitForTimeout(900);
+  expect(await mode(page)).toBe("mode-menu");
+  await page.evaluate(() => window.MiatoffMeters.select()); // highlighted: 2077, opens its page list
+  await page.evaluate(() => window.MiatoffMeters.select()); // on the page used last
+  expect(await mode(page)).toBe("set-y2077");
+  const on = await page.locator("#dots span").evaluateAll((spans) => spans.findIndex((s) => s.className === "on"));
+  expect(on).toBe(1);
+  // Another style from the menu starts on its first page.
+  await page.goto(`${served.url}/index.html?src=sim`);
+  await page.waitForTimeout(900);
+  await page.evaluate(() => { window.MiatoffMeters.next(); window.MiatoffMeters.select(); window.MiatoffMeters.select(); });
+  expect(await mode(page)).toBe("set-y2077n");
+  expect(await page.locator("#dots span").evaluateAll((spans) => spans.findIndex((s) => s.className === "on"))).toBe(0);
+  expect(errors).toEqual([]);
+});
