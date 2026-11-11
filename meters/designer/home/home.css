@@ -114,23 +114,26 @@ details.panel-section > summary {
   flex-direction: column;
   gap: 8px;
 }
-/* Fit: the whole 800 x 480 screen in the space there is, in width and in height, centred (as Meters).
-   100%: actual pixels, scrolled when larger (the inline width set by the Fit / 100% button). */
+/* The canvas sits in the Meters screen frame (.screen in studio-v3.css). Fit: the whole 800 x 480 screen in the
+   space there is, in width and in height, centred; 100% (.actual, as in Meters): actual pixels, scrolled when
+   larger, without cutting off an edge. */
 #canvas-wrap {
   flex: 1;
-  min-height: 0;
-  overflow: auto;
   container-type: size;
   display: grid;
   place-items: safe center;
 }
-canvas {
-  display: block;
+#canvas-wrap canvas {
   width: min(100cqw, 100cqh * 5 / 3);
+  max-width: none;
+  height: auto;
   aspect-ratio: 5/3;
-  touch-action: none;
   background: #17191d;
-  border-radius: 6px;
+}
+#canvas-wrap.actual canvas {
+  width: 800px;
+  min-width: 800px;
+  height: 480px;
 }
 #navigation {
   display: flex;

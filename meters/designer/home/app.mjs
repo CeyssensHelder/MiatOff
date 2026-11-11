@@ -515,10 +515,10 @@ $("snap").onchange = () =>
     sections: { ...preferences.value.sections, homeSnap: $("snap").value },
   });
 let fullSize = preferences.value.sections.homeFull === true;
-canvas.style.width = fullSize ? "800px" : "";
+$("canvas-wrap").classList.toggle("actual", fullSize);
 $("zoom").onclick = () => {
   fullSize = !fullSize;
-  canvas.style.width = fullSize ? "800px" : "";
+  $("canvas-wrap").classList.toggle("actual", fullSize);
   preferences.set({
     sections: { ...preferences.value.sections, homeFull: fullSize },
   });
