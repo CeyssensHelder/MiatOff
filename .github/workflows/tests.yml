@@ -2,8 +2,7 @@ name: tests
 on: [push, pull_request]
 jobs:
   host-tests:
-    # Pinned: on 11 Nov 2026 the Playwright install began to hang for 10 minutes on ubuntu-latest (which is moving to
-    # Ubuntu 26) while it took 20 s on 24.04 the same morning, with no change in this repository.
+    # Pinned to the image the suite is known to pass on (ubuntu-latest is moving to Ubuntu 26).
     runs-on: ubuntu-24.04
     env:
       MO_SYNTHETIC: "1"
@@ -19,7 +18,9 @@ jobs:
         with:
           node-version: "20"
       # Ubuntu's default awk (mawk) buffers input from pipes; the car runs BusyBox awk, so the tests use gawk.
-      - run: sudo apt-get update && sudo apt-get install -y gawk
+      # gawk and xvfb are on the runner image; apt is only used when one is missing, so a mirror outage cannot stop
+      # the suite (on 11 Nov 2026 the runners could not resolve the Ubuntu mirror for hours).
+      - run: command -v gawk || { sudo apt-get update && sudo apt-get install -y gawk; }
       - run: python dump-stick/tests/test_dump_stick.py
       - run: python collector/tests/test_collector.py
       - run: python collector/tests/test_calibrate.py
@@ -36,18 +37,11 @@ jobs:
       - run: node --test meters/tests/v3/*.test.mjs
       - run: python tools/tests/test_custom_pages_build.py
       - run: python tools/tests/test_home_menu.py
-      - run: sudo apt-get install -y xvfb
+      - run: command -v xvfb-run || { sudo apt-get update && sudo apt-get install -y xvfb; }
       - run: xvfb-run -a python tools/tests/test_meters_library.py
-      # Chromium's system libraries and the browser, in two steps with their own time limit, so a hang names its cause.
+      # Only the browser, from Playwright's own server: the runner image already has Chromium's libraries, and
+      # "--with-deps" only added extra fonts from the Ubuntu mirror that the pages (with their own fonts) do not use.
       # On failure the end of the log becomes an annotation, which is readable without signing in.
-      - name: Chromium system libraries
-        working-directory: meters/tests/v3
-        run: |
-          set +e
-          timeout 480 sudo -E env "PATH=$PATH" npx playwright install-deps chromium > deps.log 2>&1
-          rc=$?
-          if [ "$rc" -ne 0 ]; then python3 ../../../tools/ci_annotation.py deps.log "Playwright install-deps failed (exit $rc)"; fi
-          exit $rc
       - name: Chromium browser
         working-directory: meters/tests/v3
         run: |
