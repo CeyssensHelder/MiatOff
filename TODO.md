@@ -33,18 +33,22 @@ Built (PR #11): a local editor for custom Meters pages, a Designer tab in the ap
 *Applications → Meters → CUSTOM*, installed and updated through the normal Meters payload (`custom-pages.js` in the
 `MANIFEST`, REPAIR for an update). Tried on our car with three simple pages. See [docs/15](docs/15-meters-designer.md).
 
-- [x] **First-run setup** (branch `feature/first-run-setup`): the Meters designer asks for region, car, gearbox, body,
-  tyre and units the first time, and fills the vehicle profile from six presets in `meters/designer/v3/presets.mjs`
-  ([docs/18](docs/18-vehicle-presets.md)); *Project → Car setup* changes it later. Not tried in a car.
-- [ ] Car setup, open data points: no manufacturer source for the 1.5 gear ratios, final drive and running mass, or for any
-  fuel cut (limiter = redline for now); no preset for the JP-only 1.5 automatic; the EU/UK automatic ratios are taken from
-  the US/JP sheets; the 2024 update is not covered.
+- [x] **First-run car setup** (branch `feature/first-run-setup`): the Meters designer asks for region, car, gearbox,
+  body, tyre and units the first time, and fills the vehicle profile from six presets in
+  `meters/designer/v3/presets.mjs` ([docs/18](docs/18-vehicle-presets.md)); *Project → Car setup* changes it later.
+  Mazda's published redline is the limiter; the gauges turn red a chosen margin earlier (default 500 rpm, so 7,000 on a
+  7,500 rpm car). Custom pages work out the gear from their own gearing. Not tried in a car.
+- [ ] Car setup, open data points: no manufacturer source for the 1.5 gear ratios, final drive and running mass; the
+  exact fuel-cut rpm is not published (the limiter uses Mazda's redline); no preset for the JP-only 1.5 automatic; the
+  EU/UK automatic ratios are taken from the US/JP sheets; the 2024 update is not covered.
+- [ ] Try the car setup in the car: an ND1 2.0 or ND2 profile (red before the cut, gear from the profile's gearing) and
+  imperial units, on the built-in styles and on custom pages.
 - [ ] Known issues seen on our car ([docs/15](docs/15-meters-designer.md#known-issues)): gauges lag up to about a second
   when stationary (the built-in pages too), one unexplained RPM jump (about 1,900 to 3,000), and the consumption scale
   (`Drv1AvlFuelE`) not yet compared with the car's own figure.
 - [ ] Speed and memory in the car with eight pages and with background images.
-- [ ] Decide what stays fixed for safety and readability (minimum font sizes, rev-limit warnings, how many things per
-  page; the editor allows 24 widgets).
+- [ ] Decide what stays fixed for safety and readability (minimum font sizes, how many things per page; the editor
+  allows 24 widgets). Rev warnings now come before the limiter by the car setup's margin.
 - [ ] Day mode in the car app (the designer has one; the car draws night styling only).
 
 ## Meters: more configuration
@@ -55,22 +59,23 @@ farenheit for us Americans?"
 - [x] Let the built-in styles use the same settings as the custom pages (units, RPM thresholds), converted in one place
   (`meters/js/units.js`): the designer's car setup goes to the builder and onto the stick as `js/car-profile.js`, and
   Street, Track, Cyberpunk, 2077 and 2077 NIGHT take their rev warnings, gearing, power figures and units from it.
-  Not tried in a car.
+  The app's Meters row shows the car and asks for a Meters update when it changed. Not tried in a car.
+- [x] The app always starts in the style menu (it used to reopen the last style, so it seemed to start in 2077 every
+  time); the last style is highlighted and two presses resume its last page. Not tried in a car.
+- [ ] The power page's shared axis keeps its PS/Nm legend with imperial units (the live numbers convert); give power
+  and torque their own axis labels.
+- [ ] The simulator (`meters/js/data.js`, `?src=sim`) still drives with the ND1 1.5 manual gearing, so with another car
+  its gear readout looks wrong in previews; drive it from the car profile.
 
-## Mazda Home menu customisation
+## Mazda Home menu
 
-On the unmerged branch `codex/unified-designer`: the research (`docs/16-mazda-menu-customisation.md`) and a Mazda Home
-mode for the shared Designer (one 800 × 480 screen, 1–12 items, background, normal/selected icons, Commander order;
-`docs/17-unified-designer.md`). It is a design prototype only: no install action, plan key or pinned hashes.
+Built and merged (PR #14, PR #15): a Home mode in the shared Designer, five built-in menus, *Design your menu* in the app
+and *Custom menu* under *Choose tweaks > Interface*. The car side is a userscript that wraps Mazda's `MainMenuCtrl`; it
+travels in the Meters payload and Mazda's Home files stay unchanged. Installed and working on our car in a first test
+([docs/17](docs/17-unified-designer.md#home-menu-in-the-car)).
 
-- [ ] Review and merge the shared Designer (Meters and Mazda Home in one editor).
-- [ ] Identify the exact v74 Home files (MainMenu control JS/CSS, the shared background) and their stock hashes on a
-  future FULL dump run, without copying Mazda files into the repository.
-- [ ] Find out whether the shared background also changes screens other than Home.
-- [ ] A first, small car feature: background and label colour only, hash-guarded, sharing the Meters loader rather than
-  a second installer. Mind the `systemApp.js` combinations already pinned for the Entertainment-menu item.
-- [ ] Later: moved or custom shortcuts, only after the real control lifecycle and the native routes are verified, and
-  only if every factory destination stays reachable.
+- [ ] Confirm the rest of the first car-test checklist
+  ([docs/17](docs/17-unified-designer.md#checklist-for-the-first-car-test-parked)).
 
 ## Later phases
 
