@@ -13,6 +13,8 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
 - [ ] **Shift sound.** A short tone on the Meters pages at the shift RPM, with an on/off switch next to the designer's
   shift lights, shared by custom pages and the built-in styles, silent when stationary. The sound files ship in the
   Meters payload (hash-guarded).
+- [ ] **Media controls in Meters.** Control the audio from the Meters pages without leaving them: what is playing, and
+  play/pause and previous/next.
 - [ ] **Day mode in the car app.** The designer already has one; the car draws the night styling only.
 - [ ] **Car setup presets:** the JP-only 1.5 automatic and the 2024 update
   ([docs/18](docs/18-vehicle-presets.md)).
