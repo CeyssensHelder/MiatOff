@@ -99,7 +99,7 @@ nothing otherwise).
 |---|---|
 | Install | the menu chosen under Your menus (shown beside the choice) |
 | Mazda's Home | no menu: REPAIR or INSTALL brings back Mazda's own Home |
-| Leave as-is | the menu the last Meters stick carried, so reinstalling or updating Meters keeps the car as it is. When the app does not know that menu (a menu installed by the first Home menu version, which kept no record, or one deleted since), it stops and asks for Install or Mazda's Home rather than guess |
+| Leave as-is | the menu the last Meters stick carried, so reinstalling or updating Meters keeps the car as it is |
 
 The app remembers which menu each Meters stick carried once that stick is written.
 

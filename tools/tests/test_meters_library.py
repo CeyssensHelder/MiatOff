@@ -670,32 +670,6 @@ class GuiTests(unittest.TestCase):
         builder, _ask, _error = build()
         self.assertIsNone(builder.home)
 
-    def test_leave_as_is_does_not_remove_an_unrecorded_menu(self):
-        # As after the first Home menu version: a menu chosen and installed, but no record of the stick's menu.
-        gui, app = self.make_app()
-        app.home_menus.select("starter-2077-night")
-        app.tabs.select(app.choose_tab)
-        self.pick_stick(app)
-        app.vars["meters"].set("install")
-        app.vars["home"].set("keep")
-        self.assertIn("does not know", app._home_reason())
-        builder = Mock()
-        builder.verify.return_value = []
-        ask, _info, error, _warn = self.run_action(gui, app, "build", builder)
-        self.assertIn("does not know", error.call_args[0][1])
-        ask.assert_not_called()
-        # Install puts the chosen menu (back) on the car and records it; Leave as-is keeps it from then on.
-        app.vars["home"].set("install")
-        self.assertIsNone(app._home_reason())
-        ask, _info, error, _warn = self.run_action(gui, app, "build", builder)
-        error.assert_not_called()
-        self.assertEqual(builder.home["name"], "2077 Night")
-        app.vars["home"].set("keep")
-        self.assertIsNone(app._home_reason())
-        ask, _info, error, _warn = self.run_action(gui, app, "build", builder)
-        error.assert_not_called()
-        self.assertEqual(builder.home["name"], "2077 Night")
-
     def make_app(self):
         import miatoff_gui as gui
         with patch.dict("os.environ", {"MIATOFF_METERS_LIBRARY": str(self.library.path)}), patch.object(gui, "removable_drives", return_value=[]):

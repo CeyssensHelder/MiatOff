@@ -45,4 +45,6 @@ pages and the Home menu. A contributor ran the check, the install and the wirele
 - The downloads are not signed yet, so Windows and macOS warn the first time you open them; see
   [Opening the app](https://github.com/CeyssensHelder/MiatOff/blob/master/README.md#opening-the-app). `SHA256SUMS.txt` lists the checksum of each download.
 - Stay on firmware 74.00.324A. Not for the ND3 (2024 and later) or any other firmware.
+- Installed a Home menu with an early build (before the *Custom menu* choice)? Updating Meters with Custom menu on
+  *Leave as-is* may put Mazda's Home back. Set Custom menu to *Install* once with that Meters update to keep your menu.
 - Open items are in the [TODO](https://github.com/CeyssensHelder/MiatOff/blob/master/TODO.md).

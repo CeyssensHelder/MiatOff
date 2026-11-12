@@ -98,8 +98,7 @@ To change them later, repeat from step 2. Start with one simple page. More in [d
    (or *Update*), then prepare the stick.
 3. In the car, accept **INSTALL** or **REPAIR**. Try a new menu parked first.
 
-*Leave as-is* keeps the menu of your last stick when Meters is installed again; if MiatOff does not know which menu is
-on the car, it asks you to choose *Install* or *Mazda's Home* instead. To get Mazda's own Home back, set
+*Leave as-is* keeps the menu of your last stick when Meters is installed again. To get Mazda's own Home back, set
 Custom menu to *Mazda's Home* (with Meters set to *Install*) and repeat, or remove Meters. More in
 [docs/17](docs/17-unified-designer.md#home-menu-in-the-car).
 

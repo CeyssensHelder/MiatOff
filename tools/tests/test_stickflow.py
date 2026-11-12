@@ -112,11 +112,6 @@ def test_blockers():
           "Custom menu Install or Mazda's Home needs Meters set to Install")
     check("Choose the menu" in reason("install", "install", False), "Install needs a chosen menu")
     check(reason("install", "install", True) is None and reason("remove", "install", False) is None, "otherwise it can be built")
-    unknown = reason("keep", "install", True, False)
-    check(unknown is not None and "Install" in unknown and "Mazda's Home" in unknown,
-          "Leave as-is with Meters stops when the menu on the car is unknown")
-    check(reason("keep", "install", True, True) is None, "a known menu (or none) is kept")
-    check(reason("keep", "keep", True, False) is None, "without a Meters stick nothing on the car changes")
     check("Meters" in block("choose", GOOD, True, False, False, home=reason("install", "keep", True)),
           "the Custom menu reason stops step 3")
     check("Meters" in block("review", GOOD, True, False, True, home=reason("install", "keep", True)),
