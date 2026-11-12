@@ -170,6 +170,21 @@ class LibraryTests(unittest.TestCase):
         self.menus.select(None)
         self.assertIsNone(self.menus.chosen())
 
+    def test_the_menu_on_the_car_is_unknown_without_a_record(self):
+        self.assertTrue(self.menus.built_known(), "never chose a menu: there is none on the car")
+        self.menus.select("starter-2077-night")
+        self.assertFalse(self.menus.built_known(),
+                         "chosen but never recorded: the first Home menu version installed it without a record")
+        self.menus.mark_built("starter-2077-night")
+        self.assertTrue(self.menus.built_known())
+        self.menus.mark_built("")
+        self.assertTrue(self.menus.built_known(), "recorded as Mazda's Home")
+        saved = self.menus.save(pictured("Mine"))
+        self.menus.mark_built(saved["id"])
+        self.assertTrue(self.menus.built_known())
+        self.menus.remove(saved["id"])
+        self.assertFalse(self.menus.built_known(), "the recorded menu is gone from the library")
+
     def test_a_damaged_stored_menu_is_refused(self):
         saved = self.menus.save(pictured())
         with self.library.connect() as db:

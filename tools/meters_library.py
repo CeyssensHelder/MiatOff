@@ -781,6 +781,22 @@ class HomeMenus:
         except KeyError:
             return None
 
+    def built_known(self):
+        """False when the menu on the car is unknown, so "Leave as-is" must not guess: no stick recorded it although a
+        menu was chosen once (the first Home menu version put the chosen menu on every Meters stick and recorded
+        nothing), or the recorded menu is no longer in the library. Never having chosen a menu means none."""
+        with self.library.connect() as db:
+            built = db.execute("SELECT value FROM library_meta WHERE key='home-built'").fetchone()
+            if built is None:
+                return db.execute("SELECT 1 FROM library_meta WHERE key='home-selected'").fetchone() is None
+        if not built["value"]:
+            return True
+        try:
+            self.get(built["value"])
+        except KeyError:
+            return False
+        return True
+
     def mark_built(self, key):
         with self.library.connect() as db:
             db.execute("INSERT OR REPLACE INTO library_meta VALUES ('home-built', ?)", (key or "",))

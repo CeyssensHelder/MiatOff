@@ -975,9 +975,10 @@ class App(tk.Tk):
             return None
         try:
             chosen = bool(self.home_menus.selected())
+            known = self.home_menus.built_known()
         except Exception:  # the build reports a library that cannot be read
-            chosen = False
-        return stickflow.home_reason(self.vars[stickflow.HOME_KEY].get(), self.vars["meters"].get(), chosen)
+            chosen, known = False, True
+        return stickflow.home_reason(self.vars[stickflow.HOME_KEY].get(), self.vars["meters"].get(), chosen, known)
 
     def home_selection(self):
         """The Home menu design for the stick, or None. Install: the chosen menu. Mazda's Home: none. Leave as-is: the

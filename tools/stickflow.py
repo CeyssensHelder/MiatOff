@@ -152,12 +152,17 @@ def component_lines(verdict: dict) -> list:
     return out
 
 
-def home_reason(home: str, meters: str, chosen: bool):
-    """Why the Custom menu choice cannot be built as it stands; None when it can."""
+def home_reason(home: str, meters: str, chosen: bool, known: bool = True):
+    """Why the Custom menu choice cannot be built as it stands; None when it can. known: whether MiatOff knows which
+    menu the car has (HomeMenus.built_known); "Leave as-is" with Meters would otherwise replace it with a guess."""
     if home in ("install", "remove") and meters != "install":
         return "Custom menu goes on the car with Meters: set Meters to Install (or Update) as well."
     if home == "install" and not chosen:
         return "Choose the menu to install under Design your menu > Your menus."
+    if home == "keep" and meters == "install" and not known:
+        return ("MiatOff does not know which Home menu is on your car, so Custom menu \"Leave as-is\" cannot keep it "
+                "when Meters is installed again. Set Custom menu to Install to keep your menu (it goes back on the car "
+                "if it was removed), or to Mazda's Home.")
     return None
 
 
