@@ -114,7 +114,7 @@ class App(tk.Tk):
         stickui.enable_dpi_awareness()
         super().__init__()
         version = app_version()
-        self.title("MiatOff" if version == "source" else f"MiatOff {version} (preview)")
+        self.title("MiatOff" if version == "source" else f"MiatOff {version}")
         stickui.apply_theme(self)
         self.geometry("1080x800")
         self.minsize(880, 560)
