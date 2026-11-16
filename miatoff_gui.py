@@ -126,6 +126,7 @@ class App(tk.Tk):
         self.dump_path = None
         self.stick_ready = False
         self.prepared = None
+        self.prepared_root = None  # the drive that was prepared: re-plugging that same stick must keep "Verify USB"
         self.active_root = None
         self.notice = None
         self.job_label = ""
@@ -453,7 +454,9 @@ class App(tk.Tk):
         root = info.root if info else None
         if root != self.active_root:
             self.active_root = root
-            self._forget_check(keep_ready=root is None)  # pulling the stick out is what we told the user to do
+            # Pulling the stick out, and plugging the same one back in, is what we told the user to do.
+            again = self.stick_ready and self.prepared_root is not None and root == self.prepared_root
+            self._forget_check(keep_ready=root is None or again)
         self._show_drive_status()
         self._look_for_results()
         self._update_chrome()
@@ -1329,6 +1332,8 @@ class App(tk.Tk):
         else:
             self.stick_ready = True
             self.prepared = prepared  # what "Verify USB" compares a re-plugged stick with
+            drive = self.chosen_drive()
+            self.prepared_root = drive.root if drive else None
             self.verify_result.configure(text="")
             self.review_result.pack(fill="x", pady=7)
             self.notice = ("✓  USB ready. Follow the steps on this page.", OK)
