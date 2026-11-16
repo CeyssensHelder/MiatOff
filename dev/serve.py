@@ -63,7 +63,7 @@ class Handler(BaseHTTPRequestHandler):
         target = (ROOT / 'meters' / path.lstrip('/')).resolve()
         public = ROOT / 'meters'
         allowed = path == '/index.html' or any(
-            target.is_relative_to(public / folder) for folder in ('js', 'fonts'))
+            target.is_relative_to(public / folder) for folder in ('js', 'fonts', 'sounds'))
         if path == '/live.txt':
             target = self.server.live
         elif not allowed:

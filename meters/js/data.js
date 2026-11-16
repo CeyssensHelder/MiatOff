@@ -10,7 +10,8 @@
  * Sources (pick with ?src=...):
  *   sim                 built-in driving simulator (default)
  *   ws://host:port      websocket; each message is JSON {"Field": value} or lines "Field=value" / "Field#value"
- *   poll:<url>          XHR every 100 ms on a file/URL with the same text format (e.g. poll:live.txt)
+ *   poll:<url>          XHR every 100 ms on a file/URL with the same text format (e.g. poll:live.txt); line text
+ *                       must end with a "LiveSeq=<n>" line, or the read is taken as half-written and skipped
  */
 (function (W) {
     'use strict';
@@ -101,14 +102,20 @@
     }
 
     var LINE = /^\s*([^=#:\s]+)\s*[=#:\s]\s*(-?[0-9.]+)/;
+    // The collector rewrites live.txt in place with LiveSeq as its last line (no tmp + mv: forking mv ten times a
+    // second made it fall behind on the car). A read that does not end with that whole line, newline included,
+    // caught a write halfway.
+    var WHOLE = /(^|\n)LiveSeq=[0-9]+\r?\n$/;
 
-    function ingestText(s) {
+    // whole: the text is a file that may be read halfway through a write (poll); skip it unless it is complete.
+    function ingestText(s, whole) {
         if (!s) return;
         s = String(s);
         if (s.replace(/^\s+/, '').charAt(0) === '{') {
             try { ingest(JSON.parse(s)); } catch (e) { /* half-written file: next poll */ }
             return;
         }
+        if (whole && !WHOLE.test(s)) return;
         var lines = s.split(/\r?\n/), obj = {}, m, k;
         for (k = 0; k < lines.length; k++) {
             m = LINE.exec(lines[k]);
@@ -204,25 +211,35 @@
     }
 
     function PollSource(url) {
-        var busy = false;
+        var busy = false, cur = null, startedAt = 0;
         function poll() {
-            if (busy) return;
-            busy = true;
-            var x = new W.XMLHttpRequest();
-            x.onreadystatechange = function () {
-                if (x.readyState !== 4) return;
+            if (busy) {
+                // Watchdog: a request that never completes must not stop the gauges until a reload.
+                if (Date.now() - startedAt < 2000) return;
+                var old = cur;
+                cur = null;          // its late callback is now ignored
                 busy = false;
+                try { old.abort(); } catch (e) { /* nothing to abort */ }
+            }
+            busy = true;
+            startedAt = Date.now();
+            var x = new W.XMLHttpRequest();
+            cur = x;
+            x.onreadystatechange = function () {
+                if (x !== cur || x.readyState !== 4) return;   // aborted and replaced: not ours any more
+                busy = false;
+                cur = null;
                 // file:// answers with status 0
-                if (x.status === 200 || (x.status === 0 && x.responseText)) ingestText(x.responseText);
+                if (x.status === 200 || (x.status === 0 && x.responseText)) ingestText(x.responseText, true);
             };
             try {
                 // Cache-buster only over HTTP: on file:// a query string may become part of the file name.
                 x.open('GET', /^https?:/.test(W.location.protocol) && !/^file:/.test(url)
                     ? url + (url.indexOf('?') < 0 ? '?' : '&') + '_=' + Date.now() : url, true);
                 x.send(null);
-            } catch (e) { busy = false; }
+            } catch (e) { busy = false; cur = null; }
         }
-        setInterval(poll, 100);     // VBS signals arrive at 6-10 Hz
+        setInterval(poll, 100);    // VBS signals arrive at 6-10 Hz
         poll();
     }
 

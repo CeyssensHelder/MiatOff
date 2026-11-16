@@ -154,8 +154,9 @@ def make_fixture(work: Path):
     (work / "out").mkdir()
 
 
-def start(work: Path, oneshot: bool, smdb_sleep: str = "", slow_s: str = "10"):
-    env = {"MO_OUT_DIR": "W/out", "MO_DBUS_MONITOR": "W/bin/dbus-monitor", "MO_SMDB_READ": "W/bin/smdb-read",
+def start(work: Path, oneshot: bool, smdb_sleep: str = "", slow_s: str = "10", monitor: str = "dbus-monitor",
+          restart_s: str = "2"):
+    env = {"MO_OUT_DIR": "W/out", "MO_DBUS_MONITOR": "W/bin/" + monitor, "MO_RESTART_S": restart_s, "MO_SMDB_READ": "W/bin/smdb-read",
            "MO_DATA": "W/data", "MO_ONESHOT": "1" if oneshot else "0", "MO_SMDB_SLEEP": smdb_sleep,
            "MO_SLOW_S": slow_s}
     if DOCKER_IMAGE:
@@ -179,11 +180,21 @@ def sh(work: Path, command: str):
     return subprocess.run(["sh", "-c", command.replace("W/", work.as_posix() + "/")], capture_output=True, text=True)
 
 
+WHOLE = re.compile(r"(^|\n)LiveSeq=\d+\n$")
+
+
 def read_live(work: Path) -> dict:
+    """live.txt as the page takes it: the collector rewrites it in place, so a read that does not end with
+    the LiveSeq line caught a write halfway and is read again."""
     path = work / "out/live.txt"
-    if not path.exists():
-        return {}
-    return dict(line.split("=", 1) for line in path.read_text().splitlines() if "=" in line)
+    for _ in range(50):
+        if not path.exists():
+            return {}
+        text = path.read_text()
+        if WHOLE.search(text):
+            return dict(line.split("=", 1) for line in text.splitlines() if "=" in line)
+        time.sleep(0.02)
+    return {}
 
 
 def wait_for(cond, seconds: float) -> bool:
@@ -226,6 +237,13 @@ def main():
         check(live.get("PID_Drv1Dstnc_curr") == "26" and live.get("Drv1AvlFuelE") == "37", "vdm trip fields included")
         check("SteeringWheel" not in live and "SvdFuelRate" not in live, "only the wanted smdb fields")
         check(int(live.get("LiveSeq", "0")) >= 1, f"LiveSeq counts the writes ({live.get('LiveSeq')})")
+        check(bool(lines) and lines[-1].startswith("LiveSeq=") and WHOLE.search((work / "out/live.txt").read_text()),
+              "LiveSeq is the last line, so a reader can tell a whole file from a write caught halfway")
+        # One write per speed signal (~10 Hz): starting sh + mv for each made the collector fall seconds behind
+        # next to a busy Opera (docs/15). The fast pipeline must not start a process per write.
+        fast_src = SCRIPT.read_text().split("fast_awk() {", 1)[1].split("\n}\n", 1)[0]
+        check("system(" not in fast_src and "| getline" not in fast_src and "mv -f" not in fast_src,
+              "the fast pipeline starts no process per write")
         check(not list((work / "out").glob("*.tmp")) and not (work / "out/slow.raw").exists(), "no temporary files left")
         smdb_log = (work / "data/smdb.log").read_text().split("\n")
         check([l for l in smdb_log if l] == ["start vdm_vdt_current_data", "done vdm_vdt_current_data",
@@ -259,6 +277,35 @@ def main():
         check(log.count("start") == log.count("done") > 0, f"a running smdb-read is never killed ({log.split()})")
         check(not (work / "out/collector.pid").exists(), "pid file removed on stop")
         check("VehicleSpeed" in read_live(work), "last values stay readable after stop")
+        # The fake dbus-monitor never stops talking: after TERM no pipeline process may be left over and
+        # live.txt must stop changing (a kill of only the background subshell once left both running).
+        time.sleep(1)
+        procs = sh(work, "ps -ef 2>/dev/null || ps").stdout
+        left = [l for l in procs.splitlines() if "bin/dbus-monitor" in l or "miatoff-collector" in l
+                or ("awk" in l and "LiveSeq" in l)]
+        check(not left, f"no collector, dbus-monitor or awk process left after stop ({left[:3]})")
+        seq_a = read_live(work).get("LiveSeq")
+        time.sleep(1.5)
+        check(read_live(work).get("LiveSeq") == seq_a, f"LiveSeq stops rising after stop ({seq_a})")
+        check(not (work / "out/dbus.fifo").exists(), "no fifo left after stop")
+
+        # --- a dbus-monitor that keeps exiting must not fill collector.log (tmpfs)
+        work = base / "failing"
+        make_fixture(work)
+        write(work / "bin/dbus-monitor-fail",
+              '#!/bin/sh\necho "dbus-monitor: cannot connect to the bus" >&2\nexit 1\n', 0o755)
+        proc = start(work, oneshot=False, monitor="dbus-monitor-fail", restart_s="0.05", slow_s="100")
+        time.sleep(4)
+        sh(work, "kill -TERM $(cat W/out/collector.pid)")
+        try:
+            proc.wait(timeout=20)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        text = (work / "out/collector.log").read_text()
+        check(text.count("restarting in") == 5 and text.count("further restarts are not logged") == 1,
+              f"restart messages are capped ({text.count('restarting in')} + {text.count('not logged')})")
+        check(text.count("cannot connect") <= 6 and len(text) < 2000,
+              f"collector.log stays small after many restarts ({len(text)} bytes)")
     finally:
         if DOCKER_IMAGE:
             subprocess.run(["docker", "rm", "-f", "mo-collector-loop", "mo-collector-oneshot"], capture_output=True)

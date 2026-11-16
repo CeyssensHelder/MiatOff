@@ -808,6 +808,21 @@ export class Inspector {
       c.page.name,
       (v) => (c.page.name = v),
     );
+    // In the car only: ticks from the vehicle's amber line, a steady tone at its shift point (meters/js/shiftsound.js).
+    this.field(
+      name,
+      "page.shiftSound",
+      {
+        label: "Beep at the shift point",
+        control: "checkbox",
+        help: "In the car: ticks speeding up from the amber line, then a steady tone at the shift point, while driving.",
+      },
+      c.page.shiftSound === true,
+      (on) => {
+        if (on) c.page.shiftSound = true;
+        else delete c.page.shiftSound;
+      },
+    );
     if (this.api.level() >= 1)
       this.field(
         name,

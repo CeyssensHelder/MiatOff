@@ -2771,7 +2771,15 @@ case "$ACTION" in
     meters_off) done_text="Meters has been removed." ;;
 esac
 log "done: $ACTION, state $STATE; requesting SafeReboot"
-popup "$done_text\n\nRemove the USB. The unit is restarting..."
+# Wording only: with a plan that still has a step for the new state, the USB stays in.
+more=$(plan_next "$STATE" 2>/dev/null) || more=
+if [ -n "$more" ]; then
+    log "plan: next step after the restart: $more"
+    usb_text="Leave the USB in for the next step.\nThe unit is restarting..."
+else
+    usb_text="Remove the USB. The unit is restarting..."
+fi
+popup "$done_text\n\n$usb_text"
 if ! safe_reboot; then
     popup "$done_text\n\nRestart failed: switch the car off and on again."
     exit 1

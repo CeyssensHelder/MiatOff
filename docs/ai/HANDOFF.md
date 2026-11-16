@@ -1,44 +1,50 @@
-# HANDOFF — for the reviewer / stronger model
+# HANDOFF: brief for a reviewer
 
-This project investigates how to build — for your **own** car — open-source tweaks
-for the Mazda Connect (CMU). Goals: **touch while driving** + **faster startup**. This is a legitimate
-modification of your own hardware (2017 MX-5 ND1, FW 74.00.324).
+MiatOff builds USB sticks that tweak the Mazda Connect (CMU) head unit of a 2017 EU MX-5 ND1 on firmware 74.00.324A
+(ND2 on the same firmware also supported). It is for the owner's own car. Read [README.md](../../README.md) for what it
+does and [AGENTS.md](../../AGENTS.md) for the layout, rules and tests.
 
-## What you need to know before you start
-- All findings come from **web research** (enthusiast forums, commercial vendors' websites,
-  ZDI/Trend Micro security research, public GitHub repos). **No firmware of our own has been analysed yet.**
-- As a result, much is certain at the **mechanism level**, but not yet at the **byte/line level** for our specific
-  **EU build**.
-- Markers in the docs: **(verified)** = read directly from public source code/repo; **(vendor claim)** = from
-  a commercial vendor; **(forum report)** = unconfirmed community report.
+## What exists
 
-## The core in 5 points
-1. **Touch** is in effect solved: TouchTune (GPL-3.0) comments out a single line in `Common.js` (the
-   `"Global.AtSpeed"` handler) and sets two NVRAM settings (`bus_bcm_speed_restriction`, `lvds_speed_restriction`)
-   to `disable`, with backup + SHA-256 verification + rollback. (verified — see [docs/03](../03-touch-feature.md))
-2. **Boot** runs through the JCI Service Manager based on `/jci/sm/sm.conf` + stage scripts; the biggest gain is in
-   **core scheduling** + removing hard-coded `sleep`s + the AHA gate + trimming services for hardware that isn't
-   present. (see [docs/04](../04-boot-speedup.md))
-3. **UI tweaks**: the disclaimer timer in the HMI JS (3.5 → 0.5 s) and the page delay (1.5 → 0.3 s). (see [docs/05](../05-ui-tweaks.md))
-4. **Risk #1**: broad system-file overwrites (as MZD-AIO does) can break wireless CarPlay → **keep it
-   surgical**, TouchTune style. (see [docs/07](../07-risks.md))
-5. The exact `sm.conf` lines and the disclaimer/page-delay locations differ **per region/build** and still have to be
-   determined for our **EU 74.00.324** against the actual files.
+- A PC app (`miatoff_gui.py`) that builds a check stick or an install stick and writes a plan, `miatoff-plan.txt`.
+- The on-car installer, `aa-touch-stick/stick/aa-touch.sh` (BusyBox ash), and a read-only dump stick plus a checker.
+- Tweaks: touch while driving (TouchTune, vendored unmodified), touch in Android Auto (oem-aa-mod shim), boot trim,
+  startup warning, list delay, camera text, parking graphics, Meters gauges, Meters Designer, Home menu, and an
+  experimental shift sound.
+- A host simulator for the installer (fake car root, power-loss and failure injection) under BusyBox.
+- The research notes are in [docs/README.md](../README.md). They started as web research, then moved to a dump of our
+  own unit ([docs/11](../11-dump-analysis.md)). [docs/12](../12-handoff-aa-touch.md) is the AA-touch brief.
 
-## What we want your review on
-See [docs/09-open-questions.md](../09-open-questions.md) for the full list. In short:
-1. **Architecture review** of the proposed installer design in [docs/08](../08-approach-roadmap.md): is the
-   TouchTune approach (stage → verify → publish → rollback) the right basis, and where are the weak spots?
-2. **Boot strategy**: which of the levers named (core affinity, `sleep` removal, service trimming) give the best
-   gain/risk ratio, and which must absolutely not be touched without a recovery path?
-3. **Modifying safely**: how do we guarantee a reliable recovery path (failsafe boot / reflash) before we change anything,
-   so that a failed change never leads to an unrecoverable unit?
-4. **Licence**: is our GPL-3.0 analysis correct, and what does it mean if we take TouchTune code as a base?
-5. **Scope check**: are there better/newer open-source projects than those named here (see [docs/06](../06-ecosystem-and-repos.md))?
+## What was tested where
 
-## Main uncertainties / assumptions to challenge
-- "Core scheduling is the biggest lever" comes from a commercial vendor — not independently verified.
-- The claim that CarPlay/Android Auto/Bluetooth/Bose/steering-wheel buttons do *not* depend on the services to be trimmed is a
-  vendor claim.
-- Whether this specific EU ND1 has factory **wireless** CarPlay (which determines the whole risk profile) is not yet confirmed.
-- All timing figures are vendor measurements on other units (including a 2019 CX-5), not on an ND1.
+Source: [CHANGELOG.md](../../CHANGELOG.md). Nothing is described as stable.
+
+- **In our ND1:** the dump, touch in Android Auto, boot trim, startup warning, shorter list delay, Meters, three
+  custom Meters pages, the Home menu.
+- **In a contributor's ND2:** the check, the install, the wireless CarPlay edits, camera safety text and parking
+  graphics (our car has no reversing camera).
+- **PC only:** the car setup (other engines, gearboxes, imperial units), the fix for Meters lag, the shift sound,
+  the macOS and Linux downloads. Everything else is also covered by the simulator, which cannot replace a real unit.
+
+## Safety design to challenge
+
+- Every file is recognised by exact sha256 (stock or already patched). Unknown state means change nothing. The 64
+  `sm.conf` variants are pinned in `aa-touch.sh` and must agree with the Python `sm_table()` in the tests.
+- Each change is staged, verified, then swapped in with one atomic `mv`, with a backup and rollback. Every
+  intermediate state must still boot. Is the ordering right, and is a power cut at every point really recoverable?
+- One action per run: each run does one step, restarts the unit, and the plan only selects the next step.
+- Meters data must never come from spawning `smdb-read` in a loop or killing one: that is suspected of locking SMDB so
+  the Service Manager resets the unit ([docs/13](../13-gauges.md)). The collector is built around this; is it enough?
+- Our patches never touch `Common.js`, so TouchTune's own repair and remove keep working.
+- The Home menu is a userscript that wraps `MainMenuCtrl`; Mazda's Home files stay unchanged.
+- Recovery: remove (byte-exact restore), the `MIATOFF-RESTORE` stick, last resort reflash of 74.00.324A.
+
+## Main uncertainties
+
+From [TODO.md](../../TODO.md) and the CHANGELOG "Not tested by us":
+
+- Whether Meters still trails the car by seconds after the collector change, and one unexplained rpm jump.
+- Shift sound: does the unit play the sound file or only its own beep, and how loud over music.
+- Consumption scale (`Drv1AvlFuelE`), and some scales still unknown (BrakePressure, DR_Slope).
+- Bluetooth at startup: where v74 picks the start source is not found yet ([docs/14](../14-bluetooth-startup.md)).
+- Only 74.00.324A is covered; other firmware and the ND3 are refused. Behaviour on cars other than our ND1 and the one ND2 is unknown.

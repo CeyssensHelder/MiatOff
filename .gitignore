@@ -4,6 +4,7 @@ miatoff-dumps/
 
 # Local tooling
 .claude/
+.worktrees/
 .miatoff/
 designer-server*.log
 

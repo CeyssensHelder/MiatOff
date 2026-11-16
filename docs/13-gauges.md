@@ -169,7 +169,8 @@ remains available to verify them, e.g. the left/right direction.
 ### Recommended collector
 1. **Fast (6–10 Hz), lock-free:** `dbus-monitor --address unix:path=/tmp/dbus_service_socket` with match rules
    for `com.jci.vbs.vdt` and `com.jci.vbs.bcm` → `awk` → `field=value` lines with the smdb names the gauges
-   expect (`Veh_V_ActlEng`→`VehicleSpeed`, etc.), written atomically to `/tmp` (tmpfs). Only BusyBox and
+   expect (`Veh_V_ActlEng`→`VehicleSpeed`, etc.), rewritten in place in `/tmp` (tmpfs) with `LiveSeq` last, so a
+   reader can skip a write it caught halfway (no `mv` per write; see docs/15, Known issues). Only BusyBox and
    Mazda's own `dbus-monitor`; nothing to compile.
 2. **Slow (about every 10 s), for temperatures, yaw rate, brake pressure and fuel:** one `smdb-read -n vdm_vdt_current_data`
    per round, **never abort** and never two at once. Optional: without this part everything works except those values.
@@ -234,6 +235,25 @@ Proposed steps:
 **Risks:** an error in `opera.ini` or in a userscript affects the Mazda menu itself (Opera). Android Auto runs
 separately, but the home screen can then drop out until it is restored. Hence test first with an invisible
 userscript, and always with the DISABLE/REMOVE route of the stick.
+
+## Sound on the unit
+For the Meters shift sound ([meters/README.md](../meters/README.md)). **Nothing here is tried in a car yet.**
+
+- **What the page can try.** HTML5 audio with the payload's `sounds/tick.wav` and `sounds/shift.wav`, or the HMI's
+  own `framework.common.beep("Short", "Touch")`. Our Home script already uses that beep for a tap. The Meters page sits in
+  an iframe of the HMI template, so it calls the beep through `window.parent`.
+- **What the audio capture shows** (the private run of the [audio research stick](../audio-research-stick/README.txt),
+  read on the PC and summarised in our own words). The unit's audio manager is a set of Lua services on D-Bus. They
+  give each stream a type and settle what happens when a second stream starts. A *tone* stream is mixed over media
+  instead of replacing it. There is also a separate *BEEP* volume group next to media, navigation and the phone. The
+  HMI's beep probably goes this way: over the music, at the beep volume.
+- **Still unknown.**
+  - Whether Opera Presto on this unit plays HTML5 audio at all, and which output it would get next to the audio
+    manager, which owns ALSA.
+  - Whether the touch-beep setting in the car mutes the HMI beep.
+  - Which other beep types the HMI accepts besides `"Short", "Touch"`.
+
+  The style list's sound test settles the first two in the car.
 
 ## Sources
 - [Trevelopment/MZD_Speedometer](https://github.com/Trevelopment/MZD_Speedometer) (GPL-3.0; `speedometer.sh` read)

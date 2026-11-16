@@ -1269,6 +1269,23 @@ def main():
             r = car.run("meters_on")
             check(r.returncode != 0 and car.digest() == stock_digest, "damaged car-profile.js on the stick: refused")
 
+            # The shift sound: the WAVs are binary files of the payload, installed byte for byte; a truncated copy on
+            # the stick is refused like any other Meters file.
+            car = fresh(base, "meters-sound")
+            r = car.run("meters_on")
+            sounds = Path(__file__).resolve().parents[2] / "meters/sounds"
+            check(r.returncode == 0 and
+                  all((car.root / app_dir / f"meters/sounds/{n}.wav").read_bytes() == (sounds / f"{n}.wav").read_bytes()
+                      for n in ("tick", "shift")) and
+                  (car.root / app_dir / "meters/js/shiftsound.js").is_file(),
+                  "the shift sounds and their script are on the car, byte for byte")
+            car = fresh(base, "meters-sound-bad")
+            stock_digest = car.digest()
+            damaged = car.stick / "miatoff-app/app/meters/sounds/shift.wav"
+            damaged.write_bytes(damaged.read_bytes()[:-2])
+            r = car.run("meters_on")
+            check(r.returncode != 0 and car.digest() == stock_digest, "damaged shift.wav on the stick: refused")
+
             # A Home menu travels in the same payload: its script and design in the userscript folder, its pictures
             # in app/home. Install, change to a menu with pictures (the car sees an older Meters), go back to no
             # menu, REMOVE gives byte-exact stock; a damaged design on the stick is refused.
@@ -1622,6 +1639,22 @@ def main():
         plan.write_text("aa_touch=install\n")
         r = car.run("remove")
         check(r.returncode != 0 and car.digest() == stock_digest, "an explicit action still wins over the plan")
+
+        # --- the restart popup: leave the USB in while the plan has a step left
+        car = fresh(base, "plan-popup")
+        (car.stick / "miatoff-plan.txt").write_text("delay=install\nsafety=install\n")
+        r = car.run("")
+        log = (car.stick / "miatoff-aa-touch.log").read_text()
+        check(r.returncode == 0 and car.state("camera text:") != "patched" and "plan: next step after the restart: safety_on" in log,
+              "plan with two steps: after the first the USB is to stay in")
+        r = car.run("")
+        log = (car.stick / "miatoff-aa-touch.log").read_text()
+        check(r.returncode == 0 and car.state("camera text:") == "patched" and log.count("plan: next step after the restart") == 1,
+              "plan with two steps: after the last the USB is to be removed")
+        car = fresh(base, "noplan-popup")
+        r = car.run("delay_on")
+        log = (car.stick / "miatoff-aa-touch.log").read_text()
+        check(r.returncode == 0 and "plan: next step" not in log, "no plan: the USB is to be removed")
 
         # --- a plan with a trim change and the menu item is one step, one restart
         car = fresh(base, "plan-menu")

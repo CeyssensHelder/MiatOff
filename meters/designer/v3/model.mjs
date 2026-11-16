@@ -1024,6 +1024,10 @@ export function validate(s) {
           p.widgets?.length <= 24,
         "Invalid page",
       );
+      requireValue(
+        p.shiftSound == null || typeof p.shiftSound === "boolean",
+        "Invalid shift sound setting",
+      );
       if (p.background) bg(p.background);
       if (p.dayBackground) bg(p.dayBackground);
       p.widgets.forEach(checkWidget);

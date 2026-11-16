@@ -65,6 +65,16 @@ class HarnessTests(unittest.TestCase):
         with urlopen(url) as response:
             return response.read()
 
+    def whole_live(self, url):
+        """live.txt as the page takes it: rewritten in place, so a read that does not end with the LiveSeq
+        line caught a write halfway and is read again."""
+        for _ in range(100):
+            text = self.get(url + '/live.txt').decode()
+            if text.endswith('\n') and text.rstrip('\n').rsplit('\n', 1)[-1].startswith('LiveSeq='):
+                return text
+            time.sleep(0.02)
+        self.fail('live.txt never read whole')
+
     @needs_runtime
     def test_occupied_port_cleans_up_without_launching_a_collector(self):
         from serve import Harness
@@ -123,7 +133,7 @@ class HarnessTests(unittest.TestCase):
             url = harness.url.split('/index.html')[0]
             with urlopen(url + '/live.txt') as response:
                 self.assertEqual(response.headers['Cache-Control'], 'no-store')
-                live = response.read().decode()
+            live = self.whole_live(url)
             values = dict(line.split('=', 1) for line in live.splitlines())
             self.assertEqual(values['VehicleSpeed'], '3000')
             self.assertEqual(values['AccelPedalPosition'], '1000')
@@ -131,8 +141,7 @@ class HarnessTests(unittest.TestCase):
             first = values['LiveSeq']
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline:
-                with urlopen(url + '/live.txt') as response:
-                    latest = response.read().decode()
+                latest = self.whole_live(url)
                 if dict(line.split('=', 1) for line in latest.splitlines())['LiveSeq'] != first:
                     break
                 time.sleep(0.1)
@@ -146,7 +155,7 @@ let now = 10000;
 const box = {window: {}, Date: {now: () => now}};
 vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), box);
 const d = box.window.MeterData;
-d.ingestText(process.argv[2]);
+d.ingestText(process.argv[2], true);
 assert.equal(d.target.speed, 30);
 assert.equal(d.target.throttle, 100);
 assert.equal(d.target.coolant, 85);
@@ -156,7 +165,7 @@ assert(Math.abs(d.target.fuel - 120 * 100 / 181) < 0.001);
 assert(Math.abs(d.target.rpm - Number(process.argv[3]) * 2) < 0.01);
 assert.equal(d.stale(), false);
 now += 3100;
-d.ingestText(process.argv[2]);
+d.ingestText(process.argv[2], true);
 assert.equal(d.stale(), true, 'repeated LiveSeq must not refresh freshness');
 """
             subprocess.run(['node', '-e', script,

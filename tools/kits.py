@@ -67,6 +67,7 @@ METERS_FILES = {
     "app/meters/js/units.js": "meters/js/units.js",
     "app/meters/js/custom-pages.js": "meters/js/custom-pages.js",
     "app/meters/js/custom.js": "meters/js/custom.js",
+    "app/meters/js/shiftsound.js": "meters/js/shiftsound.js",
     "app/meters/js/app.js": "meters/js/app.js",
     "app/meters/fonts/ChakraPetch-Bold.ttf": "meters/fonts/ChakraPetch-Bold.ttf",
     "app/meters/fonts/ShareTechMono-Regular.ttf": "meters/fonts/ShareTechMono-Regular.ttf",
@@ -76,11 +77,14 @@ METERS_FILES = {
     "app/meters/fonts/OFL-ShareTechMono.txt": "meters/fonts/OFL-ShareTechMono.txt",
     "app/meters/fonts/OFL-Rajdhani.txt": "meters/fonts/OFL-Rajdhani.txt",
     "app/meters/fonts/OFL-RussoOne.txt": "meters/fonts/OFL-RussoOne.txt",
+    "app/meters/sounds/shift.wav": "meters/sounds/shift.wav",
+    "app/meters/sounds/tick.wav": "meters/sounds/tick.wav",
     "app/collector/miatoff-collector.sh": "collector/miatoff-collector.sh",
     "userjs/miatoff-apps.js": "meters-app/userjs/miatoff-apps.js",
 }
 
 
+BINARY_SUFFIXES = (".ttf", ".wav")    # copied byte for byte (no LF rewrite)
 CUSTOM_PAGES_REL = "app/meters/js/custom-pages.js"
 CAR_PROFILE_REL = "app/meters/js/car-profile.js"
 CUSTOM_PAGES_LIMIT = 6 * 1024 * 1024  # bytes of generated JavaScript; the car loads it with the page
@@ -103,6 +107,8 @@ def car_page(setup: dict, images: dict) -> dict:
         "widgets": [{k: v for k, v in w.items() if k not in CUSTOM_DROP} for w in page["widgets"]],
         "vehicle": {"rpm": vehicle["rpm"], "units": vehicle["units"], **car_gearing(vehicle)},
     }
+    if page.get("shiftSound") is True:   # the page's own shift sound switch; left out when off
+        out["shiftSound"] = True
     background = page.get("background") or theme.get("background")
     if background:
         out["background"] = background
@@ -168,13 +174,13 @@ def meters_files(custom=None, home=None, car=None) -> dict:
             raise StickError(f"ERROR: meters/index.html loads {name}, which is not in METERS_FILES")
     files, lines = {}, []
     for rel, src in METERS_FILES.items():
-        # Fonts are binary; everything else is text with LF endings.
+        # Fonts and sounds are binary; everything else is text with LF endings.
         if rel == CUSTOM_PAGES_REL:
             data = custom_pages_js(custom)
         elif rel == CAR_PROFILE_REL:
             data = car_profile_js(car)
         else:
-            data = (ROOT / src).read_bytes() if src.endswith(".ttf") else stickkit.lf_bytes(ROOT / src)
+            data = (ROOT / src).read_bytes() if src.endswith(BINARY_SUFFIXES) else stickkit.lf_bytes(ROOT / src)
         files["miatoff-app/" + rel] = data
         lines.append(f"{sha256(data)}  {rel}\n")
     if home is not None:

@@ -125,6 +125,8 @@ class App(tk.Tk):
         self.report_text = ""
         self.dump_path = None
         self.stick_ready = False
+        self.prepared = None
+        self.prepared_root = None  # the drive that was prepared: re-plugging that same stick must keep "Verify USB"
         self.active_root = None
         self.notice = None
         self.job_label = ""
@@ -293,6 +295,7 @@ class App(tk.Tk):
         self.stick_ready = False
         if hasattr(self, "review_result"):
             self.review_result.pack_forget()
+            self.verify_result.configure(text="")
         if self.current() == "review":
             self._refresh_review()
         self._refresh_car()
@@ -451,7 +454,9 @@ class App(tk.Tk):
         root = info.root if info else None
         if root != self.active_root:
             self.active_root = root
-            self._forget_check(keep_ready=root is None)  # pulling the stick out is what we told the user to do
+            # Pulling the stick out, and plugging the same one back in, is what we told the user to do.
+            again = self.stick_ready and self.prepared_root is not None and root == self.prepared_root
+            self._forget_check(keep_ready=root is None or again)
         self._show_drive_status()
         self._look_for_results()
         self._update_chrome()
@@ -644,6 +649,7 @@ class App(tk.Tk):
             # The car the Meters on the stick are set up for (from the designer's Project > Car setup).
             self.car_line_label = WrapLabel(text, text="", bg=CARD, fg=MUTED, font=SMALL, wraplength=300)
             self.car_line_label.pack(fill="x")
+            self._sound_row(text)
             self.car_note_label = WrapLabel(text, text="", bg=CARD, fg=WARN, font=SMALL, wraplength=300)
         var = tk.StringVar(self, value="keep")
         self.vars[key] = var
@@ -651,6 +657,28 @@ class App(tk.Tk):
         segment.grid(row=0, column=1, sticky="e")
         self.segments[key] = segment
         self.options[key] = segment.labels
+
+    def _sound_row(self, parent):
+        """Shift sound per built-in Meters style, saved at once in the Meters library (CarProfile.sound) and carried in
+        js/car-profile.js. Custom pages have their own switch in the designer."""
+        tk.Label(parent, text=stickflow.SOUND_LABEL, bg=CARD, fg=MUTED, font=SMALL, anchor="w").pack(fill="x", pady=(6, 0))
+        grid = tk.Frame(parent, bg=CARD)
+        grid.pack(fill="x")
+        self.sound_vars = {}
+        for i, (key, name) in enumerate(stickflow.SOUND_STYLES):
+            var = tk.BooleanVar(self, value=False)
+            self.sound_vars[key] = var
+            ttk.Checkbutton(grid, text=name, variable=var, style="Card.TCheckbutton",
+                            command=self._sound_changed).grid(row=i // 3, column=i % 3, sticky="w", padx=(0, 12))
+
+    def _sound_changed(self):
+        if not hasattr(self, "car_profile"):
+            return
+        try:
+            self.car_profile.set_sound([key for key, var in self.sound_vars.items() if var.get()])
+        except Exception as error:  # surfaced to the user, never silent
+            messagebox.showerror("MiatOff", f"The shift sound choice could not be saved: {error}")
+        self._refresh_car()
 
     def _home_row(self, parent):
         """Custom menu: a choice of this builder only (the plan has no key for it). The menu travels in the Meters
@@ -733,9 +761,12 @@ class App(tk.Tk):
                      "Confirm each step on the screen. Nothing has changed on the car until you do.",
                      "Never confirm a Mazda software update screen."):
             self.paragraph(self.review_result, "•  " + line, fg=INK, pady=(0, 5))
+        self.paragraph(self.review_result, stickflow.VERIFY_HINT, pady=(6, 5))
         row = tk.Frame(self.review_result, bg=CARD)
-        row.pack(anchor="w", padx=20, pady=(6, 14))
-        self.job_button(row, "Verify stick again", "Small.TButton", self.verify).pack(side="left")
+        row.pack(anchor="w", padx=20, pady=(0, 8))
+        self.job_button(row, "Verify USB", "Small.TButton", self.verify_prepared).pack(side="left")
+        self.verify_result = WrapLabel(self.review_result, text="", bg=CARD, fg=MUTED, font=BODY)
+        self.verify_result.pack(fill="x", padx=20, pady=(0, 10))
 
     def _refresh_review(self):
         for child in self.review_lines.winfo_children():
@@ -1015,10 +1046,11 @@ class App(tk.Tk):
                 label.configure(text=text, fg=fg)
 
     def car_selection(self):
-        """The car profile for the stick, or None (the car's built-in ND1 1.5). The other stick has none."""
+        """What js/car-profile.js on the stick holds: the car profile and the styles with the shift sound on, or None
+        (the car's built-in ND1 1.5, no sound). The other stick has none."""
         if self.checking():
             return None
-        return self.car_profile.get()
+        return self.car_profile.selection()
 
     def _refresh_car(self):
         """The car line and the update note under Meters on Choose tweaks."""
@@ -1026,10 +1058,14 @@ class App(tk.Tk):
             return
         try:
             profile, built = self.car_profile.get(), self.car_profile.built()
+            selection, sound = self.car_profile.selection(), self.car_profile.sound()
         except Exception:  # the build reports a library that cannot be read
             return
         self.car_line_label.configure(text=stickflow.car_line(profile))
-        note = stickflow.car_update_note(profile, built, self.vars["meters"].get())
+        for key, var in getattr(self, "sound_vars", {}).items():
+            if var.get() != (key in sound):
+                var.set(key in sound)
+        note = stickflow.car_update_note(selection, built, self.vars["meters"].get())
         if note:
             self.car_note_label.configure(text=note)
             if not self.car_note_label.winfo_manager():
@@ -1264,7 +1300,8 @@ class App(tk.Tk):
                 self._home_mark = ""
         car = self.car_selection()
         if not checking and choices.get("meters") == "install":
-            summary += "\n" + stickflow.car_line(car)
+            summary += "\n" + stickflow.car_line(self.car_profile.get())
+            summary += "\n" + stickflow.sound_line((car or {}).get("shiftSound"))
         # The car on the stick, remembered once it is written (so a changed car setup is noticed).
         self._car_mark = (car,) if not checking and choices.get("meters") == "install" else None
         kit = self.kit(custom, home, car)
@@ -1283,9 +1320,10 @@ class App(tk.Tk):
         def work():
             stickkit.require_stick_root(target)
             kit.build(target, plan=plan, progress=report)
-        self.start_job("Writing and verifying the USB stick…", work, lambda _result, error: self._stick_written(checking, error))
+        self.start_job("Writing and verifying the USB stick…", work,
+                       lambda _result, error: self._stick_written(checking, error, (kit, plan)))
 
-    def _stick_written(self, checking, error):
+    def _stick_written(self, checking, error, prepared=None):
         if error:
             self.show_failure(error)
             return
@@ -1293,6 +1331,10 @@ class App(tk.Tk):
             self.check_made.configure(text="✓  USB ready. Eject it safely, then take it to the car.")
         else:
             self.stick_ready = True
+            self.prepared = prepared  # what "Verify USB" compares a re-plugged stick with
+            drive = self.chosen_drive()
+            self.prepared_root = drive.root if drive else None
+            self.verify_result.configure(text="")
             self.review_result.pack(fill="x", pady=7)
             self.notice = ("✓  USB ready. Follow the steps on this page.", OK)
             if getattr(self, "_home_mark", None) is not None:
@@ -1327,6 +1369,26 @@ class App(tk.Tk):
             messagebox.showerror("MiatOff", "This USB stick does not match this version of MiatOff." + note, detail="\n".join(lines))
         else:
             self.notice = ("✓  The USB stick is correct.", OK)
+
+    def verify_prepared(self):
+        """Read-only: compare the plugged-in stick with the kit and plan that were just prepared."""
+        if not self.stick_ready or not getattr(self, "prepared", None):
+            return
+        kit, plan = self.prepared
+        info = self.chosen_drive()
+        if info is None:
+            self._show_verified(stickflow.NO_STICK, None)
+            return
+        target = Path(info.root)
+        self.start_job("Reading the USB stick…", lambda: stickflow.verify_prepared(kit, target, plan), self._show_verified)
+
+    def _show_verified(self, result, error):
+        if error:
+            self.show_failure(error)
+            return
+        colour = {"ok": OK, "warn": WARN}.get(result["kind"], BAD)
+        icon = "✓" if result["kind"] == "ok" else "!"
+        self.verify_result.configure(text=f"{icon}  {result['title']} {result['body']}", fg=colour)
 
     def custom_selection(self, choices: dict):
         """(selection bundle or None, note). A library that cannot be read blocks a Meters build, but not any

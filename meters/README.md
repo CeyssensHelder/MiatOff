@@ -72,6 +72,43 @@ Rev limits (one table, `RPM` in [js/app.js](js/app.js)), for the ND1 1.5: 131 PS
 red 7000, SHIFT 7200. Power stays close to its peak up to the cut-off and the gears are close together, so shifting
 late is quickest. 7200 leaves about a quarter of a second to react before the cut-off.
 
+**Shift sound.** A progressive shift beeper, like the ones of aftermarket tachometers: short ticks that speed up from
+the amber line, then a steady tone at the shift point until you shift. Switched on per style and per page:
+- **Built-in styles:** in the MiatOff app, under Meters (*Shift sound*: Street, Track, Cyberpunk, 2077, 2077 Night),
+  for example on for Track and off for Street. The list travels in `js/car-profile.js` (`shiftSound`), with or without
+  a car setup. They use the car's amber line and shift rpm.
+- **Custom pages:** each page has its own switch in the designer (*Page style → Beep at the shift point*), and uses
+  its own vehicle's amber line and shift rpm.
+
+Off everywhere unless switched on. [js/shiftsound.js](js/shiftsound.js) decides when:
+- **Ticks** from the amber line (or 700 rpm before the shift point), 450 ms apart there and 110 ms just below the
+  shift point.
+- **Steady tone** at the shift point (`sounds/shift.wav`, at most 1.5 s). It stops at the upshift: the rpm falls 200
+  below its highest point.
+- **Early:** both use the rpm a quarter of a second ahead, predicted from how fast it rises, so the tone comes when you
+  move the lever rather than a reaction time later. It is never more than 1,000 rpm ahead, so a glitch in the data
+  cannot sound the shift point far too early. At steady revs it is the rpm itself.
+- **Then quiet**, the limiter included, until the rpm is back below the amber line.
+- Only while moving (above 5 km/h), on fresh data (not when NO DATA would show) and on a gauge, not in the menus. It
+  uses the raw rpm, not the smoothed needle. The car sends the rpm about six times a second, so the ticks and the
+  early tone are only as fine as that.
+
+The sounds are `sounds/tick.wav` (1.6 kHz, 50 ms) and `sounds/shift.wav` (2.6 kHz), made by
+[tools/make_shift_sound.py](../tools/make_shift_sound.py); two pitches so the warning and the shift point sound
+different. If the page cannot play them, the head unit's own short beep (`framework.common.beep("Short", "Touch")` of
+the Mazda HMI that hosts the page) plays the ticks, and repeats every 120 ms in place of the steady tone. **Not tried in
+a car yet:** whether Opera on the unit plays the files, how quickly, and how either sound mixes with the music, is
+unknown. To find out, the style list shows *SHIFT SOUND* top right when the sound is on for at least one style or page
+(touch only): tap it to hear a short demo of the chosen route (four ticks speeding up, then the steady tone), tap
+again within 4 s to switch between the files and the Mazda beep and hear that one. The last choice is kept.
+
+**Hearing it on a PC** (no car, no revving): open the page with the built-in simulator and `&sound=`, which switches
+the sound on without a car file, for example `index.html?src=sim&set=track&sound=track`. The simulator drives a loop
+up to about 7,400 rpm, so you hear the ticks and the steady tone every lap. `&sound=` takes style keys separated by commas
+(`street`, `track`, `cyber`, `y2077`, `y2077n`), `custom` for every custom page, or `all`. The PC has no Mazda HMI,
+so only the file plays (the sound test shows *No sound available* for the Mazda beep). The `dev/serve.py` drive
+stays below 4,000 rpm and never reaches the shift point.
+
 Sized for the 7" screen: no more than about six things per page, numbers 50–280 px, labels at least 18 px.
 
 To change page: swipe, tap the page, tap the ‹ › corners, or press the arrow keys. `R` resets the peak G.
