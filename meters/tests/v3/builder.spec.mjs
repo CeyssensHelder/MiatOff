@@ -300,6 +300,33 @@ test.describe("local builder handoff with a temporary library", () => {
     await expect(page.locator("#send-builder")).toBeEnabled();
   });
 
+  test("a page's shift sound switch travels with the page to the builder", async ({
+    page,
+  }) => {
+    await open(page);
+    await page.locator("#empty-theme").click();
+    const box = page.getByRole("checkbox", { name: "Beep at the shift point" });
+    await expect(box).not.toBeChecked();
+    await box.check();
+    expect(
+      await page.evaluate(
+        () => __studio.store.project.themes[0].pages[0].shiftSound,
+      ),
+    ).toBe(true);
+    const sent = page.waitForRequest(
+      (r) => r.url().endsWith("/api/builder/pages") && r.method() === "POST",
+    );
+    await send(page);
+    expect((await sent).postData()).toContain('"shiftSound":true');
+    await page.evaluate(() => __studio.store.undo());
+    expect(
+      await page.evaluate(
+        () => __studio.store.project.themes[0].pages[0].shiftSound,
+      ),
+    ).toBe(undefined);
+    await expect(box).not.toBeChecked();
+  });
+
   test("saved preview errors are clear and do not open a blank editor draft", async ({
     page,
   }) => {

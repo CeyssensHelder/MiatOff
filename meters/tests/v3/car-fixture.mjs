@@ -159,6 +159,16 @@ export function gearProjects() {
   ];
 }
 
+// One Street page whose own vehicle shifts at `shift` rpm (amber and red just below it), with the page's shift
+// sound switch on or off.
+export function shiftProject(shift, sound = true) {
+  const theme = M.starter("Street"), vehicle = M.vehicle();
+  theme.pages = theme.pages.slice(0, 1);
+  if (sound) theme.pages[0].shiftSound = true;
+  Object.assign(vehicle.rpm, { amber: shift - 500, red: shift - 200, shift });
+  return project([theme], {}, vehicle);
+}
+
 // Run the Python builder step: projects in, the car's custom-pages.js and the validated setups out.
 export async function carPages(projects) {
   const folder = await mkdtemp(join(tmpdir(), "miatoff-car-"));
@@ -183,6 +193,7 @@ const types = {
   ".png": "image/png",
   ".json": "application/json",
   ".txt": "text/plain",
+  ".wav": "audio/wav",
 };
 // A static server for meters/. `overrides` maps URL paths to file contents (the generated custom-pages.js).
 export async function serveMeters(overrides = {}) {

@@ -9,9 +9,10 @@
 #   fuel level).
 #
 # Output: $OUT_DIR/live.txt, one "Field=value" per line with raw values and the
-# smdb field names, replaced atomically (write live.txt.tmp, then mv). Fields
+# smdb field names, rewritten in place with LiveSeq as the last line. Fields
 # only on D-Bus keep their D-Bus member name. LiveSeq counts the writes, so a
-# reader can see when the data stops.
+# reader can see when the data stops, and a read that does not end with the
+# LiveSeq line caught a write halfway: readers skip it.
 #
 # smdb safety: smdb is guarded by one named POSIX semaphore per namespace,
 # without recovery. A killed smdb-read can leave it locked, after which the
@@ -30,7 +31,8 @@ DBUS_MONITOR="${MO_DBUS_MONITOR:-/usr/bin/dbus-monitor}"
 SMDB_READ="${MO_SMDB_READ:-/jci/bin/smdb-read}"
 SLOW_S="${MO_SLOW_S:-10}"
 ONESHOT="${MO_ONESHOT:-0}"              # test hook: one slow sweep, one monitor run
-FLUSH_EVERY="${MO_FLUSH_EVERY:-30}"     # also write after this many signals without speed
+RESTART_S="${MO_RESTART_S:-2}"          # pause before dbus-monitor is started again
+FLUSH_EVERY="${MO_FLUSH_EVERY:-30}"    # also write after this many signals without speed
 # Slow fields per smdb namespace: "namespace:field,field,...". One smdb-read
 # per namespace per round, one after the other.
 SLOW_SOURCES="vdm_vdt_current_data:EngClnt_Te_Actl,DR_IntakeAirTemp,Out-CarTemperature,YawRate,BrakePressure,FuelGaugePosition,DR_Slope vdm:PID_Drv1Dstnc_curr,Drv1AvlFuelE"
@@ -40,8 +42,12 @@ SLOW="$OUT_DIR/slow.txt"
 SLOW_RAW="$OUT_DIR/slow.raw"
 PIDFILE="$OUT_DIR/collector.pid"
 LOG="$OUT_DIR/collector.log"
+FIFO="$OUT_DIR/dbus.fifo"
 SLOW_PID=
-PIPE_PID=
+MON_PID=
+AWK_PID=
+RESTARTS=0
+LOG_RESTARTS=5
 
 log() { printf '%s\n' "[collector $(cut -d' ' -f1 /proc/uptime 2>/dev/null)] $*" >> "$LOG"; }
 
@@ -76,21 +82,42 @@ slow_loop() {
 # dbus-monitor text -> live.txt. Values of the last signal of each kind are
 # kept; the file is rewritten on every vehicle-speed signal (~10 Hz) or after
 # FLUSH_EVERY other signals, with slow.txt appended.
+#
+# dbus-monitor writes into a fifo and awk reads it, both in the background with
+# their own pids, so stop() can end the pipeline: killing dbus-monitor gives awk
+# an end of input, it flushes and exits.
 fast_pipeline() {
+    local errto="$LOG"
+    [ "$RESTARTS" -lt "$LOG_RESTARTS" ] || errto=/dev/null      # keep collector.log (tmpfs) small
+    rm -f "$FIFO"
+    mkfifo "$FIFO" || return 1
     "$DBUS_MONITOR" --address "$BUS" \
         "type='signal',interface='com.jci.vbs.vdt'" \
-        "type='signal',interface='com.jci.vbs.bcm'" 2>>"$LOG" |
-    awk -v out="$LIVE" -v tmp="$LIVE.tmp" -v slow="$SLOW" -v every="$FLUSH_EVERY" '
+        "type='signal',interface='com.jci.vbs.bcm'" >"$FIFO" 2>>"$errto" &
+    MON_PID=$!
+    fast_awk < "$FIFO" &
+    AWK_PID=$!
+    wait "$AWK_PID"
+    [ -z "$MON_PID" ] || kill "$MON_PID" 2>/dev/null     # awk ended first: do not leave the monitor behind
+    MON_PID=
+    AWK_PID=
+    rm -f "$FIFO"
+}
+
+fast_awk() {
+    awk -v out="$LIVE" -v slow="$SLOW" -v every="$FLUSH_EVERY" '
+        # Rewritten in place, LiveSeq last. No tmp + mv: that forked sh and mv
+        # about 10 times a second, and at nice 5 next to a busy Opera the
+        # collector then fell seconds behind the D-Bus stream (docs/15).
         function flush(   k, line) {
             seq++
             since = 0
-            printf "" > tmp
-            for (k in val) printf "%s=%s\n", k, val[k] > tmp
-            while ((getline line < slow) > 0) print line > tmp
+            printf "" > out
+            for (k in val) printf "%s=%s\n", k, val[k] > out
+            while ((getline line < slow) > 0) print line > out
             close(slow)
-            printf "LiveSeq=%d\n", seq > tmp
-            close(tmp)
-            system("mv -f \"" tmp "\" \"" out "\"")
+            printf "LiveSeq=%d\n", seq > out
+            close(out)
         }
         BEGIN {
             # D-Bus member -> smdb field name the Meters page knows.
@@ -134,9 +161,10 @@ fast_pipeline() {
 stop() {
     trap '' TERM INT HUP
     log "stopping"
-    [ -z "$PIPE_PID" ] || kill "$PIPE_PID" 2>/dev/null       # awk; dbus-monitor then ends on SIGPIPE
+    [ -z "$MON_PID" ] || kill "$MON_PID" 2>/dev/null         # awk then sees end of input, flushes, exits
     [ -z "$SLOW_PID" ] || kill "$SLOW_PID" 2>/dev/null       # the loop only, never smdb-read
-    rm -f "$PIDFILE" "$LIVE.tmp" "$SLOW.tmp"
+    [ -z "$AWK_PID" ] || wait "$AWK_PID" 2>/dev/null
+    rm -f "$PIDFILE" "$SLOW.tmp" "$FIFO"
     exit 0
 }
 
@@ -161,9 +189,14 @@ trap stop TERM INT HUP
 slow_loop &
 SLOW_PID=$!
 while :; do
-    fast_pipeline &
-    PIPE_PID=$!
-    wait "$PIPE_PID"
-    log "dbus-monitor ended; restarting in 2 s"
-    sleep 2
+    fast_pipeline
+    RESTARTS=$((RESTARTS + 1))
+    # collector.log lives in tmpfs: only the first restarts are written.
+    if [ "$RESTARTS" -le "$LOG_RESTARTS" ]; then
+        log "dbus-monitor ended; restarting in ${RESTART_S} s"
+    elif [ "$RESTARTS" -eq $((LOG_RESTARTS + 1)) ]; then
+        log "dbus-monitor keeps ending; further restarts are not logged"
+    fi
+    sleep "$RESTART_S" &
+    wait $!
 done

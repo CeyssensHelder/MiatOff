@@ -644,6 +644,7 @@ class App(tk.Tk):
             # The car the Meters on the stick are set up for (from the designer's Project > Car setup).
             self.car_line_label = WrapLabel(text, text="", bg=CARD, fg=MUTED, font=SMALL, wraplength=300)
             self.car_line_label.pack(fill="x")
+            self._sound_row(text)
             self.car_note_label = WrapLabel(text, text="", bg=CARD, fg=WARN, font=SMALL, wraplength=300)
         var = tk.StringVar(self, value="keep")
         self.vars[key] = var
@@ -651,6 +652,28 @@ class App(tk.Tk):
         segment.grid(row=0, column=1, sticky="e")
         self.segments[key] = segment
         self.options[key] = segment.labels
+
+    def _sound_row(self, parent):
+        """Shift sound per built-in Meters style, saved at once in the Meters library (CarProfile.sound) and carried in
+        js/car-profile.js. Custom pages have their own switch in the designer."""
+        tk.Label(parent, text=stickflow.SOUND_LABEL, bg=CARD, fg=MUTED, font=SMALL, anchor="w").pack(fill="x", pady=(6, 0))
+        grid = tk.Frame(parent, bg=CARD)
+        grid.pack(fill="x")
+        self.sound_vars = {}
+        for i, (key, name) in enumerate(stickflow.SOUND_STYLES):
+            var = tk.BooleanVar(self, value=False)
+            self.sound_vars[key] = var
+            ttk.Checkbutton(grid, text=name, variable=var, style="Card.TCheckbutton",
+                            command=self._sound_changed).grid(row=i // 3, column=i % 3, sticky="w", padx=(0, 12))
+
+    def _sound_changed(self):
+        if not hasattr(self, "car_profile"):
+            return
+        try:
+            self.car_profile.set_sound([key for key, var in self.sound_vars.items() if var.get()])
+        except Exception as error:  # surfaced to the user, never silent
+            messagebox.showerror("MiatOff", f"The shift sound choice could not be saved: {error}")
+        self._refresh_car()
 
     def _home_row(self, parent):
         """Custom menu: a choice of this builder only (the plan has no key for it). The menu travels in the Meters
@@ -1015,10 +1038,11 @@ class App(tk.Tk):
                 label.configure(text=text, fg=fg)
 
     def car_selection(self):
-        """The car profile for the stick, or None (the car's built-in ND1 1.5). The other stick has none."""
+        """What js/car-profile.js on the stick holds: the car profile and the styles with the shift sound on, or None
+        (the car's built-in ND1 1.5, no sound). The other stick has none."""
         if self.checking():
             return None
-        return self.car_profile.get()
+        return self.car_profile.selection()
 
     def _refresh_car(self):
         """The car line and the update note under Meters on Choose tweaks."""
@@ -1026,10 +1050,14 @@ class App(tk.Tk):
             return
         try:
             profile, built = self.car_profile.get(), self.car_profile.built()
+            selection, sound = self.car_profile.selection(), self.car_profile.sound()
         except Exception:  # the build reports a library that cannot be read
             return
         self.car_line_label.configure(text=stickflow.car_line(profile))
-        note = stickflow.car_update_note(profile, built, self.vars["meters"].get())
+        for key, var in getattr(self, "sound_vars", {}).items():
+            if var.get() != (key in sound):
+                var.set(key in sound)
+        note = stickflow.car_update_note(selection, built, self.vars["meters"].get())
         if note:
             self.car_note_label.configure(text=note)
             if not self.car_note_label.winfo_manager():
@@ -1264,7 +1292,8 @@ class App(tk.Tk):
                 self._home_mark = ""
         car = self.car_selection()
         if not checking and choices.get("meters") == "install":
-            summary += "\n" + stickflow.car_line(car)
+            summary += "\n" + stickflow.car_line(self.car_profile.get())
+            summary += "\n" + stickflow.sound_line((car or {}).get("shiftSound"))
         # The car on the stick, remembered once it is written (so a changed car setup is noticed).
         self._car_mark = (car,) if not checking and choices.get("meters") == "install" else None
         kit = self.kit(custom, home, car)

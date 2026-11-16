@@ -170,6 +170,19 @@ def car_line(profile) -> str:
     return "Car: default ND1 1.5 · set your car in the designer (Project → Car setup)"
 
 
+# The built-in Meters styles that can beep at the shift point, as the car's style list names them (keys as in
+# meters_library.SOUND_STYLES). Custom pages have their own switch in the designer.
+SOUND_STYLES = (("street", "Street"), ("track", "Track"), ("cyber", "Cyberpunk"), ("y2077", "2077"),
+                ("y2077n", "2077 Night"))
+SOUND_LABEL = "Shift sound (a short tone at the shift point):"
+
+
+def sound_line(styles) -> str:
+    """The shift sound line of the stick summary, for the built-in style keys that have it on."""
+    names = [name for key, name in SOUND_STYLES if key in (styles or ())]
+    return "Shift sound: " + (", ".join(names) if names else "off") + " (custom pages: set per page in the designer)"
+
+
 def car_changed(profile, built) -> bool:
     """True when the car profile to build is not the one the last Meters stick carried (None: the built-in default)."""
     return (profile or None) != (built or None)
@@ -180,8 +193,8 @@ def car_update_note(profile, built, meters: str):
     a change in your custom pages, it reaches the car as a different Meters payload: REPAIR in the car."""
     if not car_changed(profile, built) or meters == "install":
         return None
-    return ("Your car setup changed since the last stick. Set Meters to Install (Update) and press REPAIR in the "
-            "car to put it on the car.")
+    return ("Your car setup or shift sound changed since the last stick. Set Meters to Install (Update) and press "
+            "REPAIR in the car to put it on the car.")
 
 
 def blocker(page: str, drive, have_check: bool, override: bool, changed: bool, home=None):

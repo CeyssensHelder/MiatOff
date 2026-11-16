@@ -10,9 +10,6 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
   power-on instead of falling back to FM (user request, ND2). First step: run the
   [audio research stick](audio-research-stick/README.txt) in the car and find where v74 picks the start source;
   background in [docs/14](docs/14-bluetooth-startup.md).
-- [ ] **Shift sound.** A short tone on the Meters pages at the shift RPM, with an on/off switch next to the designer's
-  shift lights, shared by custom pages and the built-in styles, silent when stationary. The sound files ship in the
-  Meters payload (hash-guarded).
 - [ ] **Media controls in Meters.** Control the audio from the Meters pages without leaving them: what is playing, and
   play/pause and previous/next.
 - [ ] **Day mode in the car app.** The designer already has one; the car draws the night styling only.
@@ -28,8 +25,13 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
 
 ## Fixes
 
-- [ ] **Meters lag when stationary:** the gauges trail the car by up to about a second (custom and built-in pages)
-  ([docs/15](docs/15-meters-designer.md#known-issues)).
+- [ ] **Meters lag:** the gauges trail the car by up to a few seconds (custom and built-in pages), cleared by going back
+  to the Meters menu. Probable cause found and fixed on the PC (the collector forked `mv` on every write and fell
+  behind a busy Opera); still to confirm in the car ([docs/15](docs/15-meters-designer.md#known-issues)).
+- [ ] **Shift sound in the car:** built and tested on the PC only. Use the sound test in the Meters style list to find
+  out whether the unit plays `sounds/tick.wav` and `sounds/shift.wav` or only the Mazda beep, how late, how either
+  mixes with music, and whether the touch-beep setting mutes the Mazda beep. Then tune the ticks and the early tone
+  to the car's 6 Hz rpm ([meters/README.md](meters/README.md), [docs/13](docs/13-gauges.md#sound-on-the-unit)).
 - [ ] **RPM jump:** one unexplained jump from about 1,900 to 3,000 rpm seen on our car.
 - [ ] **Consumption scale:** calibrate `Drv1AvlFuelE` against the car's own average consumption figure.
 - [ ] **Power page with imperial units:** power and torque share one axis that is labelled PS/Nm; give each its own

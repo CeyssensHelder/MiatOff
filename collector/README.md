@@ -19,8 +19,11 @@
   after 2 s. A second instance stops immediately.
 
 ## Format of live.txt
-One `Field=value` per line, raw values, replaced atomically (`live.txt.tmp` → `mv`). Field names are the
-smdb names where they exist. Example, made from the recording of 27-10-2026 (±122 km/h in 6th):
+One `Field=value` per line, raw values, rewritten in place with `LiveSeq` as the **last line**. A read that does not end
+with a whole `LiveSeq=<n>` line (newline included) caught a write halfway; readers skip it, as the Meters page does.
+There is no `live.txt.tmp` → `mv`: starting `sh` and `mv` about 10 times a second was most of the collector's CPU, and at
+`nice 5` next to a busy Opera it then fell seconds behind ([docs/15](../docs/15-meters-designer.md#known-issues)). Field
+names are the smdb names where they exist. Example, made from the recording of 27-10-2026 (±122 km/h in 6th):
 
 ```
 VehicleSpeed=12256              ×0.01 km/h            (D-Bus Veh_V_ActlEng)

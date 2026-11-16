@@ -173,6 +173,8 @@ def car_gearing(vehicle):
 
 
 CAR_LABEL_MAX = 60
+# The built-in Meters styles (keys of app.js) that can have the shift sound; custom pages have their own switch.
+SOUND_STYLES = ("street", "track", "cyber", "y2077", "y2077n")
 CAR_DEFAULT_LABEL = "My car"
 
 
@@ -322,6 +324,7 @@ def validate_setup(doc):
         unique(page)
         widgets = page.get("widgets")
         require(text(page.get("name")) and isinstance(widgets, list) and len(widgets) <= 24, "Invalid page")
+        require(page.get("shiftSound") is None or isinstance(page["shiftSound"], bool), "Invalid shift sound setting")
         for key in ("style", "dayStyle"):
             if page.get(key) is not None:
                 style(page[key])
@@ -832,9 +835,35 @@ class CarProfile:
         with self.library.connect() as db:
             db.execute("INSERT OR REPLACE INTO library_meta VALUES ('car-built', ?)", (_car_json(profile) if profile else "",))
 
+    def sound(self):
+        """The built-in Meters styles with the shift sound on (keys of SOUND_STYLES, in that order)."""
+        with self.library.connect() as db:
+            row = db.execute("SELECT value FROM library_meta WHERE key='shift-sound'").fetchone()
+        try:
+            styles = json.loads(row["value"]) if row and row["value"] else []
+        except ValueError:
+            return []
+        return [s for s in SOUND_STYLES if isinstance(styles, list) and s in styles]
+
+    def set_sound(self, styles):
+        """Store the built-in styles that beep at the shift point. Raises ValueError for an unknown style."""
+        require(isinstance(styles, (list, tuple, set)) and all(s in SOUND_STYLES for s in styles), "Unknown Meters style")
+        chosen = [s for s in SOUND_STYLES if s in styles]
+        with self.library.connect() as db:
+            db.execute("INSERT OR REPLACE INTO library_meta VALUES ('shift-sound', ?)", (json.dumps(chosen),))
+        return chosen
+
+    def selection(self):
+        """What js/car-profile.js on the next stick holds: the car profile plus the styles with the shift sound on,
+        or None when there is neither (the repository's default file)."""
+        profile, styles = self.get(), self.sound()
+        if not styles:
+            return profile
+        return {**(profile or {}), "shiftSound": styles}
+
     def stale(self):
-        """True when the stored profile is not what the last stick carried (the car needs a Meters update)."""
-        return self.get() != self.built()
+        """True when the next stick's car file is not what the last stick carried (the car needs a Meters update)."""
+        return self.selection() != self.built()
 
 
 def validate_selection(bundle):

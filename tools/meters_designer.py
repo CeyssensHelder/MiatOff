@@ -16,7 +16,8 @@ import home_menu
 import meters_library
 
 # In the packaged app the files are unpacked below sys._MEIPASS, in the same folders as in the repository.
-ROOT = (Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1]) / "meters"
+# Resolved: requests are resolved too, and a symlink in the path (macOS /var) would otherwise make every asset a 404.
+ROOT = ((Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1]) / "meters").resolve()
 DEFAULT_PORT = 8890
 
 

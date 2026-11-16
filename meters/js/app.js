@@ -2,6 +2,7 @@
  *
  * URL options: ?src=sim|sim:<hz>|ws://...|poll:<url>  &set=street|track|cyber|y2077|y2077n|custom  &page=<0..n-1>
  *              &gm=car (G-meter shows what the car does instead of what you feel)
+ *              &sound=track,custom|all (shift sound on for those styles, for a PC preview; the car uses js/car-profile.js)
  * Navigation: swipe, tap a page edge arrow, tap anywhere that is not a control, or arrow keys.
  * Menu: a style list, then live previews of its pages, then the gauge. Knob: turn = next/prev, press = select,
  * back button = up one level (MiatoffMeters API). Long-press on a gauge = back. ?menu opens the style menu.
@@ -40,6 +41,11 @@
             out.power = { ps: p.ratedPower, psRpm: p.powerRpm, nm: p.ratedTorque, nmRpm: p.torqueRpm };
         out.label = typeof p.label === 'string' ? p.label : '';
         out.units = p.units && typeof p.units === 'object' ? p.units : null;
+        // The built-in styles with the shift sound on, chosen in the MiatOff app (custom pages carry their own).
+        out.shiftSound = {};
+        if (p.shiftSound && p.shiftSound.length) {
+            for (var k = 0; k < p.shiftSound.length; k++) if (typeof p.shiftSound[k] === 'string') out.shiftSound[p.shiftSound[k]] = true;
+        }
         return out;
     }
     var CAR = carProfile(W.MeterCarProfile) || {};
@@ -97,6 +103,25 @@
     var RPM = { low: 1000, amber: 6500, red: 7000, shift: 7200, limit: 7500, max: 8000 };   // low: start of the TRACK shift bars
     if (CAR.rpm) { RPM.amber = CAR.rpm.amber; RPM.red = CAR.rpm.red; RPM.shift = CAR.rpm.shift; RPM.limit = CAR.rpm.limit; RPM.max = CAR.rpm.max; }
     function rpmBand(r) { return r >= RPM.red ? C.red : (r >= RPM.amber ? C.amber : C.band); }
+
+    // Shift sound (shiftsound.js): on per built-in style (CAR.shiftSound, from the MiatOff app) and per custom page (its
+    // own shiftSound, from the designer). SOUND: on anywhere, set up below once the custom pages are made. The route
+    // ('file' or 'beep') is the driver's choice in the style menu's sound test, kept like the last style.
+    var SS = W.MeterShiftSound, SOUND = false, soundRoute = 'file', soundSaid = 0, shifter = null, shiftPlayer = null;
+    var SOUND_STYLES = {}, SOUND_CUSTOM = false;
+    (function () {
+        var k, from = CAR.shiftSound || {}, url = query().sound, keys = ['street', 'track', 'cyber', 'y2077', 'y2077n'];
+        for (k in from) if (from.hasOwnProperty(k)) SOUND_STYLES[k] = from[k];
+        // ?sound=track,custom or ?sound=all: switch it on for a PC preview without a car file (the car's own address
+        // never has it). custom = every custom page; all = every style and custom page.
+        if (!url) return;
+        url = url.split(',');
+        for (k = 0; k < url.length; k++) {
+            if (url[k] === 'all') { SOUND_CUSTOM = true; for (var i = 0; i < keys.length; i++) SOUND_STYLES[keys[i]] = true; }
+            else if (url[k] === 'custom') SOUND_CUSTOM = true;
+            else SOUND_STYLES[url[k]] = true;
+        }
+    })();
 
     // Readable on the 7" screen: few things per page, numbers at least ~50 px, labels ~20 px.
 
@@ -533,6 +558,17 @@
             }
         }
     })();
+    (function () {
+        var k, on = false;
+        for (k in SOUND_STYLES) if (SOUND_STYLES.hasOwnProperty(k) && SETS[k]) on = true;
+        if (SETS.custom) for (k = 0; k < SETS.custom.length; k++) if (SETS.custom[k].shiftSound || SOUND_CUSTOM) on = true;
+        if (!on || !SS) return;
+        SOUND = true;
+        shifter = new SS.Shifter();
+        shiftPlayer = new SS.Player({ base: 'sounds/', win: W });
+        try { if (W.localStorage.getItem('miatoff.sound') === 'beep') soundRoute = 'beep'; } catch (e) { /* no storage */ }
+        if (soundRoute === 'file') shiftPlayer.load();
+    })();
     var FX = W.MeterFX, lastGear;
     // The menu: first a style, then a page of that style (with live previews), then the gauge itself.
     // Back goes up one level; at the top it is left to the Mazda framework (leave the app).
@@ -555,6 +591,43 @@
     var mode = 'style', styleSel = 0, pickSet = 'street', pickSel = 0;
     var setName = 'street', pages = SETS.street, cur = 0;
     var dots = $('dots');
+
+    // Whether the page on screen has the shift sound on: a custom page by its own switch, a built-in style by the app's.
+    function pageSound() {
+        if (setName === 'custom') return SOUND_CUSTOM || !!(pages && pages[cur] && pages[cur].shiftSound);
+        return SOUND_STYLES[setName] === true;
+    }
+    // The shift rpm of the page on screen: a custom page carries its own vehicle, the built-in styles use RPM.
+    function pageShift() {
+        var p = pages && pages[cur], s = p && p.vehicle && p.vehicle.rpm ? p.vehicle.rpm.shift : null;
+        return typeof s === 'number' && isFinite(s) && s > 0 ? s : RPM.shift;
+    }
+    // Where the warning ticks start: the amber line of the page on screen (as pageShift).
+    function pageAmber() {
+        var p = pages && pages[cur], s = p && p.vehicle && p.vehicle.rpm ? p.vehicle.rpm.amber : null;
+        return typeof s === 'number' && isFinite(s) && s > 0 ? s : RPM.amber;
+    }
+    // Sound test, top right of the style list: a tap plays the chosen route (ticks speeding up, then the shift tone);
+    // another tap within 4 s switches to the other route and plays that, so the driver keeps the one that was heard.
+    var SOUND_X = 520;
+    function soundTest(now) {
+        if (now - soundSaid < 4000) {
+            soundRoute = soundRoute === 'beep' ? 'file' : 'beep';
+            try { W.localStorage.setItem('miatoff.sound', soundRoute); } catch (e) { /* no storage */ }
+        }
+        soundSaid = now;
+        try { shiftPlayer.demo(soundRoute); } catch (e) { shiftPlayer.last = 'none'; }
+        forceDraw = true;
+    }
+    function drawSoundTest(c, now) {
+        var said = now - soundSaid < 4000, last = shiftPlayer.last, sub;
+        if (!said) sub = 'Tap: test';
+        else if (last === 'none') sub = 'No sound available · tap: other';
+        else if (soundRoute === 'file' && last === 'beep') sub = 'File failed, Mazda beep used · tap: other';
+        else sub = (last === 'file' ? 'File' : 'Mazda beep') + ' played · not heard? tap';
+        text(c, 'SHIFT SOUND: ' + (soundRoute === 'beep' ? 'MAZDA BEEP' : 'FILE'), 776, 20, 15, said ? C.text : C.dim, 'right', true);
+        text(c, sub, 776, 42, 13, C.dim, 'right', false);
+    }
 
     function remember() {
         try { W.localStorage.setItem('miatoff.set', setName); W.localStorage.setItem('miatoff.page', String(cur)); } catch (e) { /* no storage */ }
@@ -625,7 +698,7 @@
         c.fillStyle = C.ring; c.fillRect(0, 58, 800, 2);
         if (canBack) text(c, '‹', 28, 26, 48, C.dim, 'center', false);
         text(c, title, canBack ? 58 : 24, 30, 28, C.text, 'left', true);
-        text(c, 'MIATA', 776, 30, 15, C.dim, 'right', true);
+        if (!(SOUND && !canBack)) text(c, 'MIATA', 776, 30, 15, C.dim, 'right', true);   // the style list shows the sound test there
         text(c, hint, 400, 458, 15, C.faint, 'center', false);
     }
     function openStyle() {
@@ -662,6 +735,7 @@
             c.globalAlpha = 1;
             if (on) { c.strokeStyle = st.accent; c.lineWidth = 2; c.strokeRect(784 - tw + 1, y + 1, tw - 2, rh - 2); }
         }
+        if (SOUND) drawSoundTest(c, now);
     }
     // Page picker: three columns of 240x144 previews for up to six pages, four columns of 180x108 for more (up to 8).
     function pickLayout(n) {
@@ -824,11 +898,13 @@
         fresh = D.lastData !== lastSeen;
         lastSeen = D.lastData;
         // The dyno works on raw values per data update: smoothing would shift rpm against acceleration.
+        if (fresh && SOUND) shifter.sample(now, D.target.rpm);   // raw, per data update: the rise rate for the early tone
         if (fresh) {
             dyno.sample(now, { speed: D.target.speed, gLong: D.target.gLong, rpm: D.target.rpm,
                 throttle: D.target.throttle, gear: derivedGear() });
         }
         if (mode !== 'gauge') {
+            if (SOUND && shifter.state === 'shift') { shifter.reset(); shiftPlayer.stop(); }   // a menu ends the shift tone
             if (forceDraw || now - lastDraw > 250) {
                 forceDraw = false;
                 lastDraw = now;
@@ -838,6 +914,16 @@
             }
             setTimeout(frame, 33);
             return;
+        }
+        // Shift sound: ticks speeding up from the amber line, then the steady tone (shiftsound.js), on raw rpm and speed.
+        if (SOUND) {
+            try {
+                var cue = shifter.update(now, { enabled: pageSound(), live: !D.stale(), speed: D.target.speed,
+                    amber: pageAmber(), shift: pageShift() });
+                if (cue === 'tick') shiftPlayer.tick(soundRoute);
+                else if (cue === 'start') shiftPlayer.start(soundRoute);
+                else if (cue === 'stop') shiftPlayer.stop();
+            } catch (e) { /* a sound must never stop the frame loop */ }
         }
         // Rev ring on every page of the track, cyber and 2077 sets; both 2077 sets add the damage glitch on top.
         var rpm = num(v.rpm), ring = setName !== 'street' && setName !== 'custom', dmg = setName.indexOf('y2077') === 0 ? W.MeterSets.y2077Damage : null,
@@ -880,6 +966,7 @@
         if (mode !== 'gauge') {
             if (Math.abs(dx) > 20 || Math.abs(dy) > 20) return;
             if (mode === 'pick' && p.y < 60 && p.x < 200) { back(); return; }
+            if (mode === 'style' && SOUND && p.y < 60 && p.x > SOUND_X) { soundTest(Date.now()); return; }
             if (mode === 'style') {
                 rh = rowHeight();
                 for (i = 0; i < STYLES.length; i++) {

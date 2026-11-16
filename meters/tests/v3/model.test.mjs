@@ -409,3 +409,18 @@ test("migration retains legacy inherited text ink as well as accent color", () =
   assert.equal(t.style.captionColor, "#123456");
   assert.equal(t.dayStyle.textColor, "#101820");
 });
+test("the page's shift sound switch is optional, boolean and kept by migration", () => {
+  const withPage = (value) => {
+    const s = M.defaults();
+    s.themes[0].pages[0].shiftSound = value;
+    return s;
+  };
+  M.validate(M.defaults()); // pages without it stay valid (off)
+  assert.equal(M.defaults().themes[0].pages[0].shiftSound, undefined, "new pages start without the sound");
+  for (const value of [true, false, null]) M.validate(withPage(value));
+  for (const value of ["on", 1])
+    assert.throws(() => M.validate(withPage(value)), /Invalid shift sound setting/);
+  const kept = withPage(true);
+  kept.version = 2;
+  assert.equal(M.migrate(kept).themes[0].pages[0].shiftSound, true);
+});

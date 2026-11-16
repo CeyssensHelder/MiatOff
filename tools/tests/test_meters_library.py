@@ -246,6 +246,36 @@ class CarProfileTests(unittest.TestCase):
         self.assertFalse(self.car.stale())
         self.assertEqual(ml.car_profile(self.vehicle, None)["label"], ml.CAR_DEFAULT_LABEL)
 
+    def test_shift_sound_per_built_in_style(self):
+        self.assertEqual(self.car.sound(), [])
+        self.assertIsNone(self.car.selection())   # nothing set: the stick keeps the default car-profile.js
+        # Without a car setup the styles alone make the car file; stored in the car's own order.
+        self.assertEqual(self.car.set_sound(["y2077n", "track"]), ["track", "y2077n"])
+        self.assertEqual(self.car.selection(), {"shiftSound": ["track", "y2077n"]})
+        self.assertTrue(self.car.stale())
+        self.car.mark_built(self.car.selection())
+        self.assertFalse(self.car.stale())
+        # With a car setup they join its profile; the profile alone stays as the designer sent it.
+        profile = self.car.set(self.vehicle, "ND1 test")
+        self.assertNotIn("shiftSound", profile)
+        self.assertEqual(self.car.selection(), {**profile, "shiftSound": ["track", "y2077n"]})
+        self.assertTrue(self.car.stale())
+        self.car.mark_built(self.car.selection())
+        self.car.set_sound([])
+        self.assertEqual(self.car.selection(), profile)
+        self.assertTrue(self.car.stale(), "switching a style off also needs a Meters update")
+        for bad in (["custom"], ["STREET"], "track", [1]):
+            with self.assertRaises(ValueError, msg=repr(bad)):
+                self.car.set_sound(bad)
+        self.assertEqual(self.car.sound(), [])
+        # The app's checkboxes and the car's style keys are the same list.
+        sys.path.insert(0, str(ROOT / "tools"))
+        import stickflow
+        self.assertEqual([k for k, _ in stickflow.SOUND_STYLES], list(ml.SOUND_STYLES))
+        app = (ROOT / "meters/js/app.js").read_text(encoding="utf-8")
+        for key in ml.SOUND_STYLES:
+            self.assertIn(f"['{key}', ", app)
+
     def test_validate_vehicle_rejects_a_bad_profile(self):
         self.assertIs(ml.validate_vehicle(self.vehicle), self.vehicle)
         for change, message in [({"generation": "NA"}, "identity"), ({"rpm": {**self.vehicle["rpm"], "red": 99}}, "RPM"),

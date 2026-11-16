@@ -174,6 +174,11 @@ def test_car_line():
     check(note is not None and "Meters to Install" in note and "REPAIR" in note, "a changed car asks for a Meters update")
     check(stickflow.car_update_note(profile, None, "install") is None, "with Meters set to Install no note is needed")
     check(stickflow.car_update_note(profile, dict(profile), "keep") is None, "an unchanged car asks for nothing")
+    check(stickflow.car_update_note({**profile, "shiftSound": ["track"]}, profile, "keep") is not None,
+          "switching the shift sound on for a style asks for a Meters update")
+    check(stickflow.sound_line(["y2077n", "track"]) == "Shift sound: Track, 2077 Night (custom pages: set per page in the designer)",
+          "the sound line names the styles in the car's order")
+    check(stickflow.sound_line(None).startswith("Shift sound: off"), "no styles: off")
 
 
 def main():

@@ -1044,6 +1044,7 @@
             need: need,
             hasLap: hasLap,
             hasG: hasG,
+            shiftSound: setup.shiftSound === true,   // this page's tone at the shift point (shiftsound.js, app.js)
             flashing: false,
             noData: false,
             // Background, and in the usual case the instruments' static parts.

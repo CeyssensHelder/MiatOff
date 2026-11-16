@@ -25,6 +25,11 @@ and choose per tweak to install, remove or leave it.
   mph, °F, miles, mpg, hp or lb-ft, on the built-in styles and on your own pages.
 - **Home menu:** your own Home screen with up to twelve shortcuts, or one of five built-in menus. Installed with
   Meters; Mazda's own Home files stay unchanged.
+- **Shift sound** (experimental): a shift beeper on the Meters pages. Ticks speed up from the amber line, then a
+  steady tone at the shift point, a quarter of a second early when the revs rise fast, until you shift. Switch it on
+  per built-in style in the app (for example Track on, Street off) and per custom page in the designer. Silent below
+  5 km/h and on the limiter. The Meters style list has a sound test to choose between the sound files and the head
+  unit's own beep.
 
 Every change is hash-guarded, backed up and can be removed again; see the README's
 [Is it safe?](https://github.com/CeyssensHelder/MiatOff/blob/master/README.md#is-it-safe).
@@ -38,7 +43,11 @@ pages and the Home menu. A contributor ran the check, the install and the wirele
 ### Not tested by us
 
 - The car setup in a car: other engines, gearboxes and imperial units are tested on the PC only.
+- The fix for Meters trailing the car by a few seconds (the collector no longer starts a process for each update): tested
+  on the PC only.
 - The macOS and Linux downloads.
+- The shift sound in a car: whether the head unit plays the sound file or only its own beep, and how loud either is
+  over music. Tested on the PC only.
 
 ### Good to know
 

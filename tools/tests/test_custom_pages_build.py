@@ -133,6 +133,33 @@ class CustomPagesBuildTests(unittest.TestCase):
             self.assertFalse(bs.check(Path(folder)))
             self.assertEqual((Path(folder) / "miatoff-app/app/meters/js/car-profile.js").read_bytes(), data)
 
+    def test_shift_sound_travels_per_page_and_per_style(self):
+        setup = deepcopy(self.pages[0])
+        self.assertNotIn("shiftSound", bs.kits.car_page(setup, {}))
+        setup["themes"][0]["pages"][0]["shiftSound"] = True
+        self.assertIs(bs.kits.car_page(setup, {})["shiftSound"], True)
+        text = bs.custom_pages_js(bundle_of([setup])).decode("ascii")
+        self.assertIn('"shiftSound":true', text)
+        bad = deepcopy(setup)
+        bad["themes"][0]["pages"][0]["shiftSound"] = "yes"
+        with self.assertRaises(ValueError):
+            ml.validate_setup(bad)
+        # The built-in styles: a car file with only the style list (no car setup) is valid for the car.
+        self.assertEqual(bs.car_profile_js({"shiftSound": ["track"]}), b'window.MeterCarProfile = {"shiftSound":["track"]};\n')
+
+    def test_shift_sound_files_are_copied_byte_for_byte(self):
+        for name in ("tick", "shift"):   # the warning ticks and the steady tone at the shift point
+            wav = (ROOT / f"meters/sounds/{name}.wav").read_bytes()
+            self.assertTrue(wav.startswith(b"RIFF") and wav[8:12] == b"WAVE")
+            self.assertEqual(bs.payload()[f"miatoff-app/app/meters/sounds/{name}.wav"], wav)
+            self.assertIn(f"{hashlib.sha256(wav).hexdigest()}  app/meters/sounds/{name}.wav\n",
+                          bs.payload()["miatoff-app/MANIFEST"].decode())
+        self.assertIn("app/meters/js/shiftsound.js", bs.kits.METERS_FILES)
+        # Binary files are never run through the LF conversion, whatever their samples happen to contain.
+        self.assertEqual(bs.kits.BINARY_SUFFIXES, (".ttf", ".wav"))
+        r = subprocess.run([sys.executable, str(ROOT / "tools/make_shift_sound.py"), "--check"], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+
     def test_car_profile_leaves_out_incomplete_gearing(self):
         full = ml.car_profile(self.car_vehicle(), "x")
         self.assertEqual((full["ratios"], full["finalDrive"], full["circumference"]), ([5.087, 2.991, 2.035, 1.594, 1.286, 1], 2.866, 1.89))
