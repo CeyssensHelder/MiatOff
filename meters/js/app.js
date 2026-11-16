@@ -619,13 +619,13 @@
         try { shiftPlayer.demo(soundRoute); } catch (e) { shiftPlayer.last = 'none'; }
         forceDraw = true;
     }
-    function drawSoundTest(c, now) {
+    function drawSoundTest(c, now, picked) {
         var said = now - soundSaid < 4000, last = shiftPlayer.last, sub;
-        if (!said) sub = 'Tap: test';
+        if (!said) sub = picked ? 'Press: test' : 'Tap: test';
         else if (last === 'none') sub = 'No sound available · tap: other';
         else if (soundRoute === 'file' && last === 'beep') sub = 'File failed, Mazda beep used · tap: other';
         else sub = (last === 'file' ? 'File' : 'Mazda beep') + ' played · not heard? tap';
-        text(c, 'SHIFT SOUND: ' + (soundRoute === 'beep' ? 'MAZDA BEEP' : 'FILE'), 776, 20, 15, said ? C.text : C.dim, 'right', true);
+        text(c, 'SHIFT SOUND: ' + (soundRoute === 'beep' ? 'MAZDA BEEP' : 'FILE'), 776, 20, 15, said || picked ? C.text : C.dim, 'right', true);
         text(c, sub, 776, 42, 13, C.dim, 'right', false);
     }
 
@@ -735,7 +735,10 @@
             c.globalAlpha = 1;
             if (on) { c.strokeStyle = st.accent; c.lineWidth = 2; c.strokeRect(784 - tw + 1, y + 1, tw - 2, rh - 2); }
         }
-        if (SOUND) drawSoundTest(c, now);
+        if (SOUND) {
+            if (styleSel === STYLES.length) { c.strokeStyle = C.text; c.lineWidth = 2; c.strokeRect(SOUND_X + 9, 5, 775 - SOUND_X - 8, 49); }   // picked with the knob
+            drawSoundTest(c, now, styleSel === STYLES.length);
+        }
     }
     // Page picker: three columns of 240x144 previews for up to six pages, four columns of 180x108 for more (up to 8).
     function pickLayout(n) {
@@ -762,13 +765,14 @@
     // Knob / keys / touch all end up here. Each returns true when it handled the input.
     function move(d) {
         if (mode === 'gauge') show(cur + d);
-        else if (mode === 'style') styleSel = Math.max(0, Math.min(STYLES.length - 1, styleSel + d));
+        else if (mode === 'style') styleSel = Math.max(0, Math.min(STYLES.length - (SOUND ? 0 : 1), styleSel + d));   // with the sound on, one more stop after the last style: the sound test
         else pickSel = Math.max(0, Math.min(SETS[pickSet].length - 1, pickSel + d));
         forceDraw = true;
         return true;
     }
     function select() {
         if (mode === 'style') {
+            if (styleSel >= STYLES.length) { soundTest(Date.now()); return true; }   // the sound test stays in the style list
             var key = STYLES[styleSel].key;
             openPick(key, key === setName ? cur : 0);   // the style shown last opens on its last page
             return true;

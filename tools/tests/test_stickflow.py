@@ -16,6 +16,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
+import stickkit  # noqa: E402
 from stickkit import DriveInfo, StickError  # noqa: E402
 import stickflow  # noqa: E402
 
@@ -181,7 +182,60 @@ def test_car_line():
     check(stickflow.sound_line(None).startswith("Shift sound: off"), "no styles: off")
 
 
+def snapshot(stick: Path) -> dict:
+    return {str(p.relative_to(stick)): (p.read_bytes(), p.stat().st_mtime_ns) for p in stick.rglob("*") if p.is_file()}
+
+
+def test_verify_prepared():
+    import stickwriter
+    kit = stickkit.Kit("AATOUCH.ID", stickwriter.KNOWN_KITS["AATOUCH.ID"].id_bytes, "aa-touch.sh", b"#!/bin/sh\n# install\n",
+                       extra={"LICENSE": b"license\n", "miatoff-app/app/index.html": b"<html>"})
+    plan = stickflow.make_plan({"meters": "install"})
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+        stick = Path(folder) / "stick"
+        stick.mkdir()
+        kit.build(stick, plan=plan)
+        before = snapshot(stick)
+        result = stickflow.verify_prepared(kit, stick, plan)
+        check(result["kind"] == "ok" and result["title"].startswith("This stick is complete."), "a freshly written stick verifies")
+        check(snapshot(stick) == before, "verifying changes nothing on the stick")
+
+        (stick / "LICENSE").write_bytes(b"licensE\n")
+        result = stickflow.verify_prepared(kit, stick, plan)
+        check(result["kind"] == "bad" and result["names"] == ["LICENSE"] and "Prepare the stick again" in result["body"]
+              and "LICENSE" in result["body"], "one changed byte in a payload file fails and names it")
+        (stick / "LICENSE").write_bytes(b"license\n")
+
+        (stick / "miatoff-app/app/index.html").unlink()
+        result = stickflow.verify_prepared(kit, stick, plan)
+        check(result["kind"] == "bad" and "differ or are missing" in result["body"], "a missing payload file fails")
+        (stick / "miatoff-app/app/index.html").write_bytes(b"<html>")
+
+        (stick / stickkit.PLAN_NAME).write_bytes(plan.encode("ascii").replace(b"install", b"remove"))
+        result = stickflow.verify_prepared(kit, stick, plan)
+        check(result["kind"] == "bad" and result["names"] == [stickkit.PLAN_NAME], "a changed plan fails")
+        (stick / stickkit.PLAN_NAME).unlink()
+        result = stickflow.verify_prepared(kit, stick, plan)
+        check(result["kind"] == "bad" and result["names"] == [stickkit.PLAN_NAME], "a missing plan fails")
+        (stick / stickkit.PLAN_NAME).write_bytes(plan.encode("ascii"))
+        check(stickflow.verify_prepared(kit, stick, plan)["kind"] == "ok", "putting it right verifies again")
+
+        kit_many = stickkit.Kit("AATOUCH.ID", kit.id_bytes, "aa-touch.sh", b"#!/bin/sh\n# install\n",
+                                extra={**kit.extra, **{f"f{i}": b"a" for i in range(6)}})
+        result = stickflow.verify_prepared(kit_many, stick, plan)
+        check(result["kind"] == "bad" and len(result["names"]) == stickflow.VERIFY_NAMES and "more" in result["body"],
+              "only a few names are listed")
+
+        empty = Path(folder) / "empty"
+        empty.mkdir()
+        result = stickflow.verify_prepared(kit, empty, plan)
+        check(result["kind"] == "warn" and "not the stick" in result["title"] and not result["names"], "a different stick is recognised")
+        check(stickflow.verify_prepared(kit, Path(folder) / "gone", plan) == stickflow.NO_STICK, "no stick at all is said so")
+        check("Verify USB" in stickflow.VERIFY_HINT and "eject" in stickflow.VERIFY_HINT, "the hint explains the action")
+
+
 def main():
+    test_verify_prepared()
     test_plan()
     test_car_line()
     test_options()

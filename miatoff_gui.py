@@ -125,6 +125,7 @@ class App(tk.Tk):
         self.report_text = ""
         self.dump_path = None
         self.stick_ready = False
+        self.prepared = None
         self.active_root = None
         self.notice = None
         self.job_label = ""
@@ -293,6 +294,7 @@ class App(tk.Tk):
         self.stick_ready = False
         if hasattr(self, "review_result"):
             self.review_result.pack_forget()
+            self.verify_result.configure(text="")
         if self.current() == "review":
             self._refresh_review()
         self._refresh_car()
@@ -756,9 +758,12 @@ class App(tk.Tk):
                      "Confirm each step on the screen. Nothing has changed on the car until you do.",
                      "Never confirm a Mazda software update screen."):
             self.paragraph(self.review_result, "•  " + line, fg=INK, pady=(0, 5))
+        self.paragraph(self.review_result, stickflow.VERIFY_HINT, pady=(6, 5))
         row = tk.Frame(self.review_result, bg=CARD)
-        row.pack(anchor="w", padx=20, pady=(6, 14))
-        self.job_button(row, "Verify stick again", "Small.TButton", self.verify).pack(side="left")
+        row.pack(anchor="w", padx=20, pady=(0, 8))
+        self.job_button(row, "Verify USB", "Small.TButton", self.verify_prepared).pack(side="left")
+        self.verify_result = WrapLabel(self.review_result, text="", bg=CARD, fg=MUTED, font=BODY)
+        self.verify_result.pack(fill="x", padx=20, pady=(0, 10))
 
     def _refresh_review(self):
         for child in self.review_lines.winfo_children():
@@ -1312,9 +1317,10 @@ class App(tk.Tk):
         def work():
             stickkit.require_stick_root(target)
             kit.build(target, plan=plan, progress=report)
-        self.start_job("Writing and verifying the USB stick…", work, lambda _result, error: self._stick_written(checking, error))
+        self.start_job("Writing and verifying the USB stick…", work,
+                       lambda _result, error: self._stick_written(checking, error, (kit, plan)))
 
-    def _stick_written(self, checking, error):
+    def _stick_written(self, checking, error, prepared=None):
         if error:
             self.show_failure(error)
             return
@@ -1322,6 +1328,8 @@ class App(tk.Tk):
             self.check_made.configure(text="✓  USB ready. Eject it safely, then take it to the car.")
         else:
             self.stick_ready = True
+            self.prepared = prepared  # what "Verify USB" compares a re-plugged stick with
+            self.verify_result.configure(text="")
             self.review_result.pack(fill="x", pady=7)
             self.notice = ("✓  USB ready. Follow the steps on this page.", OK)
             if getattr(self, "_home_mark", None) is not None:
@@ -1356,6 +1364,26 @@ class App(tk.Tk):
             messagebox.showerror("MiatOff", "This USB stick does not match this version of MiatOff." + note, detail="\n".join(lines))
         else:
             self.notice = ("✓  The USB stick is correct.", OK)
+
+    def verify_prepared(self):
+        """Read-only: compare the plugged-in stick with the kit and plan that were just prepared."""
+        if not self.stick_ready or not getattr(self, "prepared", None):
+            return
+        kit, plan = self.prepared
+        info = self.chosen_drive()
+        if info is None:
+            self._show_verified(stickflow.NO_STICK, None)
+            return
+        target = Path(info.root)
+        self.start_job("Reading the USB stick…", lambda: stickflow.verify_prepared(kit, target, plan), self._show_verified)
+
+    def _show_verified(self, result, error):
+        if error:
+            self.show_failure(error)
+            return
+        colour = {"ok": OK, "warn": WARN}.get(result["kind"], BAD)
+        icon = "✓" if result["kind"] == "ok" else "!"
+        self.verify_result.configure(text=f"{icon}  {result['title']} {result['body']}", fg=colour)
 
     def custom_selection(self, choices: dict):
         """(selection bundle or None, note). A library that cannot be read blocks a Meters build, but not any

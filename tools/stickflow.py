@@ -5,9 +5,13 @@ check result, what blocks each step, and running slow work off the window's thre
 
 SPDX-License-Identifier: GPL-3.0-or-later
 """
+import os
+from pathlib import Path
 import queue
 import sys
 import threading
+
+import stickkit
 
 # (category, [(key, title, description, install label, remove label)])
 COMPONENTS = [
@@ -251,6 +255,44 @@ def format_help(platform: str = None) -> str:
             "If FAT32 is not offered (sticks over 32 GB) or the stick uses GPT, open Disk Management: delete its volume, "
             "use Convert to MBR Disk if offered, and create a new volume of 32 GB or less formatted FAT32.\n"
             "Formatting deletes everything on the stick.")
+
+
+VERIFY_NAMES = 3  # file names in the result; more would only be noise
+VERIFY_HINT = ("For extra certainty: eject the stick, plug it in again and press Verify USB. "
+               "This reads the stick itself and changes nothing on it.")
+NO_STICK = {"kind": "warn", "title": "No USB stick found", "names": [],
+            "body": "Plug the stick in, choose it under Prepare USB and press Verify USB again."}
+
+
+def verify_prepared(kit, target, plan) -> dict:
+    """Read-only check of the plugged-in stick against the kit and plan that were prepared. Run it off the window's
+    thread. Result: kind (ok | warn | bad), title, body and a few file names."""
+    try:
+        if not os.path.isdir(stickkit.long_path(target)):
+            return NO_STICK
+        problems = kit.verify(target)
+        if plan is not None:
+            path = stickkit.long_path(Path(target) / stickkit.PLAN_NAME)
+            if not os.path.isfile(path):
+                problems.append(("MISSING", stickkit.PLAN_NAME))
+            else:
+                with open(path, "rb") as handle:
+                    if handle.read() != plan.encode("ascii"):
+                        problems.append(("DIFFERS", stickkit.PLAN_NAME))
+    except OSError:
+        return NO_STICK
+    if not problems:
+        return {"kind": "ok", "title": "This stick is complete.", "names": [],
+                "body": "Every file and your plan were read from the stick and match what was prepared."}
+    payload = kit.payload()
+    if {name for kind, name in problems if kind == "MISSING"} >= set(payload):
+        return {"kind": "warn", "title": "This is not the stick that was prepared", "names": [],
+                "body": "None of the MiatOff files are on it. Plug in the stick you prepared, or prepare this one."}
+    names = [name[:60] for _kind, name in problems[:VERIFY_NAMES]]
+    more = len(problems) - VERIFY_NAMES
+    return {"kind": "bad", "title": "This stick is not complete", "names": names,
+            "body": (f"{len(problems)} file{'s' if len(problems) > 1 else ''} differ or are missing: " + ", ".join(names)
+                     + (f" and {more} more" if more > 0 else "") + ". Prepare the stick again, or use another stick.")}
 
 
 def run_captured(work):

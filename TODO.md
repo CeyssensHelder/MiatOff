@@ -22,6 +22,20 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
   phone sheets (Tools / Properties) instead of panels below the canvas on narrow windows.
 - [ ] **One look for the app's design pages.** *Design your Meters* and *Design your menu* get the same cards, the same
   list with Preview and the same wording for choosing what goes on the stick.
+- [ ] **Stick doctor in the app.** Read `miatoff-aa-touch.log` and the state file from a returned stick and explain
+  the result in plain words, as the check results already do.
+- [ ] **Automatic laps.** The lap timer is tap-only; GPS in the collector is the missing piece.
+- [ ] **Session log.** Save the maxima and lap times to the stick, or a CSV of the live data, to look at on the PC
+  afterwards.
+- [ ] **Peak hold and warning thresholds on custom pages**, for example coolant above 105 °C, as the Track page
+  already does.
+
+## Tests and CI
+
+- [ ] **Windows job.** CI runs on Ubuntu only, while Windows is the platform we use: run the stick writer, drive and
+  stick flow tests on `windows-latest` too.
+- [ ] **All Playwright specs in CI.** Only `car-parity`, `car-app`, `collector-dev` and the Home config run there;
+  `shift-sound.spec.mjs` and `builder.spec.mjs` run locally only.
 
 ## Fixes
 

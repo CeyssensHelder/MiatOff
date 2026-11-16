@@ -282,6 +282,56 @@ test("the style menu's sound test plays the demo on the chosen route and switche
   }
 });
 
+test("the Commander knob reaches the sound test: one stop after the last style, press plays it and stays in the list", async ({ page }) => {
+  await stubs(page);
+  const drawn = [];
+  await page.exposeFunction("__text", (s) => drawn.push(s));
+  await page.addInitScript(() => {
+    const fill = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function (s) {
+      window.__text(String(s));
+      return fill.apply(this, arguments);
+    };
+  });
+  const served = await serveMeters({ "/js/car-profile.js": script({ ...PROFILE, shiftSound: ["street", "track"] }) });
+  try {
+    const errors = await open(page, served, "menu");
+    await expect.poll(() => drawn.includes("Tap: test")).toBe(true);
+    await clear(page);
+    // Turn well past the last style: it stops on the sound test, not beyond.
+    await page.evaluate(() => { for (let i = 0; i < 12; i++) window.MiatoffMeters.next(); });
+    await expect.poll(() => drawn.includes("Press: test")).toBe(true);
+    await page.evaluate(() => { for (let i = 0; i < 12; i++) window.MiatoffMeters.next(); });
+    await page.evaluate(() => window.MiatoffMeters.select());   // plays the demo, no page opens
+    await page.waitForTimeout(1900);
+    expect(pattern(await tones(page))).toBe("tick*4 shift stop");
+    await expect.poll(() => drawn.some((s) => s.startsWith("Choose a style"))).toBe(true);
+    // Still the style list: turning back one lands on the last style, press opens its page list.
+    await page.evaluate(() => { window.MiatoffMeters.prev(); window.MiatoffMeters.select(); });
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.MiatoffMeters.back())).toBe(true);   // back to the styles, not out of the app
+    expect(errors).toEqual([]);
+  } finally {
+    await served.close();
+  }
+});
+
+test("without the shift sound the knob stops on the last style", async ({ page }) => {
+  await stubs(page);
+  const served = await serveMeters();
+  try {
+    const errors = await open(page, served, "menu");
+    const before = await tones(page);
+    await page.evaluate(() => { for (let i = 0; i < 12; i++) window.MiatoffMeters.next(); window.MiatoffMeters.select(); });
+    await page.waitForTimeout(500);
+    expect(await tones(page)).toEqual(before);   // select opened the last style's page list: no sound test
+    expect(await page.evaluate(() => window.MiatoffMeters.back())).toBe(true);
+    expect(errors).toEqual([]);
+  } finally {
+    await served.close();
+  }
+});
+
 test("the real tick.wav and shift.wav are served next to the page", async ({ request }) => {
   const served = await serveMeters();
   try {
