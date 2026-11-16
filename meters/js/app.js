@@ -443,8 +443,13 @@
     function powerPage() {
         // Factory figures: the car profile's rated power and torque, else the ND1 1.5 (131 PS at 7000, 150 Nm at 4800).
         var F = CAR.power || { ps: 131, psRpm: 7000, nm: 150, nmRpm: 4800 },
-            X0 = 312, X1 = 776, Y0 = 44, Y1 = 384, R0 = 2000, R1 = Math.ceil(RPM.limit / 500) * 500,
-            V1 = CAR.power ? Math.max(180, Math.ceil(Math.max(F.ps, F.nm) * 1.15 / 50) * 50) : 180;
+            X0 = 312, Y0 = 44, Y1 = 384, R0 = 2000, R1 = Math.ceil(RPM.limit / 500) * 500,
+            V1 = CAR.power ? Math.max(180, Math.ceil(Math.max(F.ps, F.nm) * 1.15 / 50) * 50) : 180,
+            // The curves are plotted in PS and Nm on one scale (0 to V1 of both), so their shape is the same in every
+            // unit. In PS and Nm one row of tick numbers fits both. In any other units the numbers differ: power gets
+            // the left axis and torque one on the right, each in its unit and colour, and the plot makes room for it.
+            ONE = du('power', 1) === du('torque', 1), X1 = ONE ? 776 : 744,
+            PT = W.MeterUnits.ticks('power', V1, 50, UNITS), TT = W.MeterUnits.ticks('torque', V1, 50, UNITS);
         function px(r) { return X0 + (r - R0) / (R1 - R0) * (X1 - X0); }
         function py(val) { return Y1 - G.clamp(val, 0, V1) / V1 * (Y1 - Y0); }
         function curve(ctx, pts, key, col, w, alpha) {
@@ -463,7 +468,7 @@
         return {
             name: 'POWER',
             drawStatic: function (ctx) {
-                var r, val;
+                var r, k, x;
                 text(ctx, 'POWER', 16, 30, 20, C.dim, 'left', true);
                 text(ctx, 'TORQUE', 16, 176, 20, C.dim, 'left', true);
                 text(ctx, 'estimated at the crank', 16, 312, 15, C.dim, 'left', false);
@@ -472,16 +477,24 @@
                     ctx.beginPath(); ctx.moveTo(px(r), Y0); ctx.lineTo(px(r), Y1); ctx.stroke();
                     text(ctx, String(r / 1000), px(r), Y1 + 16, 15, C.dim, 'center', true);
                 }
-                for (val = 0; val <= V1; val += 50) {
-                    ctx.beginPath(); ctx.moveTo(X0, py(val)); ctx.lineTo(X1, py(val)); ctx.stroke();
-                    text(ctx, String(val), X0 - 8, py(val), 14, C.dim, 'right', false);
+                for (k = 0; k < PT.length; k++) {   // the grid lines follow the power axis
+                    ctx.beginPath(); ctx.moveTo(X0, py(PT[k].at)); ctx.lineTo(X1, py(PT[k].at)); ctx.stroke();
+                    text(ctx, PT[k].label, X0 - 8, py(PT[k].at), 14, ONE ? C.dim : C.red, 'right', false);
+                }
+                ctx.strokeStyle = C.blue;
+                for (k = 0; !ONE && k < TT.length; k++) {
+                    ctx.beginPath(); ctx.moveTo(X1, py(TT[k].at)); ctx.lineTo(X1 + 5, py(TT[k].at)); ctx.stroke();
+                    text(ctx, TT[k].label, X1 + 9, py(TT[k].at), 14, C.blue, 'left', false);
                 }
                 text(ctx, 'x1000 rpm', X1, Y1 + 36, 14, C.dim, 'right', false);
-                text(ctx, 'PS', X0 + 8, 18, 18, C.red, 'left', true);
-                text(ctx, 'Nm', X0 + 44, 18, 18, C.blue, 'left', true);
-                text(ctx, 'o = factory', X0 + 84, 18, 14, C.dim, 'left', false);
-                ring(ctx, F.psRpm, F.ps, C.red, String(Math.round(F.ps)), true);
-                ring(ctx, F.nmRpm, F.nm, C.blue, String(Math.round(F.nm)), false);
+                // The legend: PS and Nm where they always were, longer unit names by their width.
+                text(ctx, ul('power'), X0 + 8, 18, 18, C.red, 'left', true);
+                x = ONE ? X0 + 44 : X0 + 20 + ctx.measureText(ul('power')).width;
+                text(ctx, ul('torque'), x, 18, 18, C.blue, 'left', true);
+                x = ONE ? X0 + 84 : x + 16 + ctx.measureText(ul('torque')).width;
+                text(ctx, 'o = factory', x, 18, 14, C.dim, 'left', false);
+                ring(ctx, F.psRpm, F.ps, C.red, dfmt('power', F.ps, 0), true);
+                ring(ctx, F.nmRpm, F.nm, C.blue, dfmt('torque', F.nm, 0), false);
             },
             draw: function (ctx, now) {
                 var L = dyno.live, last = dyno.pulls[0], prev = dyno.pulls[1], c = dyno.cur, col = L.wot ? C.text : C.dim, k, b;

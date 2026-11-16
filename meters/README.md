@@ -25,7 +25,7 @@ the style list it leaves the app. The app always starts in the style list, with 
 |---|---|
 | DRIVE | Large tachometer (red zone from 7000) with the speed in it, a big gear number whose box also works as the shift light (amber from 6500, flashing red from 7200), coolant and fuel |
 | G-METER | Full-height G-meter showing what you feel (accelerating moves the dot back/down, a left turn moves it right; `?gm=car` mirrors it) with trail, peak G left/right/accel/brake (tap the circle to reset), throttle and brake bars |
-| POWER | Estimated power (PS) and torque (Nm) at the crank, and a dyno curve of the last full-throttle pull, next to the factory figures (131 PS at 7000, 150 Nm at 4800). The previous pull stays faintly visible for comparison |
+| POWER | Estimated power (PS) and torque (Nm) at the crank, and a dyno curve of the last full-throttle pull, next to the factory figures (131 PS at 7000, 150 Nm at 4800). The previous pull stays faintly visible for comparison. In other units (hp, kW, lb-ft) the chart has a power axis on the left and a torque axis on the right, each in its unit |
 | INFO | Six large tiles with a 1-minute sparkline: coolant, intake air, outside, fuel, trip, average fuel use |
 
 **Track** (trackday). Every track page has a thin ring around the screen edge that fades inward: amber from

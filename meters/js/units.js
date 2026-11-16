@@ -36,5 +36,13 @@
         return to ? convert(n, to, false) : (finite(n) ? n : null);
     }
 
-    W.MeterUnits = { METRIC: METRIC, convert: convert, unit: unit, display: display };
+    // Axis ticks for a chart drawn in canonical values from 0 to max: one per `step` of the display unit, as
+    // { at: canonical value, label }. Power and torque convert differently, so each needs its own axis.
+    function ticks(signal, max, step, units) {
+        var to = unit(signal, units), top = display(signal, max, units) + 1e-9, out = [], n;
+        for (n = 0; n <= top; n += step) out.push({ at: to ? convert(n, to, true) : n, label: String(n) });
+        return out;
+    }
+
+    W.MeterUnits = { METRIC: METRIC, convert: convert, unit: unit, display: display, ticks: ticks };
 })(window);

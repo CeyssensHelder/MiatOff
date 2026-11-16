@@ -48,7 +48,5 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
   to the car's 6 Hz rpm ([meters/README.md](meters/README.md), [docs/13](docs/13-gauges.md#sound-on-the-unit)).
 - [ ] **RPM jump:** one unexplained jump from about 1,900 to 3,000 rpm seen on our car.
 - [ ] **Consumption scale:** calibrate `Drv1AvlFuelE` against the car's own average consumption figure.
-- [ ] **Power page with imperial units:** power and torque share one axis that is labelled PS/Nm; give each its own
-  axis in the chosen units (the live numbers already convert).
 - [ ] **Simulator gearing:** `meters/js/data.js` (`?src=sim`) drives with the ND1 1.5 manual gearing, so previews of
   another car show the wrong gear; take the gearing from the car profile.
