@@ -214,6 +214,16 @@ test("the POWER page in metric units keeps its single PS/Nm axis", async ({ page
   expect(p.torque.map((t) => [t.s, t.y])).toEqual([["150", chartY(150, 180) - 20]]);
 });
 
+test("the default car's kW and lb-ft axes count in 25s, not just 50 and 100", async ({ page }) => {
+  // Units only, so the factory figures and the 180 PS / 180 Nm top of the axes are the ND1 1.5's: 132 kW, 133 lb-ft.
+  const p = await powerPage(page, { units: { ...PROFILE.units, power: "kW", torque: "lb-ft" } });
+  const want = ["0", "25", "50", "75", "100", "125"];
+  expect(p.left.map((t) => t.s)).toEqual(want);
+  expect(p.right.map((t) => t.s)).toEqual(want);
+  for (const t of p.left) close(t.y, chartY(Number(t.s) / 0.73549875, 180), `kW tick ${t.s}`);
+  for (const t of p.right) close(t.y, chartY(Number(t.s) / 0.7375621493, 180), `lb-ft tick ${t.s}`);
+});
+
 for (const [units, hp, lbft, powerTicks, torqueTicks] of [
   [{ power: "hp", torque: "lb-ft" }, 0.9863200706, 0.7375621493, ["0", "50", "100", "150", "200"], ["0", "50", "100", "150"]],
   [{ power: "kW", torque: "Nm" }, 0.73549875, 1, ["0", "50", "100", "150"], ["0", "50", "100", "150", "200", "250"]],

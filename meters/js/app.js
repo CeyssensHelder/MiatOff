@@ -449,7 +449,7 @@
             // unit. In PS and Nm one row of tick numbers fits both. In any other units the numbers differ: power gets
             // the left axis and torque one on the right, each in its unit and colour, and the plot makes room for it.
             ONE = du('power', 1) === du('torque', 1), X1 = ONE ? 776 : 744,
-            PT = W.MeterUnits.ticks('power', V1, 50, UNITS), TT = W.MeterUnits.ticks('torque', V1, 50, UNITS);
+            PT = W.MeterUnits.ticks('power', V1, UNITS), TT = W.MeterUnits.ticks('torque', V1, UNITS);
         function px(r) { return X0 + (r - R0) / (R1 - R0) * (X1 - X0); }
         function py(val) { return Y1 - G.clamp(val, 0, V1) / V1 * (Y1 - Y0); }
         function curve(ctx, pts, key, col, w, alpha) {

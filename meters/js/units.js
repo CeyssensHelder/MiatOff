@@ -36,10 +36,15 @@
         return to ? convert(n, to, false) : (finite(n) ? n : null);
     }
 
-    // Axis ticks for a chart drawn in canonical values from 0 to max: one per `step` of the display unit, as
+    // Axis ticks for a chart drawn in canonical values from 0 to max: round numbers of the display unit, as
     // { at: canonical value, label }. Power and torque convert differently, so each needs its own axis.
-    function ticks(signal, max, step, units) {
-        var to = unit(signal, units), top = display(signal, max, units) + 1e-9, out = [], n;
+    // The step is the smallest of STEPS that leaves at most six ticks above 0: 180 PS or Nm count in 50s, as they
+    // always did, while the same axis in kW (132) or lb-ft (133) counts in 25s instead of showing only 50 and 100.
+    var STEPS = [25, 50, 100, 200, 500, 1000];
+    function ticks(signal, max, units) {
+        var to = unit(signal, units), top = display(signal, max, units) + 1e-9, out = [], step, n;
+        for (n = 0; n < STEPS.length - 1 && Math.floor(top / STEPS[n]) > 6; n++) { /* next step */ }
+        step = STEPS[n];
         for (n = 0; n <= top; n += step) out.push({ at: to ? convert(n, to, true) : n, label: String(n) });
         return out;
     }
