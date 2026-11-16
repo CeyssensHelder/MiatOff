@@ -127,6 +127,25 @@
     // ------------------------------------------------------------------ simulator
     // A 1.5 ND1 lapping an imaginary circuit: pull through the gears, brake, corner, repeat.
     var RATIO = [0, 5.087, 2.991, 2.035, 1.594, 1.286, 1.000], FINAL = 2.866, CIRC = 1.89;
+    // Upshift halfway between the shift point and the limiter (7200 and 7500); in the lap's top gear, brake at 6/7
+    // of that.
+    var SHIFT = 7350, LIFT = 6300;
+    // Another car (js/car-profile.js) drives with its own gearing and rev limits, or the gauges would show the
+    // wrong gear and rev past its limiter. As in app.js: a part is used only when it is complete and sane.
+    function isInt(x) { return typeof x === 'number' && isFinite(x) && Math.floor(x) === x; }
+    function isPos(x) { return typeof x === 'number' && isFinite(x) && x > 0; }
+    (function (p) {
+        if (!p || typeof p !== 'object') return;
+        var r = p.rpm;
+        if (p.ratios && p.ratios.length && p.ratios.every(isPos) && isPos(p.finalDrive) && isPos(p.circumference)) {
+            RATIO = [0].concat(p.ratios); FINAL = p.finalDrive; CIRC = p.circumference;
+        }
+        if (r && isInt(r.amber) && isInt(r.red) && isInt(r.shift) && isInt(r.limit) && isInt(r.max) &&
+                1000 < r.amber && r.amber <= r.red && r.red <= r.shift && r.shift <= r.limit && r.limit <= r.max &&
+                r.max <= 15000) {
+            SHIFT = (r.shift + r.limit) / 2; LIFT = SHIFT * 6 / 7;
+        }
+    })(W.MeterCarProfile);
     // Full-throttle torque curve shaped like the 1.5's specs (150 Nm at 4800, 131 PS at 7000), so the
     // estimated power on the POWER page has something realistic to recover.
     var TQ = [[0, 90], [1000, 100], [2000, 122], [3000, 135], [4000, 145], [4800, 150], [5500, 148],
@@ -150,14 +169,15 @@
         return Math.max(850, v / CIRC * 60 * RATIO[g] * FINAL);
     };
     Sim.prototype.step = function (dt) {
-        var s = this, topGear = (s.lap % 2) ? 4 : 3, k;
+        var s = this, topGear = Math.min((s.lap % 2) ? 4 : 3, RATIO.length - 1), k;   // a car may have fewer gears
         s.t += dt;
         if (s.phase === 'accel') {
             s.thr = 100; s.brk = 0; s.lat = 0; s.steer *= 0.9;
-            // 1050 kg, CdA 0.55, Crr 0.012, 85 % driveline, wheel radius from the 1.89 m circumference
+            // 1050 kg, CdA 0.55, Crr 0.012, 85 % driveline, wheel radius from the circumference
             s.a = (torqueAt(s.rpm) * RATIO[s.gear] * FINAL * 0.85 / (CIRC / (2 * Math.PI))
                 - 0.33 * s.v * s.v - 0.012 * 1050 * 9.81) / 1050;
-            if (s.rpm > (s.gear < topGear ? 7350 : 6300)) {   // shift late, like on track
+            // Shift late, like on track. A tall gear of another car may run out of pull first: move on then too.
+            if (s.rpm > (s.gear < topGear ? SHIFT : LIFT) || s.a < 0.5) {
                 if (s.gear < topGear) { s.phase = 'shift'; s.pt = 0.35; s.gear++; }
                 else { s.phase = 'brake'; }
             }

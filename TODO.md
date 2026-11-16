@@ -50,5 +50,3 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
 - [ ] **Consumption scale:** calibrate `Drv1AvlFuelE` against the car's own average consumption figure.
 - [ ] **Power page with imperial units:** power and torque share one axis that is labelled PS/Nm; give each its own
   axis in the chosen units (the live numbers already convert).
-- [ ] **Simulator gearing:** `meters/js/data.js` (`?src=sim`) drives with the ND1 1.5 manual gearing, so previews of
-  another car show the wrong gear; take the gearing from the car profile.
