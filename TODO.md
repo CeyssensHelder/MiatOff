@@ -70,5 +70,3 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
   was already applied before using the stick: the analysis reports the files as untouched. Work out which files that
   trick changes (if any) and what the check and the install plan should say in that case.
 - [ ] **Consumption scale:** calibrate `Drv1AvlFuelE` against the car's own average consumption figure.
-- [ ] **Power page with imperial units:** power and torque share one axis that is labelled PS/Nm; give each its own
-  axis in the chosen units (the live numbers already convert).

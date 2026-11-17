@@ -163,6 +163,95 @@ for (const set of ["street", "track", "cyber", "y2077"]) {
   }
 }
 
+// The POWER page's chart. Its geometry is in PS and Nm (the top of the axis is V1 of both); the power axis on the left
+// and the torque axis on the right are each labelled in the display unit, and the factory rings sit on their own axis.
+const CHART = { x0: 312, y0: 44, y1: 384 };
+const chartY = (canonical, v1) => CHART.y1 - (canonical / v1) * (CHART.y1 - CHART.y0);
+async function powerPage(page, profile) {
+  await page.addInitScript(() => {
+    window.__text = [];
+    const fill = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function (s, x, y) {
+      window.__text.push({ s: String(s), x, y, color: String(this.fillStyle), align: this.textAlign });
+      return fill.apply(this, arguments);
+    };
+  });
+  const served = await serveMeters({ "/js/custom.js": custom, "/js/car-profile.js": script(profile) });
+  try {
+    const errors = await open(page, served, "street&page=2");
+    expect(errors).toEqual([]);
+    const all = await page.evaluate(() => window.__text);
+    expect(all.some((t) => t.s === "estimated at the crank"), "the POWER page is drawn").toBe(true);
+    const C = await page.evaluate(() => window.MeterGauges.C);
+    const numbers = (list) => list.filter((t) => /^\d+$/.test(t.s));
+    // Tick labels: numbers right of the plot's left edge are right-aligned to it; the torque axis is past the plot.
+    const left = numbers(all.filter((t) => t.align === "right" && t.x === CHART.x0 - 8));
+    const legend = all.filter((t) => t.y === 18 && t.align === "left").map((t) => t.s);
+    const plotRight = all.find((t) => t.s === "x1000 rpm").x;
+    const right = numbers(all.filter((t) => t.align === "left" && t.x > plotRight));
+    const ring = (color) => numbers(all.filter((t) => t.align === "center" && t.color === color && t.y < CHART.y1));
+    return { all, C, left, right, legend, plotRight, power: ring(C.red), torque: ring(C.blue) };
+  } finally {
+    await served.close();
+  }
+}
+const close = (got, want, what) => expect(Math.abs(got - want), `${what}: ${got} is not ${want}`).toBeLessThan(0.01);
+
+test("the POWER page in metric units keeps its single PS/Nm axis", async ({ page }) => {
+  const p = await powerPage(page, null);
+  expect(p.left.map((t) => t.s)).toEqual(["0", "50", "100", "150"]);
+  for (const t of p.left) {
+    close(t.y, chartY(Number(t.s), 180), `tick ${t.s}`);
+    expect(t.color).toBe(p.C.dim);
+  }
+  expect(p.right).toEqual([]);
+  expect(p.plotRight).toBe(776);
+  expect(p.legend).toEqual(["PS", "Nm", "o = factory"]);
+  const at = (s) => p.all.find((t) => t.s === s && t.y === 18).x;
+  expect([at("PS"), at("Nm"), at("o = factory")]).toEqual([320, 356, 396]);
+  // ND1 1.5 factory figures: 131 PS drawn below its ring, 150 Nm above it.
+  expect(p.power.map((t) => [t.s, t.y])).toEqual([["131", chartY(131, 180) + 22]]);
+  expect(p.torque.map((t) => [t.s, t.y])).toEqual([["150", chartY(150, 180) - 20]]);
+});
+
+test("the default car's kW and lb-ft axes count in 25s, not just 50 and 100", async ({ page }) => {
+  // Units only, so the factory figures and the 180 PS / 180 Nm top of the axes are the ND1 1.5's: 132 kW, 133 lb-ft.
+  const p = await powerPage(page, { units: { ...PROFILE.units, power: "kW", torque: "lb-ft" } });
+  const want = ["0", "25", "50", "75", "100", "125"];
+  expect(p.left.map((t) => t.s)).toEqual(want);
+  expect(p.right.map((t) => t.s)).toEqual(want);
+  for (const t of p.left) close(t.y, chartY(Number(t.s) / 0.73549875, 180), `kW tick ${t.s}`);
+  for (const t of p.right) close(t.y, chartY(Number(t.s) / 0.7375621493, 180), `lb-ft tick ${t.s}`);
+});
+
+for (const [units, hp, lbft, powerTicks, torqueTicks] of [
+  [{ power: "hp", torque: "lb-ft" }, 0.9863200706, 0.7375621493, ["0", "50", "100", "150", "200"], ["0", "50", "100", "150"]],
+  [{ power: "kW", torque: "Nm" }, 0.73549875, 1, ["0", "50", "100", "150"], ["0", "50", "100", "150", "200", "250"]],
+  [{ power: "PS", torque: "lb-ft" }, 1, 0.7375621493, ["0", "50", "100", "150", "200", "250"], ["0", "50", "100", "150"]],
+]) {
+  test(`the POWER page in ${units.power} and ${units.torque} has an axis for each`, async ({ page }) => {
+    // 160 PS and 200 Nm: the top of both axes is 250 PS and 250 Nm.
+    const p = await powerPage(page, { ...PROFILE, units: { ...PROFILE.units, ...units } });
+    expect(p.left.map((t) => t.s)).toEqual(powerTicks);
+    expect(p.right.map((t) => t.s)).toEqual(torqueTicks);
+    for (const t of p.left) {
+      close(t.y, chartY(Number(t.s) / hp, 250), `${units.power} tick ${t.s}`);
+      expect(t.color).toBe(p.C.red);
+    }
+    for (const t of p.right) {
+      close(t.y, chartY(Number(t.s) / lbft, 250), `${units.torque} tick ${t.s}`);
+      expect(t.color).toBe(p.C.blue);
+      expect(t.x).toBeLessThan(800 - 30);                    // room for three digits on the 800 px screen
+    }
+    expect(p.legend).toEqual([units.power, units.torque, "o = factory"]);
+    // The factory rings are labelled in the display unit and sit at that value on their own axis.
+    expect(p.power.map((t) => t.s)).toEqual([String(Math.round(160 * hp))]);
+    expect(p.torque.map((t) => t.s)).toEqual([String(Math.round(200 * lbft))]);
+    close(p.power[0].y - 22, chartY(160, 250), "factory power ring");
+    close(p.torque[0].y + 20, chartY(200, 250), "factory torque ring");
+  });
+}
+
 test("the stick's default car-profile.js has no profile", async () => {
   const text = await readFile(join(metersRoot, "js/car-profile.js"), "utf8");
   expect(text).toMatch(/window\.MeterCarProfile = null;/);
