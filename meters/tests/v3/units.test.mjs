@@ -52,7 +52,12 @@ test("the step grows with the axis, so there are never more than six ticks above
   assert.deepEqual(labels(U.ticks("power", 350)), ["0", "100", "200", "300"]);
   assert.deepEqual(labels(U.ticks("torque", 150 / 0.7375621493, { torque: "lb-ft" })),
     ["0", "25", "50", "75", "100", "125", "150"]);
-  for (const max of [180, 250, 400, 900, 2500, 100000])
-    for (const units of [undefined, { power: "hp" }, { power: "kW" }])
-      assert.ok(U.ticks("power", max, units).length >= 3, `at least three ticks up to ${max}`);
+  // Past 1000 the step goes on in 1, 2 and 5 times a power of ten.
+  assert.deepEqual(labels(U.ticks("power", 8000)), ["0", "2000", "4000", "6000", "8000"]);
+  assert.deepEqual(labels(U.ticks("power", 100000)), ["0", "20000", "40000", "60000", "80000", "100000"]);
+  for (const max of [180, 250, 400, 900, 2500, 7500, 100000, 1e9])
+    for (const units of [undefined, { power: "hp" }, { power: "kW" }]) {
+      const n = U.ticks("power", max, units).length;
+      assert.ok(n >= 3 && n <= 7, `${n} ticks up to ${max} (0 and at most six above it)`);
+    }
 });

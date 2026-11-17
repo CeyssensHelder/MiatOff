@@ -50,7 +50,7 @@ jobs:
           rc=$?
           if [ "$rc" -ne 0 ]; then python3 ../../../tools/ci_annotation.py browser.log "Playwright browser download failed (exit $rc)"; fi
           exit $rc
-      - run: npx playwright test car-parity car-app collector-dev
+      - run: npx playwright test car-parity car-app collector-dev car-profile
         working-directory: meters/tests/v3
       - name: Shared Designer and Mazda Home browser tests
         run: npx playwright test --config=home-ci.config.mjs
