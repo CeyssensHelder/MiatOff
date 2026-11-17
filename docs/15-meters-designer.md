@@ -73,10 +73,8 @@ Of the vehicle profile only these reach the car (`vehicle` in `custom-pages.js`,
 
 ### Known issues
 
-Seen on our car, cause not yet confirmed. Reports help: use the *Meters feedback* issue template.
+Open on our car. Reports help: use the *Meters feedback* issue template.
 
-- **Gauges a few seconds behind** (first noticed as a delay when stationary, up to about a second). Every page, built-in and custom, can trail the car by a few seconds. Going back to the Meters menu and opening the gauge again clears it until it builds up again. **Probable cause, fix not yet tried in the car:** the collector runs at `nice 5` and started `sh` and `mv` for every write of `live.txt` (about 10 a second). While Opera was busy drawing a gauge, the collector got too little CPU and fell behind the D-Bus stream. The unread output piled up in the `dbus-monitor` pipe, so the page drew values that were seconds old. The menu draws much less, which let the collector catch up. On a PC (BusyBox 1.25, traffic at the rates in docs/13, limited CPU shared with a busy process at nice 0), the old collector fell up to 13 s behind and caught up within 4 s once the load stopped. The collector now rewrites `live.txt` in place, with `LiveSeq` as the last line, and the page skips any read that does not end with that line. In the same test it stayed within 0.3 s, and without the forks it uses about a fifth of the CPU it did. It is still possible that the car's CPU is short even without the forks. Feedback after a drive helps.
-- **One unexplained RPM jump.** While driving at steady revs, the RPM number once jumped from about 1,900 to about 3,000. Seen once and not reproduced.
 - **Consumption scale is unverified.** `Drv1AvlFuelE`, shown under "CONSUMPTION", has not been compared with the car's own figure.
 
 ## Simulated telemetry

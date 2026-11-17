@@ -28,6 +28,7 @@ SCRIPT = ROOT / "aa-touch-stick" / "stick" / "aa-touch.sh"
 REPORT_NAME = "CHECK-REPORT.txt"
 
 CFG_ATTRS = "775 1000 1000"          # the SM config, both AAP XMLs, List2Ctrl.js and the tweak images, as aa-touch.sh checks
+OK_ATTRS = (CFG_ATTRS, "775 0 0")    # root-owned is accepted too: other tunes copy files in as root; our publish resets it
 OURS_PRELOAD = "/data_persist/oem-aa-mod/libpatch-blmjciaapa.so"
 
 # Order the report lists components in.
@@ -243,7 +244,7 @@ def check(dump_path: Path, pinned: dict = None) -> dict:
         if comps[key]["state"] in (AVAILABLE, INSTALLED, PARTIAL):
             for path in (sm_path, "/etc/aap_system_attributes.xml", "/etc/aap_system_attributes_UCP.xml"):
                 attrs = dump.attrs(path)
-                if attrs is not None and attrs != CFG_ATTRS:
+                if attrs is not None and attrs not in OK_ATTRS:
                     comps[key] = {"state": BLOCKED, "detail": f"{path} has unexpected permissions ({attrs})"}
                     break
 
@@ -274,7 +275,7 @@ def check(dump_path: Path, pinned: dict = None) -> dict:
                             {"stock": "List2Ctrl.js is stock", "patched": "the delay is shorter",
                              "unknown": "List2Ctrl.js is an unknown version"}.get(delay, "needs a FULL dump"))
     list_attrs = dump.attrs("/jci/gui/common/controls/List2/js/List2Ctrl.js")
-    if comps["delay"]["state"] in (AVAILABLE, INSTALLED) and list_attrs not in (None, CFG_ATTRS):
+    if comps["delay"]["state"] in (AVAILABLE, INSTALLED) and list_attrs not in (None, *OK_ATTRS):
         comps["delay"] = {"state": BLOCKED, "detail": f"List2Ctrl.js has unexpected permissions ({list_attrs})"}
 
     # Image sets (dumps from 1.4.0 on hash the images): every image stock or new.
@@ -286,7 +287,7 @@ def check(dump_path: Path, pinned: dict = None) -> dict:
             comps[key] = {"state": UNCHECKED, "detail": "needs a FULL dump from MiatOff dump 1.4.0 or later"}
         elif any(digest not in (row[1], row[2]) for row, digest in images):
             comps[key] = {"state": BLOCKED, "detail": f"a {what} is an unknown version"}
-        elif any(dump.attrs("/jci/nativegui/images/" + row[0]) not in (None, CFG_ATTRS) for row in rows):
+        elif any(dump.attrs("/jci/nativegui/images/" + row[0]) not in (None, *OK_ATTRS) for row in rows):
             comps[key] = {"state": BLOCKED, "detail": f"a {what} has unexpected permissions"}
         elif all(digest == row[1] for row, digest in images):
             comps[key] = result(AVAILABLE, f"all {len(rows)} {what}s are stock")

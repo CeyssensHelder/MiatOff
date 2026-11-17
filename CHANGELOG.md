@@ -4,6 +4,17 @@ Each release on the [Releases page](https://github.com/CeyssensHelder/MiatOff/re
 with its version below. Everything is for the **MX-5 ND1 and ND2** with Mazda Connect on firmware **74.00.324A** only;
 the tools check the car first and change nothing they do not recognise.
 
+## v1.0.2-rc.1
+
+Pre-release for testing one fix. Not tested in a car yet.
+
+### Fixed
+
+- **"has unexpected permissions" on a unit that had other tweaks:** stock files whose owner was root (`775 0 0`) instead
+  of the usual `775 1000 1000`, which other tools leave behind when they copy files in as root, were reported as
+  BLOCKED. The check and the installer now accept that owner when the content is the known stock file; the replacement
+  we write has the normal owner again. Any other mode or owner still blocks.
+
 ## v1.0.1
 
 Fixes for Meters and the app, and the shift sound. Update Meters from the app (*Update*, then **REPAIR** in the car)

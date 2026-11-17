@@ -23,7 +23,7 @@ Source: [CHANGELOG.md](../../CHANGELOG.md). Nothing is described as stable.
   custom Meters pages, the Home menu.
 - **In a contributor's ND2:** the check, the install, the wireless CarPlay edits, camera safety text and parking
   graphics (our car has no reversing camera).
-- **PC only:** the car setup (other engines, gearboxes, imperial units), the fix for Meters lag, the shift sound,
+- **PC only:** the car setup (other engines, gearboxes, imperial units), the shift sound,
   the macOS and Linux downloads. Everything else is also covered by the simulator, which cannot replace a real unit.
 
 ## Safety design to challenge
@@ -43,7 +43,7 @@ Source: [CHANGELOG.md](../../CHANGELOG.md). Nothing is described as stable.
 
 From [TODO.md](../../TODO.md) and the CHANGELOG "Not tested by us":
 
-- Whether Meters still trails the car by seconds after the collector change, and one unexplained rpm jump.
+- (Meters lag and the rpm jump are reported fixed in the car.)
 - Shift sound: does the unit play the sound file or only its own beep, and how loud over music.
 - Consumption scale (`Drv1AvlFuelE`), and some scales still unknown (BrakePressure, DR_Slope).
 - Bluetooth at startup: where v74 picks the start source is not found yet ([docs/14](../14-bluetooth-startup.md)).

@@ -24,31 +24,9 @@
         }
         return o;
     }
-    // The car chosen in the designer's car setup (js/car-profile.js, written by the builder), or null. Each part is
-    // used only when it is complete and sane; anything else keeps the ND1 1.5 values below.
-    function isInt(x) { return typeof x === 'number' && isFinite(x) && Math.floor(x) === x; }
-    function isPos(x) { return typeof x === 'number' && isFinite(x) && x > 0; }
-    function carProfile(p) {
-        if (!p || typeof p !== 'object') return null;
-        var r = p.rpm, out = {};
-        if (r && isInt(r.amber) && isInt(r.red) && isInt(r.shift) && isInt(r.limit) && isInt(r.max) &&
-                1000 < r.amber && r.amber <= r.red && r.red <= r.shift && r.shift <= r.limit && r.limit <= r.max &&
-                r.max <= 15000)
-            out.rpm = { amber: r.amber, red: r.red, shift: r.shift, limit: r.limit, max: r.max };
-        if (p.ratios && p.ratios.length && p.ratios.every(isPos) && isPos(p.finalDrive) && isPos(p.circumference))
-            out.gearing = { ratios: p.ratios, finalDrive: p.finalDrive, circumference: p.circumference };
-        if (isPos(p.ratedPower) && isPos(p.powerRpm) && isPos(p.ratedTorque) && isPos(p.torqueRpm))
-            out.power = { ps: p.ratedPower, psRpm: p.powerRpm, nm: p.ratedTorque, nmRpm: p.torqueRpm };
-        out.label = typeof p.label === 'string' ? p.label : '';
-        out.units = p.units && typeof p.units === 'object' ? p.units : null;
-        // The built-in styles with the shift sound on, chosen in the MiatOff app (custom pages carry their own).
-        out.shiftSound = {};
-        if (p.shiftSound && p.shiftSound.length) {
-            for (var k = 0; k < p.shiftSound.length; k++) if (typeof p.shiftSound[k] === 'string') out.shiftSound[p.shiftSound[k]] = true;
-        }
-        return out;
-    }
-    var CAR = carProfile(W.MeterCarProfile) || {};
+    // The car chosen in the designer's car setup (js/car-profile.js), checked part by part in data.js (the simulator
+    // reads it there too); a part that is missing or not sane keeps the ND1 1.5 values below.
+    var CAR = D.carProfile(W.MeterCarProfile) || {};
     // Display units of the car profile (metric without one). Values stay canonical: convert only where text is drawn.
     var UNITS = CAR.units || W.MeterUnits.METRIC;
     // du: a canonical value in the display unit; ul: the label of that unit ('°C', 'mph', 'mpg US', ...).
