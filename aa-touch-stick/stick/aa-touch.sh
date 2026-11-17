@@ -693,6 +693,10 @@ cfg_backup() {  # cfg_backup <key>: where the stock copy is kept
 }
 
 attrs_ok() { [ "$CHECK_ATTRS" = 0 ] || [ "$(attrs_of "$1")" = "$CFG_MODE $CFG_OWNER" ]; }
+# For reading the state of a file already on the unit: the stock mode with the stock owner, or with root (0:0), which
+# other tunes leave behind when they copy files in as root. The content hash still has to match; our own publish
+# replaces the file with a fresh CFG_MODE CFG_OWNER one, so the end state is clean. Staged and read-back files use attrs_ok.
+attrs_live_ok() { [ "$CHECK_ATTRS" = 0 ] || [ "$(attrs_of "$1")" = "$CFG_MODE $CFG_OWNER" ] || [ "$(attrs_of "$1")" = "$CFG_MODE 0:0" ]; }
 
 # sm_variant <file>: two chars, AA touch (0 1) and the boot trim char (see
 # SM_TABLE); empty when the file is none of the 64 known sm.conf files.
@@ -740,7 +744,7 @@ sys_part_state() {
     local v
     v=$(sys_variant "$2")
     [ -n "$v" ] || { echo unknown; return 0; }
-    attrs_ok "$2" || { echo unknown; return 0; }
+    attrs_live_ok "$2" || { echo unknown; return 0; }
     if [ "$1" = menu ]; then
         echo "${v#?}"
     elif [ "${v%?}" = 1 ]; then
@@ -777,7 +781,7 @@ file_state() {
             return 0
         fi
     fi
-    attrs_ok "$2" || { echo unknown; return 0; }
+    attrs_live_ok "$2" || { echo unknown; return 0; }
     echo "$s"
 }
 
@@ -1919,7 +1923,7 @@ image_set_state() {  # stock | patched | partial | unknown
         # one stat for all: "mode uid:gid" per file, all must be the stock attributes
         # shellcheck disable=SC2046
         (cd "$dir" && stat -c '%a %u:%g' $(image_names "$set")) 2>/dev/null | \
-            awk -v want="$CFG_MODE $CFG_OWNER" -v n="$(image_names "$set" | wc -l)" '$0 == want { ok++ } END { exit ok == n ? 0 : 1 }' || \
+            awk -v want="$CFG_MODE $CFG_OWNER" -v root="$CFG_MODE 0:0" -v n="$(image_names "$set" | wc -l)" '$0 == want || $0 == root { ok++ } END { exit ok == n ? 0 : 1 }' || \
             { echo unknown; return 0; }
     fi
     image_check "$set" live | awk '
