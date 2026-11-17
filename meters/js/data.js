@@ -124,37 +124,73 @@
         ingest(obj);
     }
 
-    // ------------------------------------------------------------------ simulator
-    // A 1.5 ND1 lapping an imaginary circuit: pull through the gears, brake, corner, repeat.
-    var RATIO = [0, 5.087, 2.991, 2.035, 1.594, 1.286, 1.000], FINAL = 2.866, CIRC = 1.89;
-    // Upshift halfway between the shift point and the limiter (7200 and 7500); in the lap's top gear, brake at 6/7
-    // of that.
-    var SHIFT = 7350, LIFT = 6300;
-    // Another car (js/car-profile.js) drives with its own gearing and rev limits, or the gauges would show the
-    // wrong gear and rev past its limiter. As in app.js: a part is used only when it is complete and sane.
+    // ------------------------------------------------------------------ car profile
+    // The car chosen in the designer's car setup (js/car-profile.js, written by the builder), or null. Each part is
+    // used only when it is complete and sane; anything else keeps the ND1 1.5 values. Shared with app.js (which loads
+    // after this file), so the simulator and the gauges always agree on which parts of a profile count. Never throws:
+    // this runs at load for every source, the car's live poll included.
     function isInt(x) { return typeof x === 'number' && isFinite(x) && Math.floor(x) === x; }
     function isPos(x) { return typeof x === 'number' && isFinite(x) && x > 0; }
-    (function (p) {
-        if (!p || typeof p !== 'object') return;
-        var r = p.rpm;
-        if (p.ratios && p.ratios.length && p.ratios.every(isPos) && isPos(p.finalDrive) && isPos(p.circumference)) {
-            RATIO = [0].concat(p.ratios); FINAL = p.finalDrive; CIRC = p.circumference;
-        }
+    function isList(x) { return Object.prototype.toString.call(x) === '[object Array]'; }
+    function carProfile(p) {
+        if (!p || typeof p !== 'object') return null;
+        var r = p.rpm, out = {}, k;
         if (r && isInt(r.amber) && isInt(r.red) && isInt(r.shift) && isInt(r.limit) && isInt(r.max) &&
                 1000 < r.amber && r.amber <= r.red && r.red <= r.shift && r.shift <= r.limit && r.limit <= r.max &&
-                r.max <= 15000) {
-            SHIFT = (r.shift + r.limit) / 2; LIFT = SHIFT * 6 / 7;
+                r.max <= 15000)
+            out.rpm = { amber: r.amber, red: r.red, shift: r.shift, limit: r.limit, max: r.max };
+        if (isList(p.ratios) && p.ratios.length && p.ratios.every(isPos) && isPos(p.finalDrive) && isPos(p.circumference))
+            out.gearing = { ratios: p.ratios, finalDrive: p.finalDrive, circumference: p.circumference };
+        if (isPos(p.ratedPower) && isPos(p.powerRpm) && isPos(p.ratedTorque) && isPos(p.torqueRpm))
+            out.power = { ps: p.ratedPower, psRpm: p.powerRpm, nm: p.ratedTorque, nmRpm: p.torqueRpm };
+        out.label = typeof p.label === 'string' ? p.label : '';
+        out.units = p.units && typeof p.units === 'object' ? p.units : null;
+        // The built-in styles with the shift sound on, chosen in the MiatOff app (custom pages carry their own).
+        out.shiftSound = {};
+        if (isList(p.shiftSound)) {
+            for (k = 0; k < p.shiftSound.length; k++) if (typeof p.shiftSound[k] === 'string') out.shiftSound[p.shiftSound[k]] = true;
         }
-    })(W.MeterCarProfile);
+        return out;
+    }
+    D.carProfile = carProfile;
+
+    // ------------------------------------------------------------------ simulator
+    // A 1.5 ND1 lapping an imaginary circuit: pull through the gears, brake, corner, repeat. Another car's profile
+    // brings its own gearing and rev limits, or the gauges would show the wrong gear and rev past its limiter.
+    // A preview on the PC only: the car runs Meters with ?src=poll:live.txt.
+    var RATIO = [0, 5.087, 2.991, 2.035, 1.594, 1.286, 1.000], FINAL = 2.866, CIRC = 1.89;
+    // Upshift halfway between the shift point and the limiter (7200 and 7500), but at least LIMIT_GAP below the
+    // limiter so the lag of one step and the rpm noise stay under it; in the lap's top gear, brake at 6/7 of that.
+    var LIMIT_GAP = 100, SHIFT = 7350, LIFT = 6300;
+    var SIM_CAR = carProfile(W.MeterCarProfile) || {};
+    if (SIM_CAR.gearing) {
+        RATIO = [0].concat(SIM_CAR.gearing.ratios); FINAL = SIM_CAR.gearing.finalDrive; CIRC = SIM_CAR.gearing.circumference;
+    }
+    if (SIM_CAR.rpm) {
+        SHIFT = Math.min((SIM_CAR.rpm.shift + SIM_CAR.rpm.limit) / 2, SIM_CAR.rpm.limit - LIMIT_GAP);
+        LIFT = SHIFT * 6 / 7;
+    }
     // Full-throttle torque curve shaped like the 1.5's specs (150 Nm at 4800, 131 PS at 7000), so the
-    // estimated power on the POWER page has something realistic to recover.
+    // estimated power on the POWER page has something realistic to recover. Mass and curve stay the ND1's for
+    // every profile.
     var TQ = [[0, 90], [1000, 100], [2000, 122], [3000, 135], [4000, 145], [4800, 150], [5500, 148],
               [6000, 145], [6500, 140], [7000, 134], [7500, 122], [8000, 100]];
+    var MASS = 1050;   // kg
+    // A gear of another car may be too tall to reach its shift point with this engine. It ends once its pull has
+    // fallen below MIN_PULL (m/s²) and to half the best it gave: the ND1 1.5 never gets that low (about 1 m/s² at the
+    // end of 4th), and a tall first gear that starts weak is still free to pull away.
+    var MIN_PULL = 0.5;
     function torqueAt(r) {
         for (var i = 1; i < TQ.length; i++) {
             if (r <= TQ[i][0]) return TQ[i - 1][1] + (TQ[i][1] - TQ[i - 1][1]) * (r - TQ[i - 1][0]) / (TQ[i][0] - TQ[i - 1][0]);
         }
         return TQ[TQ.length - 1][1];
+    }
+    // Acceleration (m/s²) at full throttle in gear g at speed v (m/s) with the engine at rpm r: 85 % driveline,
+    // CdA 0.55, Crr 0.012, wheel radius from the circumference.
+    function pullAt(r, g, v) {
+        return (torqueAt(r) * RATIO[g] * FINAL * 0.85 / (CIRC / (2 * Math.PI))
+            - 0.33 * v * v - 0.012 * MASS * 9.81) / MASS;
     }
 
     function Sim(hz) {
@@ -162,7 +198,7 @@
         this.acc = 0;
         this.v = 0; this.gear = 1; this.rpm = 850;
         this.phase = 'accel'; this.pt = 0; this.lap = 0; this.dir = 1;
-        this.a = 0; this.lat = 0; this.steer = 0; this.thr = 0; this.brk = 0;
+        this.a = 0; this.best = 0; this.lat = 0; this.steer = 0; this.thr = 0; this.brk = 0;
         this.coolant = 62; this.fuel = 71; this.trip = 128.4; this.econ = 6.8; this.t = 0;
     }
     Sim.prototype.rpmFor = function (v, g) {
@@ -173,14 +209,19 @@
         s.t += dt;
         if (s.phase === 'accel') {
             s.thr = 100; s.brk = 0; s.lat = 0; s.steer *= 0.9;
-            // 1050 kg, CdA 0.55, Crr 0.012, 85 % driveline, wheel radius from the circumference
-            s.a = (torqueAt(s.rpm) * RATIO[s.gear] * FINAL * 0.85 / (CIRC / (2 * Math.PI))
-                - 0.33 * s.v * s.v - 0.012 * 1050 * 9.81) / 1050;
-            // Shift late, like on track. A tall gear of another car may run out of pull first: move on then too.
-            if (s.rpm > (s.gear < topGear ? SHIFT : LIFT) || s.a < 0.5) {
+            s.a = pullAt(s.rpm, s.gear, s.v);
+            s.best = Math.max(s.best, s.a);   // the most this gear has pulled since it went in
+            if (s.rpm > (s.gear < topGear ? SHIFT : LIFT)) {   // shift late, like on track
                 if (s.gear < topGear) { s.phase = 'shift'; s.pt = 0.35; s.gear++; }
                 else { s.phase = 'brake'; }
+            } else if (s.a < MIN_PULL && s.a < s.best / 2) {
+                // Out of pull before the shift point: the next gear only if it pulls harder at this speed (it does
+                // when the revs are past the curve, not when drag is what holds the car back), or else brake.
+                if (s.gear < topGear && pullAt(s.rpmFor(s.v, s.gear + 1), s.gear + 1, s.v) > s.a) {
+                    s.phase = 'shift'; s.pt = 0.35; s.gear++;
+                } else { s.phase = 'brake'; }
             }
+            if (s.phase !== 'accel') s.best = 0;
         } else if (s.phase === 'shift') {
             s.thr = 0; s.a = -0.4; s.pt -= dt;
             if (s.pt <= 0) s.phase = 'accel';

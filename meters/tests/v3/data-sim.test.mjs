@@ -7,10 +7,11 @@ import vm from "node:vm";
 
 const source = readFileSync(new URL("../../js/data.js", import.meta.url), "utf8");
 
-// Every sample the simulator emits in `seconds` of driving, without its noise (Math.random fixed at the middle).
-function drive(profile, seconds = 300) {
+// Every sample the simulator emits in `seconds` of driving, without its noise (Math.random fixed at the middle), or
+// with the noise at the top of its range (random 0.999).
+function drive(profile, seconds = 300, random = 0.5) {
   const window = profile === undefined ? {} : { MeterCarProfile: profile };
-  const box = { window, Date, Math: Object.assign(Object.create(Math), { random: () => 0.5 }) };
+  const box = { window, Date, Math: Object.assign(Object.create(Math), { random: () => random }) };
   vm.runInNewContext(source, box);
   const d = window.MeterData, samples = [];
   d.start("sim");
@@ -65,6 +66,8 @@ test("a profile without complete, sane gearing or rev limits keeps the ND1 1.5 v
     { ratios: [3.5, 0, 1.4], finalDrive: 4.1, circumference: 1.89 },       // a gear without a ratio
     { ratios: [], finalDrive: 4.1, circumference: 1.89 },
     { ratios: AUTO.ratios, finalDrive: "4.1", circumference: 1.89 },
+    { ratios: "3.5,2.0", finalDrive: 4.1, circumference: 1.89 },           // not a list: must not throw either
+    { ratios: { length: 2, 0: 3.5, 1: 2.0 }, finalDrive: 4.1, circumference: 1.89 },
     { rpm: { amber: 7000, red: 6000, shift: 7200, limit: 7500, max: 8000 } },   // out of order
     { rpm: { amber: 4000, red: 4500, shift: 4800, limit: 5000 } },         // no max
   ];
@@ -108,9 +111,34 @@ test("the simulator shifts between the shift point and the limiter of the car pr
   assert.equal(JSON.stringify(drive({ rpm: nd1 })), JSON.stringify(drive(undefined)));
 });
 
-test("a gear too tall to reach its shift point does not stop the lap", () => {
-  // 6300 rpm in this single gear is 300 km/h: the simulated engine runs out of pull long before.
-  const samples = drive({ ratios: [1.0], finalDrive: 2.5, circumference: 2.0 });
+test("the shift point stays under the limiter when the profile puts them together", () => {
+  const rpm = { amber: 6000, red: 6500, shift: 7000, limit: 7000, max: 8000 };
+  const samples = drive({ rpm }, 300, 0.999);   // the rpm noise at its highest
+  assert.ok(peak(samples, "rpm") < rpm.limit, `peak ${peak(samples, "rpm")}`);
+  assert.ok(peak(samples, "rpm") > rpm.limit - 200, `peak ${peak(samples, "rpm")}`);
+});
+
+test("a gear too tall to reach its shift point pulls away, then ends the run", () => {
+  // 6300 rpm in this single gear is 300 km/h: the simulated engine runs out of pull long before. It starts weak
+  // (about 0.5 m/s² at standstill), so it must still pull away instead of braking at once.
+  for (const finalDrive of [2.5, 2.0]) {
+    const samples = drive({ ratios: [1.0], finalDrive, circumference: 2.0 }, 600);
+    assert.ok(peak(samples, "speed") > 100, `peak ${peak(samples, "speed")} km/h`);
+    assert.ok(samples.filter((s) => s.throttle === 100).length > samples.length / 2, "mostly at full throttle");
+    assert.ok(laps(samples) > 3, `${laps(samples)} laps`);
+    assert.ok(peak(samples, "rpm") < 6300);
+  }
+});
+
+test("a gear that runs out of pull moves up only into a gear that pulls harder", () => {
+  // A tall 3rd: it ends on drag at about 135 km/h, where 4th pulls even less, so the odd laps brake from 3rd.
+  const car = { ratios: [3.5, 2.2, 0.9, 0.6], finalDrive: 2.9, circumference: 1.95 }, samples = drive(car);
+  assert.equal(peak(samples, "gear"), 3);
   assert.ok(laps(samples) > 3, `${laps(samples)} laps`);
-  assert.ok(peak(samples, "rpm") < 6300);
+});
+
+test("app.js reads the car profile through the same check as the simulator", () => {
+  const app = readFileSync(new URL("../../js/app.js", import.meta.url), "utf8");
+  assert.match(app, /D\.carProfile\(W\.MeterCarProfile\)/);
+  assert.doesNotMatch(app, /function carProfile\(/);
 });
