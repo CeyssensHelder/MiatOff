@@ -38,7 +38,7 @@ const FIELD_LABELS = {
   mass: "Kerb mass",
 };
 export const MARKET_NAMES = {
-  EU: "Europe",
+  EU: "Continental Europe",
   UK: "United Kingdom",
   US: "United States",
   JP: "Japan",
@@ -82,16 +82,16 @@ export function presetById(id) {
 // Options left after the earlier selections. Require an explicit choice when multiple drivetrains match.
 export function resolveChoices(choices) {
   const c = { ...choices };
-  if (!MARKETS.includes(c.market)) c.market = MARKETS[0];
   const pick = (key, list) => {
     if (!list.includes(c[key])) c[key] = list[0];
     return list;
   };
-  let pool = presetsFor(c.market);
+  const options = {};
   c.model ??= modelFor(c.generation);
-  const options = { market: MARKETS };
-  options.model = pick("model", unique(pool.map((p) => modelFor(p.generation))));
-  pool = pool.filter((p) => modelFor(p.generation) === c.model);
+  options.model = pick("model", unique(PRESETS.map((p) => modelFor(p.generation))));
+  let pool = PRESETS.filter((p) => modelFor(p.generation) === c.model);
+  options.market = pick("market", MARKETS.filter((market) => pool.some((p) => p.markets.includes(market))));
+  pool = pool.filter((p) => p.markets.includes(c.market));
   options.generation = pick("generation", unique(pool.map((p) => p.generation)));
   pool = pool.filter((p) => p.generation === c.generation);
   options.engine = pick("engine", unique(pool.map((p) => p.engine)));
@@ -107,7 +107,8 @@ export function resolveChoices(choices) {
   const preset = findPreset(c);
   options.body = pick("body", preset?.bodies ?? []);
   options.tyre = pick("tyre", preset?.tyres ?? []);
-  const units = { ...MARKET_UNITS[c.market], ...(c.units ?? {}) };
+  const savedUnits = c.market === choices.market ? c.units : null;
+  const units = { ...MARKET_UNITS[c.market], ...savedUnits };
   for (const [k, list] of Object.entries(unitChoices))
     if (!list.includes(units[k])) units[k] = MARKET_UNITS[c.market][k];
   c.units = units;
@@ -163,16 +164,18 @@ export function presetValues(preset, { body, tyre }) {
 // Write a preset into project.vehicle. Units go through setUnits so custom scales are converted.
 // Unknown preset values keep the current value and are marked assumed.
 export function applyPreset(project, preset, choices) {
+  const market = MARKETS.includes(choices.market) ? choices.market : MARKETS[0];
+  if (!preset.markets.includes(market))
+    throw Error(preset.label + " is not listed for " + market);
   const { choices: c } = resolveChoices({
     ...choices,
+    market,
     model: modelFor(preset.generation),
     generation: preset.generation,
     engine: preset.engine,
     transmission: preset.transmission,
     drive: preset.drive,
   });
-  if (!preset.markets.includes(c.market))
-    throw Error(preset.label + " is not listed for " + c.market);
   const v = project.vehicle,
     values = presetValues(preset, c),
     assumed = [];
@@ -246,12 +249,14 @@ const fmt = (field, value, units) => {
   return value + ({ circumference: " m", mass: " kg" }[field] ?? "");
 };
 
+const SETUP_STEPS = ["model", "market", "car", "units"];
+
 // The dialog. api: { command(name, fn) (inline errors), lastError(), vehicle(), preferences, openDialog(id), notify(text) }
 export class CarSetup {
   constructor(api) {
     this.api = api;
     this.$ = (id) => document.getElementById(id);
-    this.step = 1;
+    this.step = 0;
     this.firstRun = false;
     this.choices = null;
     const $ = this.$;
@@ -293,16 +298,11 @@ export class CarSetup {
     };
     $("setup-form").onsubmit = (e) => {
       e.preventDefault();
-      if (this.step === 1) {
-        this.step = 2;
-        this.render();
-        $("setup-unit-speed").focus();
-      } else this.apply();
+      if ($("setup-next").disabled) return;
+      if (this.step === SETUP_STEPS.length - 1) this.apply();
+      else this.showStep(this.step + 1);
     };
-    $("setup-back").onclick = () => {
-      this.step = 1;
-      this.render();
-    };
+    $("setup-back").onclick = () => this.showStep(this.step - 1);
     // Leaving the first run without a choice keeps the profile and is not asked again.
     // Remembered right away (the close event comes a task later, after a quick reload could already have happened).
     const dismiss = () => {
@@ -321,7 +321,7 @@ export class CarSetup {
   }
   open({ firstRun = false } = {}) {
     this.firstRun = firstRun;
-    this.step = 1;
+    this.step = 0;
     this.choices = choicesFromVehicle(this.api.vehicle());
     this.$("setup-error").textContent = "";
     this.$("setup-intro").textContent = firstRun
@@ -333,8 +333,14 @@ export class CarSetup {
     this.render();
     this.api.openDialog("setup-dialog");
   }
+  showStep(step) {
+    this.step = step;
+    this.render();
+    this.$("setup-title").focus();
+  }
   render() {
     const $ = this.$,
+      stage = SETUP_STEPS[this.step],
       { choices, options, preset } = resolveChoices(this.choices);
     this.choices = choices;
     this.preset = preset;
@@ -372,21 +378,26 @@ export class CarSetup {
     for (const [k, u] of Object.entries(choices.units))
       $("setup-unit-" + k).value = u;
     $("setup-margin").value = String(choices.margin);
-    $("setup-car").hidden = this.step !== 1;
-    $("setup-preset").hidden = this.step !== 1 || !preset || !preset.drive;
+    for (const section of SETUP_STEPS) $("setup-step-" + section).hidden = stage !== section;
+    $("setup-preset").hidden = !preset?.drive;
     $("setup-preset").textContent = preset?.label ?? "";
-    $("setup-intro").hidden = this.step !== 1;
-    $("setup-units").hidden = this.step !== 2;
-    $("setup-back").hidden = this.step !== 2;
-    $("setup-next").textContent = this.step === 1 ? "Next" : "Apply";
-    $("setup-next").disabled = !preset;
-    $("setup-title").textContent =
-      this.step === 1 ? "Your car" : "Units and summary";
-    if (!preset) {
-      $("setup-error").textContent = options.drive.length > 1 ? "Choose FWD or AWD." : "No preset for this combination yet.";
-      return;
-    }
+    $("setup-intro").hidden = stage !== "model";
+    $("setup-back").hidden = stage === "model";
+    $("setup-next").textContent = stage === "units" ? "Apply" : "Next";
+    const needsPreset = stage === "car" || stage === "units";
+    $("setup-next").disabled = needsPreset && !preset;
+    const marketName = MARKET_NAMES[choices.market];
+    const titles = {
+      model: "Choose your Mazda",
+      market: "Market for " + choices.model,
+      car: choices.model + " · " + marketName,
+      units: "Units and summary",
+    };
+    $("setup-title").textContent = titles[stage];
     $("setup-error").textContent = "";
+    if (needsPreset && !preset)
+      $("setup-error").textContent = options.drive.length > 1 ? "Choose FWD or AWD." : "No preset for this combination yet.";
+    if (stage !== "units" || !preset) return;
     const values = presetValues(preset, choices),
       warnings = warningRpm(
         values["rpm.limit"].value ?? this.api.vehicle().rpm.limit,

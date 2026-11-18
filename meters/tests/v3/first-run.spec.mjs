@@ -14,8 +14,10 @@ const vehicle = (page) =>
 test("first run asks for the car, applies a US preset, and does not ask again", async ({ page }) => {
   const db = await open(page);
   await expect(dialog(page)).toBeVisible();
-  await expect(page.locator("#setup-title")).toHaveText("Your car");
+  await expect(page.locator("#setup-title")).toHaveText("Choose your Mazda");
+  await page.locator("#setup-next").click();
   await page.locator("#setup-market").selectOption("US");
+  await page.locator("#setup-next").click();
   const preset = await page.evaluate(async () => {
     const S = await import("./v3/car-setup.mjs");
     const c = S.resolveChoices({ market: "US" });
@@ -58,23 +60,41 @@ test("first run asks for the car, applies a US preset, and does not ask again", 
   await expect(page.locator("#setup-skip")).toHaveText("Cancel");
 });
 
-test("choosing an additional model filters the market and requires the CX-5 drivetrain", async ({ page }) => {
-  const db = await open(page);
+test("the model narrows market choices, then market narrows the detailed specs", async ({ page }) => {
+  await open(page);
   const model = page.locator("#setup-model");
+  const market = page.locator("#setup-market");
+  const engine = page.locator("#setup-engine");
   const drive = page.locator("#setup-drive");
   const next = page.locator("#setup-next");
+  const back = page.locator("#setup-back");
   await expect(model).toHaveValue("MX-5");
-  await expect(drive).toBeHidden();
+  await expect(market).toBeHidden();
+  await expect(engine).toBeHidden();
   await expect(model.locator("option")).toHaveText(["MX-5", "CX-5", "Mazda3"]);
   await model.selectOption("Mazda3");
+  await next.click();
+  await expect(market.locator("option")).toHaveText(["Continental Europe", "United Kingdom", "United States"]);
+  await expect(engine).toBeHidden();
+  await next.click();
   await expect(page.locator("#setup-preset")).toHaveText("2016 Mazda3 Center-Line (Germany)");
   await expect(page.locator("#setup-generation")).toHaveValue("BM");
-  await page.locator("#setup-market").selectOption("UK");
-  await expect(model.locator("option")).toHaveText(["MX-5", "Mazda3"]);
-  await model.selectOption("Mazda3");
+  await back.click();
+  await market.selectOption("UK");
+  await next.click();
   await expect(page.locator("#setup-preset")).toHaveText("2018 Mazda3 Sport Black");
-  await page.locator("#setup-market").selectOption("US");
+  await back.click();
+  await back.click();
   await model.selectOption("CX-5");
+  await next.click();
+  await expect(market.locator("option")).toHaveText(["Continental Europe", "United States"]);
+  await expect(market).toHaveValue("EU");
+  await next.click();
+  await expect(engine).toHaveValue("2.0");
+  await back.click();
+  await market.selectOption("US");
+  await next.click();
+  await expect(engine).toHaveValue("2.5");
   await expect(drive).toHaveValue("");
   await expect(next).toBeDisabled();
   await drive.selectOption("AWD");
@@ -86,11 +106,12 @@ test("choosing an additional model filters the market and requires the CX-5 driv
   expect(await vehicle(page)).toMatchObject({
     preset: "cx5-kf-2019-us-sport-awd", finalDrive: 4.624, tyre: "225/65R17", year: 2019,
   });
-  await page.evaluate(() => __studio.flush());
-  await open(page, db);
   await page.locator("#project-open").click();
   await page.locator("#car-setup-open").click();
   await expect(model).toHaveValue("CX-5");
+  await next.click();
+  await expect(market).toHaveValue("US");
+  await next.click();
   await expect(drive).toHaveValue("AWD");
 });
 
@@ -116,6 +137,7 @@ test("an existing draft is asked once, prefilled from its vehicle", async ({ pag
   await page.evaluate(() => __studio.flush());
   await open(page, db);
   await expect(dialog(page)).toBeVisible();
+  await page.locator("#setup-next").click();
   await expect(page.locator("#setup-market")).toHaveValue("UK");
   await page.keyboard.press("Escape");
   await expect(dialog(page)).toBeHidden();

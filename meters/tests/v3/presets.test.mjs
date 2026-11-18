@@ -105,13 +105,21 @@ test("choices only offer what exists for the region", () => {
 });
 
 test("market and model filter the configurations and an ambiguous drivetrain needs a choice", () => {
-  assert.deepEqual(resolveChoices({ market: "JP" }).options.model, ["MX-5"]);
-  assert.deepEqual(resolveChoices({ market: "EU" }).options.model, ["MX-5", "CX-5", "Mazda3"]);
+  const jp = resolveChoices({ market: "JP" });
+  assert.deepEqual(jp.options.model, ["MX-5", "CX-5", "Mazda3"]);
+  assert.deepEqual(jp.options.market, ["EU", "UK", "US", "JP"]);
   const euMazda3 = resolveChoices({ market: "EU", model: "Mazda3" }).preset;
   assert.equal(euMazda3.generation, "BM");
   assert.equal(euMazda3.finalDrive, 3.619);
-  assert.deepEqual(resolveChoices({ market: "UK" }).options.model, ["MX-5", "Mazda3"]);
+  assert.deepEqual(resolveChoices({ model: "Mazda3" }).options.market, ["EU", "UK", "US"]);
+  const fallback = resolveChoices({ model: "CX-5", market: "UK", units: MARKET_UNITS.UK });
+  assert.deepEqual(fallback.options.market, ["EU", "US"]);
+  assert.equal(fallback.choices.market, "EU");
+  assert.deepEqual(fallback.choices.units, MARKET_UNITS.EU);
+  assert.deepEqual(fallback.options.engine, ["2.0"]);
+  assert.throws(() => applyPreset(M.defaults(), fallback.preset, { market: "UK" }), /not listed for UK/);
   const us = resolveChoices({ market: "US", model: "CX-5" });
+  assert.deepEqual(us.options.engine, ["2.5"]);
   assert.deepEqual(us.options.drive, ["FWD", "AWD"]);
   assert.equal(us.preset, null);
   for (const [drive, finalDrive] of [["FWD", 4.325], ["AWD", 4.624]]) {

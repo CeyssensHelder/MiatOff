@@ -564,24 +564,31 @@
     <dialog id="setup-dialog" class="wide-dialog">
       <form id="setup-form">
         <div class="dialog-heading">
-          <h2 id="setup-title">Your car</h2>
+          <h2 id="setup-title" tabindex="-1">Choose your Mazda</h2>
           <button type="button" data-close aria-label="Close car setup">
             ×
           </button>
         </div>
         <p id="setup-intro" class="hint"></p>
-        <div id="setup-car" class="setup-grid">
-          <label>Region<select id="setup-market"></select></label>
+        <div id="setup-step-model">
           <label>Model<select id="setup-model"></select></label>
-          <label>Generation<select id="setup-generation"></select></label>
-          <label>Engine<select id="setup-engine"></select></label>
-          <label>Gearbox<select id="setup-transmission"></select></label>
-          <label hidden>Drivetrain<select id="setup-drive"></select></label>
-          <label>Body<select id="setup-body"></select></label>
-          <label>Tyre size<select id="setup-tyre"></select></label>
         </div>
-        <p id="setup-preset" hidden></p>
-        <div id="setup-units" hidden>
+        <div id="setup-step-market" hidden>
+          <p class="hint">Choose the market where your car was originally sold.</p>
+          <label>Market<select id="setup-market"></select></label>
+        </div>
+        <div id="setup-step-car" hidden>
+          <div class="setup-grid">
+            <label>Generation<select id="setup-generation"></select></label>
+            <label>Engine<select id="setup-engine"></select></label>
+            <label>Gearbox<select id="setup-transmission"></select></label>
+            <label hidden>Drivetrain<select id="setup-drive"></select></label>
+            <label>Body<select id="setup-body"></select></label>
+            <label>Tyre size<select id="setup-tyre"></select></label>
+          </div>
+          <p id="setup-preset" hidden></p>
+        </div>
+        <div id="setup-step-units" hidden>
           <div id="setup-unit-fields" class="setup-grid"></div>
           <label
             >Turn the gauges red<select id="setup-margin"></select

@@ -881,7 +881,7 @@ dialog label > select {
   color: var(--muted);
   padding-bottom: 6px;
 }
-#setup-units label {
+#setup-step-units label {
   margin: 8px 0;
 }
 #setup-summary th,
