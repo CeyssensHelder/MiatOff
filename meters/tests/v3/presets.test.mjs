@@ -37,7 +37,7 @@ test("presets are well formed and their sourced fields name a source", () => {
     assert.ok(p.bodies.length && p.bodies.every((b) => VEHICLE_BODIES.includes(b)));
     for (const t of p.tyres) assert.ok(circumferenceFor(t), p.id + " tyre " + t);
     assert.deepEqual(Object.keys(p.rpm), ["limit"], p.id + " carries only the limiter");
-    assert.ok(Number.isInteger(p.rpm.limit) && p.rpm.limit > 5000, p.id + " limit");
+    assert.ok(Number.isInteger(p.rpm.limit) && p.rpm.limit > p.powerRpm, p.id + " limit");
     assert.equal(p.ratios.length, 6, p.id + " has six gears");
     const cited = new Set(p.sources.flatMap((s) => s.fields));
     for (const f of p.verified) {
@@ -93,11 +93,16 @@ test("dashboard warnings come before the limiter so there is time to react", () 
   assert.doesNotMatch(project.vehicle.provenance, /edited by hand/);
 });
 
-test("choices only offer what exists for the region", () => {
-  for (const market of MARKETS) {
-    const { options } = resolveChoices({ market });
-    for (const g of options.generation)
-      assert.ok(PRESETS.some((p) => p.generation === g && p.markets.includes(market)));
+test("every model and market in the picker has a preset", () => {
+  for (const [model, generations] of Object.entries(VEHICLE_MODELS)) {
+    const { options } = resolveChoices({ model });
+    assert.ok(options.market.length, model);
+    for (const market of options.market) {
+      const details = resolveChoices({ model, market });
+      for (const generation of details.options.generation)
+        assert.ok(generations.includes(generation) &&
+          PRESETS.some((p) => p.generation === generation && p.markets.includes(market)));
+    }
   }
   const { choices, preset } = resolveChoices({ market: "EU", generation: "nope" });
   assert.ok(preset, "falls back to an existing preset");
@@ -106,14 +111,14 @@ test("choices only offer what exists for the region", () => {
 
 test("market and model filter the configurations and an ambiguous drivetrain needs a choice", () => {
   const jp = resolveChoices({ market: "JP" });
-  assert.deepEqual(jp.options.model, ["MX-5", "CX-5", "Mazda3"]);
+  assert.deepEqual(jp.options.model, Object.keys(VEHICLE_MODELS));
   assert.deepEqual(jp.options.market, ["EU", "UK", "US", "JP"]);
   const euMazda3 = resolveChoices({ market: "EU", model: "Mazda3" }).preset;
   assert.equal(euMazda3.generation, "BM");
   assert.equal(euMazda3.finalDrive, 3.619);
   assert.deepEqual(resolveChoices({ model: "Mazda3" }).options.market, ["EU", "UK", "US"]);
   const fallback = resolveChoices({ model: "CX-5", market: "UK", units: MARKET_UNITS.UK });
-  assert.deepEqual(fallback.options.market, ["EU", "US"]);
+  assert.deepEqual(fallback.options.market, ["EU", "US", "AU"]);
   assert.equal(fallback.choices.market, "EU");
   assert.deepEqual(fallback.choices.units, MARKET_UNITS.EU);
   assert.deepEqual(fallback.options.engine, ["2.0"]);

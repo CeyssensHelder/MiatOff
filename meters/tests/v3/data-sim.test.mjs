@@ -88,7 +88,7 @@ test("the simulator drives with the gearing of the car profile", () => {
 
 test("the new Mazda presets reach the simulator with their own gearing", () => {
   const presets = PRESETS.filter((preset) => preset.drive);
-  assert.equal(presets.length, 6);
+  assert.equal(presets.length, 26);
   for (const preset of presets) {
     const project = defaults();
     applyPreset(project, preset, { market: preset.markets[0] });

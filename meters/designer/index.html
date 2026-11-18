@@ -570,8 +570,103 @@
           </button>
         </div>
         <p id="setup-intro" class="hint"></p>
-        <div id="setup-step-model">
-          <label>Model<select id="setup-model"></select></label>
+        <div id="setup-step-model" class="setup-model-grid" role="radiogroup" aria-label="Mazda model">
+          <label class="setup-model-card">
+            <input type="radio" name="setup-model" value="MX-5" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <path class="setup-model-body" d="M17 51 14 45 19 40 44 37 67 34 82 24 90 24 102 34 132 36 162 38 181 42 186 48 182 54H161a13 13 0 0 0-26 0H65a13 13 0 0 0-26 0H23Z" />
+              <path class="setup-model-detail" d="M83 25 92 35m12 1-8 15m-68-9 14-2m124 2 14 4" />
+              <circle cx="52" cy="54" r="10" />
+              <circle cx="148" cy="54" r="10" />
+              <circle class="setup-model-detail" cx="52" cy="54" r="4" />
+              <circle class="setup-model-detail" cx="148" cy="54" r="4" />
+            </svg>
+            <span>MX-5</span>
+          </label>
+          <label class="setup-model-card">
+            <input type="radio" name="setup-model" value="Mazda2" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <path class="setup-model-body" d="M20 53 16 47 19 39 28 34 39 20Q44 15 53 15H90Q111 16 131 36l32 3 14 6 5 7-9 4h-16a13 13 0 0 0-26 0H65a13 13 0 0 0-26 0H26Z" />
+              <path class="setup-model-detail" d="M36 34 48 21h41q16 1 32 15H37m31-15-1 14m25-13 5 14m0 4-3 14m-66-18 8 2m127 4 12 4" />
+              <circle cx="52" cy="56" r="10" />
+              <circle cx="144" cy="56" r="10" />
+              <circle class="setup-model-detail" cx="52" cy="56" r="4" />
+              <circle class="setup-model-detail" cx="144" cy="56" r="4" />
+            </svg>
+            <span>Mazda2</span>
+          </label>
+          <label class="setup-model-card">
+            <input type="radio" name="setup-model" value="Mazda3" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <path class="setup-model-body" d="M14 51 13 46 20 41 39 39 54 28Q68 18 87 18h16q16 2 38 20l26 3 16 5 4 7-9 4h-18a14 14 0 0 0-28 0H64a14 14 0 0 0-28 0H22Z" />
+              <path class="setup-model-detail" d="M51 38 69 25q8-3 23-3h9q13 2 29 16H51m37-15-2 15m7 4-6 13m-66-12 16 1m118-1 22 5" />
+              <circle cx="50" cy="57" r="10" />
+              <circle cx="146" cy="57" r="10" />
+              <circle class="setup-model-detail" cx="50" cy="57" r="4" />
+              <circle class="setup-model-detail" cx="146" cy="57" r="4" />
+            </svg>
+            <span>Mazda3</span>
+          </label>
+          <label class="setup-model-card">
+            <input type="radio" name="setup-model" value="Mazda6" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <path class="setup-model-body" d="M11 53 12 45 23 40l27-3 22-13q12-7 36-6 18 1 37 20l32 3 12 6 3 7-10 4h-21a14 14 0 0 0-28 0H65a14 14 0 0 0-28 0H20Z" />
+              <path class="setup-model-detail" d="M57 38 78 26q9-4 22-4h10q12 1 25 16H57m37-15-2 15m3 4-4 14m-69-13 21-1m122 0 20 6" />
+              <circle cx="51" cy="58" r="10" />
+              <circle cx="147" cy="58" r="10" />
+              <circle class="setup-model-detail" cx="51" cy="58" r="4" />
+              <circle class="setup-model-detail" cx="147" cy="58" r="4" />
+            </svg>
+            <span>Mazda6</span>
+          </label>
+          <label class="setup-model-card">
+            <input type="radio" name="setup-model" value="CX-3" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <path class="setup-model-body" d="M17 52 16 44 20 37 32 34 45 22q9-7 26-7h24q20 0 41 19l26 5 15 5 6 8-8 7h-16a14 14 0 0 0-28 0H66a14 14 0 0 0-28 0H24Z" />
+              <path class="setup-model-detail" d="M38 34 49 25q8-5 23-5h23q16 1 32 16H40m36-16-2 15m23-15 9 15m-9 5-5 16m72-13 13 4" />
+              <circle cx="52" cy="59" r="11" />
+              <circle cx="145" cy="59" r="11" />
+              <circle class="setup-model-detail" cx="52" cy="59" r="4" />
+              <circle class="setup-model-detail" cx="145" cy="59" r="4" />
+            </svg>
+            <span>CX-3</span>
+          </label>
+          <label class="setup-model-card">
+            <input type="radio" name="setup-model" value="CX-5" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <path class="setup-model-body" d="M12 53 14 37 22 31 38 19q8-5 18-5h47q17 0 35 19l35 6 12 7 4 9-10 6h-17a14 14 0 0 0-28 0H65a14 14 0 0 0-28 0H22Z" />
+              <path class="setup-model-detail" d="M25 33 43 22q5-3 16-3h42q13 0 28 15H28m43-15-2 15m33-15 6 15m-12 5-5 20m76-16 14 4" />
+              <circle cx="51" cy="61" r="11" />
+              <circle cx="148" cy="61" r="11" />
+              <circle class="setup-model-detail" cx="51" cy="61" r="4" />
+              <circle class="setup-model-detail" cx="148" cy="61" r="4" />
+            </svg>
+            <span>CX-5</span>
+          </label>
+          <label class="setup-model-card">
+            <input type="radio" name="setup-model" value="CX-8" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <path class="setup-model-body" d="M9 54 12 35 19 28 28 19q7-5 21-6h60q18 0 39 21l27 5 12 7 4 10-9 6h-15a15 15 0 0 0-30 0H63a15 15 0 0 0-30 0H19Z" />
+              <path class="setup-model-detail" d="M19 33 32 22q5-4 18-4h57q14 0 29 16H20m29-16-3 15m34-15-1 16m28-16 7 16m-33 5-3 20m91-16 15 5" />
+              <circle cx="48" cy="62" r="11" />
+              <circle cx="152" cy="62" r="11" />
+              <circle class="setup-model-detail" cx="48" cy="62" r="4" />
+              <circle class="setup-model-detail" cx="152" cy="62" r="4" />
+            </svg>
+            <span>CX-8</span>
+          </label>
+          <label class="setup-model-card">
+            <input type="radio" name="setup-model" value="CX-9" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <path class="setup-model-body" d="M8 52 11 36 16 30 34 19q8-5 21-6h57q20 0 40 21l28 5 12 7 3 10-10 6h-15a15 15 0 0 0-30 0H61a15 15 0 0 0-30 0H19Z" />
+              <path class="setup-model-detail" d="M22 33 38 22q6-4 18-4h55q16 0 29 16H24m33-16-5 15m37-15-1 16m23-16 8 16m-29 5-3 20m84-16 16 4" />
+              <circle cx="46" cy="62" r="11" />
+              <circle cx="155" cy="62" r="11" />
+              <circle class="setup-model-detail" cx="46" cy="62" r="4" />
+              <circle class="setup-model-detail" cx="155" cy="62" r="4" />
+            </svg>
+            <span>CX-9</span>
+          </label>
         </div>
         <div id="setup-step-market" hidden>
           <p class="hint">Choose the market where your car was originally sold.</p>

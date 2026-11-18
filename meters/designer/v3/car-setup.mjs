@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // First-run car setup: choose a car and units, fill the project's vehicle profile from a sourced preset.
-import { PRESETS, MARKETS, MARKET_UNITS, VEHICLE_MODELS } from "./presets.mjs";
+import { PRESETS, MARKETS, MARKET_UNITS, VEHICLE_MODELS, ENGINE_NAMES } from "./presets.mjs";
 import { unitChoices, setUnits, toUnit } from "./signals.mjs";
 
 // Vehicle specifications a preset can supply, in display order. Anything not backed by a source stays "assumed".
@@ -27,7 +27,7 @@ const FIELD_LABELS = {
   "rpm.amber": "Amber from",
   "rpm.red": "Red from",
   "rpm.shift": "Shift lights flash at",
-  "rpm.limit": "Limiter (redline)",
+  "rpm.limit": "Redline reference",
   ratios: "Gear ratios",
   finalDrive: "Final drive",
   circumference: "Rolling circumference",
@@ -42,6 +42,7 @@ export const MARKET_NAMES = {
   UK: "United Kingdom",
   US: "United States",
   JP: "Japan",
+  AU: "Australia",
 };
 
 // Tyre "195/50R16" -> rolling circumference in metres (geometry only: rim + two sidewalls).
@@ -88,7 +89,7 @@ export function resolveChoices(choices) {
   };
   const options = {};
   c.model ??= modelFor(c.generation);
-  options.model = pick("model", unique(PRESETS.map((p) => modelFor(p.generation))));
+  options.model = pick("model", Object.keys(VEHICLE_MODELS));
   let pool = PRESETS.filter((p) => modelFor(p.generation) === c.model);
   options.market = pick("market", MARKETS.filter((market) => pool.some((p) => p.markets.includes(market))));
   pool = pool.filter((p) => p.markets.includes(c.market));
@@ -260,12 +261,20 @@ export class CarSetup {
     this.firstRun = false;
     this.choices = null;
     const $ = this.$;
-    for (const key of ["market", "model", "generation", "engine", "transmission", "drive", "body", "tyre"])
+    this.modelCards = [...$("setup-step-model").querySelectorAll("input")];
+    for (const input of this.modelCards) {
+      input.onchange = () => {
+        this.choices.model = input.value;
+        this.choices.drive = undefined;
+        this.render();
+      };
+    }
+    for (const key of ["market", "generation", "engine", "transmission", "drive", "body", "tyre"])
       $("setup-" + key).onchange = () => {
         this.choices[key] = $("setup-" + key).value;
         // A new region brings its own default units.
         if (key === "market") this.choices.units = null;
-        if (["market", "model", "generation", "engine", "transmission"].includes(key))
+        if (["market", "generation", "engine", "transmission"].includes(key))
           this.choices.drive = undefined;
         this.render();
       };
@@ -351,7 +360,7 @@ export class CarSetup {
       el.disabled = list.length < 2;
     };
     fill("market", options.market, (m) => MARKET_NAMES[m] ?? m);
-    fill("model", options.model);
+    for (const input of this.modelCards) input.checked = input.value === choices.model;
     fill("generation", options.generation, (g) => {
       const years = presetsFor(choices.market).filter((p) => p.generation === g).flatMap(
           (p) => p.years ?? [],
@@ -362,7 +371,7 @@ export class CarSetup {
       if (from === to) return `${g} (${from})`;
       return `${g} (${from}–${to >= new Date().getFullYear() ? "" : to})`;
     });
-    fill("engine", options.engine, (e) => e + " L");
+    fill("engine", options.engine, (engine) => ENGINE_NAMES[engine]);
     fill("transmission", options.transmission, (t) =>
       t === "manual" ? "Manual (6-speed)" : "Automatic (6-speed)",
     );

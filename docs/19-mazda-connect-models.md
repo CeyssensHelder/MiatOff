@@ -3,7 +3,7 @@
 MiatOff uses the original Mazda Connect (MZD Connect or 6G). Mazda uses the Mazda Connect name for several generations.
 Use the country of original sale, model year or build date, and trim to identify a candidate. The actual unit's
 version and the file hashes from **Check your car** determine which installer actions can run. The models below
-are research candidates for MiatOff. The Mazda3 and CX-5 presets have been exercised in simulation.
+are research candidates for MiatOff. The model picker includes all eight families. Each choice offers sourced configurations with specific markets, years and trims.
 
 ## Model families
 
@@ -54,7 +54,7 @@ Connect system. The bulletin specifies software 74.00.324 or later.
 
 | Market and model | Examples of documented equipment |
 |---|---|
-| Australia · Mazda2 | The 2021 updated range and later Evolve/GT brochure document 7-inch MZD Connect. The brochures list different power and torque figures, so keep their powertrain data tied to each edition. [2021 range](https://www.mazda.com.au/mazda-news/sporty-new-mazda-2-updated-range/) · [Later Mazda2 brochure](https://www.mazda.com.au/49ba7e/globalassets/brochures/mazda2-digital-brochure.pdf) |
+| Australia · Mazda2 | The 2021 updated range and later Evolve/GT brochure document 7-inch MZD Connect. The brochures list different power and torque figures, so keep their powertrain data tied to each edition. [2021 range](https://www.mazda.com.au/mazda-news/sporty-new-mazda-2-updated-range/) · [Later Mazda2 brochure](https://www.mazda.com.au/4aaf8f/globalassets/brochures/mazda2-digital-brochure.pdf) |
 | Australia · 2022 CX-5 | 8-inch MZD Connect on Maxx, Maxx Sport, Touring and Touring Active. Newer 10.25-inch on GT SP and Akera, and across the 2023 range. [2022 brochure](https://www.mazda.com.au/4aa9fb/globalassets/brochures/owners-brochures/cx-5-digital-brochure.pdf) · [2023 announcement](https://www.mazda.com.au/mazda-news/20221103-new-cx-5-for-2023/) |
 | Australia · 2022 CX-8 | 8-inch MZD Connect on Sport, Touring and Touring SP. Newer 10.25-inch on GT, Asaki and Asaki LE, and across the 2023 range. [2022 brochure](https://www.mazda.com.au/4a2887/globalassets/brochures/owners-brochures/mazda_cx-8_digital_brochure_2022.pdf) · [2023 announcement](https://www.mazda.com.au/mazda-news/new-mazda-cx-8-2023/) |
 | Australia · 2022 CX-9 | Sport has 7-inch MZD Connect, Touring has 9-inch MZD Connect and higher grades have 10.25-inch Mazda Connect. [Mazda Australia brochure](https://www.mazda.com.au/4a2887/globalassets/brochures/owners-brochures/mazda_cx9_digital_brochure_2022.pdf) |
@@ -87,18 +87,26 @@ verified for that configuration. Manufacturer output is reported in the original
 
 | Market and configuration | Forward ratios, 1st to 6th | Final drive | Tyre and kerb mass | Power and torque | Published redline |
 |---|---|---:|---|---|---:|
-| Australia · Mazda2 G15 Evolve hatch, 1.5 FWD 6AT, late brochure edition | 3.529 / 2.025 / 1.348 / 1.000 / 0.742 / 0.594 | 4.060 | 185/60R16 · mass ambiguous in brochure | 81 kW at 6,000 rpm · 142 Nm at 3,500 rpm | — |
+| Australia · 2026 Mazda2 G15 Evolve / GT hatch, 1.5 FWD 6AT | 3.529 / 2.025 / 1.348 / 1.000 / 0.742 / 0.594 | 4.060 | 185/60R16 · 1,109 kg | 81 kW at 6,000 rpm · 142 Nm at 3,500 rpm | — |
+| US · 2018 Mazda6 Sport sedan, 2.5 FWD 6MT | 3.700 / 1.947 / 1.300 / 1.029 / 0.837 / 0.680 | 4.105 | 225/55R17 · 3,326 lb | 187 hp at 6,000 rpm · 186 lb-ft at 4,000 rpm | 6,500 rpm |
+| US · 2018 Mazda6 Sport sedan, 2.5 FWD 6AT | 3.552 / 2.022 / 1.452 / 1.000 / 0.708 / 0.599 | 3.812 | 225/55R17 · 3,427 lb | 187 hp at 6,000 rpm · 186 lb-ft at 4,000 rpm | 6,500 rpm |
+| US · 2018 Mazda6 Grand Touring sedan, 2.5 turbo FWD 6AT | 3.487 / 1.992 / 1.449 / 1.000 / 0.707 / 0.600 | 4.090 | 225/45R19 · 3,560 lb | 227 hp on 87 AKI or 250 hp on 93 AKI at 5,000 rpm · 310 lb-ft at 2,000 rpm | 6,300 rpm |
 | Australia · 2022 Mazda6 Sport sedan, 2.5 FWD 6AT | 3.552 / 2.022 / 1.452 / 1.000 / 0.708 / 0.599 | 4.325 | 225/55R17 · 1,538 kg | 140 kW at 6,000 rpm · 252 Nm at 4,000 rpm | — |
 | Australia · 2022 Mazda6 GT SP sedan, 2.5 turbo FWD 6AT | 3.487 / 1.992 / 1.449 / 1.000 / 0.707 / 0.600 | 4.090 | 225/45R19 · 1,609 kg | 170 kW at 5,000 rpm · 420 Nm at 2,000 rpm | — |
 | Portugal · 2015 CX-3, 1.5 diesel FWD or AWD 6MT, equipped trim | 3.700 / 1.947 / 1.300 / 0.916 / 0.717 / 0.580 | 3.850 FWD or 4.105 AWD | 215/60R16 or 215/50R18 · 1,200 kg FWD or 1,275 kg AWD without driver | 77 kW at 4,000 rpm · 270 Nm at 1,600–2,500 rpm | — |
 | Portugal · 2015 CX-3, 1.5 diesel AWD 6AT, equipped trim | 3.552 / 2.022 / 1.452 / 1.000 / 0.708 / 0.599 | 4.056 | 215/60R16 or 215/50R18 · 1,295 kg without driver | 77 kW at 4,000 rpm · 270 Nm at 1,600–2,500 rpm | — |
 | US · 2019 CX-3 Sport, 2.0 FWD or AWD 6AT | 3.552 / 2.022 / 1.452 / 1.000 / 0.708 / 0.599 | 4.325 | 215/60R16 · 2,809 lb FWD or 2,952 lb AWD | 148 hp at 6,000 rpm · 146 lb-ft at 2,800 rpm | — |
 | Peru · 2024 CX-3 Core, 2.0 FWD 6MT or 6AT | — | — | 215/50R18 · 1,206 kg net MT or 1,236 kg net AT | 147 hp at 6,000 rpm · 195 Nm at 2,800 rpm | — |
+| Australia · 2022 CX-5 Maxx, 2.0 FWD 6MT | 3.700 / 1.947 / 1.300 / 1.029 / 0.837 / 0.680 | 4.705 | 225/65R17 · 1,521 kg | 115 kW at 6,000 rpm · 200 Nm at 4,000 rpm | — |
+| Australia · 2022 CX-5 Maxx, 2.0 FWD 6AT | 3.552 / 2.022 / 1.452 / 1.000 / 0.708 / 0.599 | 4.624 | 225/65R17 · 1,576 kg | 115 kW at 6,000 rpm · 200 Nm at 4,000 rpm | — |
+| Australia · 2022 CX-5 Maxx Sport, 2.5 FWD or AWD 6AT | 3.552 / 2.022 / 1.452 / 1.000 / 0.708 / 0.599 | 4.624 | 225/65R17 · 1,607 kg FWD or 1,659 kg AWD | 140 kW at 6,000 rpm · 252 Nm at 4,000 rpm | — |
+| Australia · 2022 CX-5 Touring Active, 2.2 diesel AWD 6AT | 3.487 / 1.992 / 1.449 / 1.000 / 0.707 / 0.600 | 4.090 | 225/65R17 · 1,732 kg | 140 kW at 4,500 rpm · 450 Nm at 2,000 rpm | — |
 | Australia · 2022 CX-8 Sport, 2.5 FWD 6AT | 3.552 / 2.022 / 1.452 / 1.000 / 0.708 / 0.599 | 4.957 | 225/65R17 · 1,799 kg | 140 kW at 6,000 rpm · 252 Nm at 4,000 rpm | — |
 | Australia · 2022 CX-8 Sport, 2.2 diesel AWD 6AT | 3.487 / 1.992 / 1.449 / 1.000 / 0.707 / 0.600 | 4.111 | 225/65R17 · 1,949 kg | 140 kW at 4,500 rpm · 450 Nm at 2,000 rpm | — |
 | US · 2018 CX-9 Sport, 2.5 turbo FWD or AWD 6AT | 3.487 / 1.992 / 1.449 / 1.000 / 0.707 / 0.600 | 4.411 | 255/60R18 · 4,166 lb FWD or 4,361 lb AWD | 227 hp on 87 AKI or 250 hp on 93 AKI at 5,000 rpm · 310 lb-ft at 2,000 rpm | 6,300 rpm |
 
-- Mazda2 and Mazda6 figures are tied to the Australian brochure editions named in the equipment table. [Mazda2 technical specifications](https://www.mazda.com.au/49ba7e/globalassets/brochures/mazda2-digital-brochure.pdf) · [Mazda6 technical specifications](https://www.mazda.com.au/49de26/globalassets/brochures/owners-brochures/archived/mazda6_2022.pdf)
+- The 2018 US Mazda6 Sport and Grand Touring use the original 8-inch infotainment. The 2022 Australian CX-5 records use the trims with original 8-inch MZD Connect. [Mazda USA Mazda6 specifications](https://www.mazdausa.com/siteassets/pdf/features--specs/2018/mzd6/2018_mazda6_features_specs.pdf) · [Mazda Australia CX-5 specifications](https://www.mazda.com.au/4aa9fb/globalassets/brochures/owners-brochures/cx-5-digital-brochure.pdf)
+- The 2026 Mazda2 and 2022 Mazda6 figures are tied to the Australian brochure editions named in the equipment table. [Mazda2 technical specifications](https://www.mazda.com.au/4aaf8f/globalassets/brochures/mazda2-digital-brochure.pdf) · [Mazda6 technical specifications](https://www.mazda.com.au/49de26/globalassets/brochures/owners-brochures/archived/mazda6_2022.pdf)
 - Mazda Portugal specifies the launch diesel in FWD manual, AWD manual and AWD automatic. Confirm wheel size and MZD Connect for the local trim. [Portugal CX-3 press kit, pp. 6, 13–16](https://pt.mazda-press.com/api/assets/download/fe6bff4a-268c-48cd-852f-94ccee59846d_Pdf?isDownload=false)
 - Mazda USA lists the same CX-3 final drive for both drivetrains. The Peruvian grade has different published engine output, and its brochure identifies the transmission types without publishing their individual ratios. [US CX-3 specifications, pp. 26–27](https://news.mazdausa.com/download/2019-Mazda-CX-3-Press-Kit_Version-1.pdf) · [Peru CX-3 specifications](https://www.pdn.mazda.pe/media/iyph0e5q/2024-03-26-vf_ficha_te-cnica_mazda_cx3_25marzo24.pdf)
 - Both 2022 Australian Sport CX-8 engines appear in the same 8-inch MZD Connect grade. The US CX-9 Sport figures are for that model year and fuel rating. [Australia CX-8 technical specifications](https://www.mazda.com.au/4a2887/globalassets/brochures/owners-brochures/mazda_cx-8_digital_brochure_2022.pdf) · [US CX-9 Sport specifications](https://www.mazdausa.com/siteassets/pdf/features--specs/2018/cx-9/2018-mazda-cx-9-features-specs.pdf)

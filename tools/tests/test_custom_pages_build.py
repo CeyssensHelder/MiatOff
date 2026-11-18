@@ -146,7 +146,7 @@ class CustomPagesBuildTests(unittest.TestCase):
           }})));
         """
         profiles = json.loads(subprocess.check_output(["node", "--input-type=module", "-e", source], cwd=ROOT))
-        self.assertEqual(len(profiles), 6)
+        self.assertEqual(len(profiles), 26)
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "library.sqlite3"
             library = ml.CarProfile(ml.PageLibrary(path))

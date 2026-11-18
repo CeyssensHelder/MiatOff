@@ -181,3 +181,15 @@ For the German and UK configurations below, 6,500 rpm is an assumed warning refe
 - **UK Mazda3.** 120 PS at 6,000 rpm and 210 Nm at 4,000 rpm. The release identifies the output in PS. Kerb mass of 1,205 kg is the published 1,280 kg less its 75 kg driver allowance. [Mazda UK Sport Black specifications](https://uk.mazda-press.com/news/2018/mazda3-sport-black-on-sale-from-3rd-april/)
 - **US Mazda3.** 155 hp at 6,000 rpm, 150 lb-ft at 4,000 rpm, 2,899 lb kerb mass and a 6,800 rpm redline. Stored as 157.15 PS, 203.37 Nm and 1,315 kg. [Mazda USA 2018 Mazda3 4-door Sport specifications](https://www.mazdausa.com/siteassets/pdf/owners-optimized/2018/mazda3-4door/2018-mazda3-4d-features-specs.pdf)
 - **US CX-5.** Both drivetrains use the naturally aspirated 2.5 petrol rated at 187 hp at 6,000 rpm and 186 lb-ft at 4,000 rpm, with a 6,500 rpm redline. Stored as 189.59 PS and 252.18 Nm. Kerb mass is 3,541 lb FWD or 3,679 lb AWD, stored as 1,606 or 1,669 kg. [Mazda USA 2019 CX-5 Sport specifications](https://www.mazdausa.com/siteassets/pdf/owners-optimized/2019/cx-5/2019-mazda-cx-5-features-specs.pdf)
+
+## Additional market configurations
+
+The [regional research and technical specifications](19-mazda-connect-models.md#technical-specifications-for-additional-configurations)
+list the manufacturer data for Australian Mazda2, Mazda6, CX-5 and CX-8, Portuguese CX-3, and US Mazda6, CX-3 and CX-9 presets.
+The Peruvian CX-3 remains a research record pending sourced drivetrain ratios. Use the displayed market and
+configuration labels to match a preset to the vehicle.
+
+The CX-9 and US Mazda6 turbo presets use the 87 AKI power rating. The Portuguese CX-3 diesel uses the upper end of the published
+peak-torque band, 2,500 rpm, for the simulator's single torque point. Where Mazda omits a redline, Car Setup marks the
+dashboard reference as assumed. Those references are 5,000 rpm for the diesels, 6,300 rpm for the Australian Mazda6
+turbo and 6,500 rpm for the remaining newly added petrol presets.

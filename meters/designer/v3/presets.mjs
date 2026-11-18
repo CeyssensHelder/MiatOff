@@ -4,6 +4,14 @@
 // shift, gauge maximum) are not specifications: the car setup works them out from the limit and the warning margin.
 // mass is in kg without a driver (US curb weight converted; see notes where the source differs).
 const SRC = {
+  auMazda2: { title: "Mazda Australia, October 2026 Mazda2 brochure", url: "https://www.mazda.com.au/4aaf8f/globalassets/brochures/mazda2-digital-brochure.pdf" },
+  auMazda6: { title: "Mazda Australia, 2022 Mazda6 brochure", url: "https://www.mazda.com.au/49de26/globalassets/brochures/owners-brochures/archived/mazda6_2022.pdf" },
+  ptCx3: { title: "Mazda Portugal, 2015 CX-3 press kit", url: "https://pt.mazda-press.com/api/assets/download/fe6bff4a-268c-48cd-852f-94ccee59846d_Pdf?isDownload=false" },
+  usCx3: { title: "Mazda USA, 2019 CX-3 press kit", url: "https://news.mazdausa.com/download/2019-Mazda-CX-3-Press-Kit_Version-1.pdf" },
+  auCx5: { title: "Mazda Australia, 2022 CX-5 brochure", url: "https://www.mazda.com.au/4aa9fb/globalassets/brochures/owners-brochures/cx-5-digital-brochure.pdf" },
+  usMazda6: { title: "Mazda USA, 2018 Mazda6 specifications", url: "https://www.mazdausa.com/siteassets/pdf/features--specs/2018/mzd6/2018_mazda6_features_specs.pdf" },
+  auCx8: { title: "Mazda Australia, 2022 CX-8 brochure", url: "https://www.mazda.com.au/4a2887/globalassets/brochures/owners-brochures/mazda_cx-8_digital_brochure_2022.pdf" },
+  usCx9: { title: "Mazda USA, 2018 CX-9 specifications", url: "https://www.mazdausa.com/siteassets/pdf/features--specs/2018/cx-9/2018-mazda-cx-9-features-specs.pdf" },
   deCx5: { title: "Mazda Germany, 2017 CX-5 press kit", url: "https://de.mazda-press.com/api/assets/download/8bba40e3-8975-4266-9879-4233b31d8c40_Default?isDownload=false" },
   deMazda3: { title: "Mazda Germany, April 2016 Mazda3 technical specifications", url: "https://de.mazda-press.com/api/assets/download/3599c9d4-bd34-4904-b761-bec8865432ca_Default?isDownload=false" },
   ukMazda3: { title: "Mazda UK, 2018 Mazda3 Sport Black", url: "https://uk.mazda-press.com/news/2018/mazda3-sport-black-on-sale-from-3rd-april/" },
@@ -23,10 +31,23 @@ const src = (key, fields) => ({ fields, ...SRC[key], retrieved: RETRIEVED });
 
 export const VEHICLE_MODELS = {
   "MX-5": ["ND1", "ND2"],
+  Mazda2: ["DJ"],
   Mazda3: ["BM", "BN"],
+  Mazda6: ["GL"],
+  "CX-3": ["DK"],
   "CX-5": ["KF"],
+  "CX-8": ["KG"],
+  "CX-9": ["TC"],
 };
-export const VEHICLE_ENGINES = ["1.5", "2.0", "2.5"];
+export const ENGINE_NAMES = {
+  "1.5": "1.5 L",
+  "1.5D": "1.5 L diesel",
+  "2.0": "2.0 L",
+  "2.2D": "2.2 L diesel",
+  "2.5": "2.5 L",
+  "2.5T": "2.5 L turbo petrol",
+};
+export const VEHICLE_ENGINES = Object.keys(ENGINE_NAMES);
 export const VEHICLE_BODIES = ["roadster", "RF", "sedan", "hatchback", "suv"];
 
 const sourcedSpecs = [
@@ -34,16 +55,82 @@ const sourcedSpecs = [
 ];
 const withRedline = [...sourcedSpecs, "rpm.limit"];
 const mazdaSource = (key, fields) => [{ ...src(key, fields), retrieved: "2026-11-18" }];
+const petrolManual = [3.700, 1.947, 1.300, 1.029, 0.837, 0.680];
+const petrolAutomatic = [3.552, 2.022, 1.452, 1.000, 0.708, 0.599];
+const highTorqueAutomatic = [3.487, 1.992, 1.449, 1.000, 0.707, 0.600];
+const usCx3 = {
+  generation: "DK", engine: "2.0", transmission: "automatic",
+  bodies: ["suv"], years: [2019, 2019], markets: ["US"],
+  rpm: { limit: 6500 },
+  ratios: petrolAutomatic, finalDrive: 4.325,
+  tyres: ["215/60R16"],
+  ratedPower: 150.05, powerRpm: 6000,
+  ratedTorque: 197.95, torqueRpm: 2800,
+  verified: sourcedSpecs,
+  sources: mazdaSource("usCx3", sourcedSpecs),
+};
+const ptCx3 = {
+  generation: "DK", engine: "1.5D",
+  bodies: ["suv"], years: [2015, 2015], markets: ["EU"],
+  rpm: { limit: 5000 },
+  tyres: ["215/60R16", "215/50R18"],
+  ratedPower: 105, powerRpm: 4000,
+  ratedTorque: 270, torqueRpm: 2500,
+  verified: sourcedSpecs,
+  sources: mazdaSource("ptCx3", sourcedSpecs),
+  notes: "For Portuguese trims with MZD Connect. Peak torque is sustained from 1,600 to 2,500 rpm.",
+};
+const cx3DieselManual = [3.700, 1.947, 1.300, 0.916, 0.717, 0.580];
 const usCx5 = {
   generation: "KF", engine: "2.5", transmission: "automatic",
   bodies: ["suv"], years: [2019, 2019], markets: ["US"],
   rpm: { limit: 6500 },
-  ratios: [3.552, 2.022, 1.452, 1.000, 0.708, 0.599],
+  ratios: petrolAutomatic,
   tyres: ["225/65R17"],
   ratedPower: 189.59, powerRpm: 6000,
   ratedTorque: 252.18, torqueRpm: 4000,
   verified: withRedline,
   sources: mazdaSource("usCx5", withRedline),
+};
+
+const auCx5 = {
+  generation: "KF",
+  bodies: ["suv"], years: [2022, 2022], markets: ["AU"],
+  tyres: ["225/65R17"],
+  verified: sourcedSpecs, sources: mazdaSource("auCx5", sourcedSpecs),
+};
+const auCx5Maxx = {
+  ...auCx5,
+  engine: "2.0", drive: "FWD",
+  rpm: { limit: 6500 },
+  ratedPower: 156.36, powerRpm: 6000, ratedTorque: 200, torqueRpm: 4000,
+};
+const auCx5Petrol = {
+  ...auCx5,
+  engine: "2.5", transmission: "automatic",
+  rpm: { limit: 6500 },
+  ratios: petrolAutomatic, finalDrive: 4.624,
+  ratedPower: 190.35, powerRpm: 6000, ratedTorque: 252, torqueRpm: 4000,
+};
+const usMazda6Sport = {
+  generation: "GL", engine: "2.5", drive: "FWD",
+  bodies: ["sedan"], years: [2018, 2018], markets: ["US"],
+  rpm: { limit: 6500 },
+  tyres: ["225/55R17"],
+  ratedPower: 189.59, powerRpm: 6000, ratedTorque: 252.18, torqueRpm: 4000,
+  verified: withRedline, sources: mazdaSource("usMazda6", withRedline),
+};
+const usCx9 = {
+  generation: "TC", engine: "2.5T", transmission: "automatic",
+  bodies: ["suv"], years: [2018, 2018], markets: ["US"],
+  rpm: { limit: 6300 },
+  ratios: highTorqueAutomatic, finalDrive: 4.411,
+  tyres: ["255/60R18"],
+  ratedPower: 230.15, powerRpm: 5000,
+  ratedTorque: 420.30, torqueRpm: 2000,
+  verified: withRedline,
+  sources: mazdaSource("usCx9", withRedline),
+  notes: "Power is rated on 87 AKI. Mazda quotes 250 hp on 93 AKI.",
 };
 
 export const PRESETS = [
@@ -251,6 +338,162 @@ export const PRESETS = [
     label: "2019 CX-5 Sport AWD",
     drive: "AWD", finalDrive: 4.624, mass: 1669,
   },
+  {
+    ...auCx5Maxx,
+    id: "cx5-kf-2022-au-maxx-mt",
+    label: "2022 CX-5 Maxx 2.0 manual",
+    transmission: "manual", ratios: petrolManual, finalDrive: 4.705, mass: 1521,
+  },
+  {
+    ...auCx5Maxx,
+    id: "cx5-kf-2022-au-maxx-at",
+    label: "2022 CX-5 Maxx 2.0 automatic",
+    transmission: "automatic", ratios: petrolAutomatic, finalDrive: 4.624, mass: 1576,
+  },
+  {
+    ...auCx5Petrol,
+    id: "cx5-kf-2022-au-25-fwd",
+    label: "2022 CX-5 Maxx Sport 2.5 FWD",
+    drive: "FWD", mass: 1607,
+  },
+  {
+    ...auCx5Petrol,
+    id: "cx5-kf-2022-au-25-awd",
+    label: "2022 CX-5 Maxx Sport / Touring 2.5 AWD",
+    drive: "AWD", mass: 1659,
+  },
+  {
+    ...auCx5,
+    id: "cx5-kf-2022-au-22d-awd",
+    label: "2022 CX-5 Touring Active diesel AWD",
+    engine: "2.2D", transmission: "automatic", drive: "AWD",
+    rpm: { limit: 5000 },
+    ratios: highTorqueAutomatic, finalDrive: 4.090, mass: 1732,
+    ratedPower: 190.35, powerRpm: 4500, ratedTorque: 450, torqueRpm: 2000,
+  },
+  {
+    ...usMazda6Sport,
+    id: "mazda6-gl-2018-us-sport-mt",
+    label: "2018 Mazda6 Sport manual",
+    transmission: "manual", ratios: petrolManual, finalDrive: 4.105, mass: 1509,
+  },
+  {
+    ...usMazda6Sport,
+    id: "mazda6-gl-2018-us-sport-at",
+    label: "2018 Mazda6 Sport automatic",
+    transmission: "automatic", ratios: petrolAutomatic, finalDrive: 3.812, mass: 1554,
+  },
+  {
+    ...usMazda6Sport,
+    id: "mazda6-gl-2018-us-grand-touring",
+    label: "2018 Mazda6 Grand Touring",
+    engine: "2.5T", transmission: "automatic",
+    rpm: { limit: 6300 },
+    ratios: highTorqueAutomatic, finalDrive: 4.090, mass: 1615,
+    tyres: ["225/45R19"],
+    ratedPower: 230.15, powerRpm: 5000, ratedTorque: 420.30, torqueRpm: 2000,
+    notes: "Power is rated on 87 AKI. Mazda quotes 250 hp on 93 AKI.",
+  },
+  {
+    id: "mazda2-dj-2026-au-g15-at",
+    label: "2026 Mazda2 G15 Evolve / GT hatch",
+    generation: "DJ", engine: "1.5", transmission: "automatic", drive: "FWD",
+    bodies: ["hatchback"], years: [2026, 2026], markets: ["AU"],
+    rpm: { limit: 6500 },
+    ratios: [3.529, 2.025, 1.348, 1.000, 0.742, 0.594], finalDrive: 4.060,
+    tyres: ["185/60R16"], mass: 1109,
+    ratedPower: 110.13, powerRpm: 6000, ratedTorque: 142, torqueRpm: 3500,
+    verified: sourcedSpecs, sources: mazdaSource("auMazda2", sourcedSpecs),
+  },
+  {
+    id: "mazda6-gl-2022-au-sport-at",
+    label: "2022 Mazda6 Sport / Touring sedan",
+    generation: "GL", engine: "2.5", transmission: "automatic", drive: "FWD",
+    bodies: ["sedan"], years: [2022, 2022], markets: ["AU"],
+    rpm: { limit: 6500 },
+    ratios: petrolAutomatic, finalDrive: 4.325,
+    tyres: ["225/55R17"], mass: 1538,
+    ratedPower: 190.35, powerRpm: 6000, ratedTorque: 252, torqueRpm: 4000,
+    verified: sourcedSpecs, sources: mazdaSource("auMazda6", sourcedSpecs),
+  },
+  {
+    id: "mazda6-gl-2022-au-gt-sp-at",
+    label: "2022 Mazda6 GT SP sedan",
+    generation: "GL", engine: "2.5T", transmission: "automatic", drive: "FWD",
+    bodies: ["sedan"], years: [2022, 2022], markets: ["AU"],
+    rpm: { limit: 6300 },
+    ratios: highTorqueAutomatic, finalDrive: 4.090,
+    tyres: ["225/45R19"], mass: 1609,
+    ratedPower: 231.14, powerRpm: 5000, ratedTorque: 420, torqueRpm: 2000,
+    verified: sourcedSpecs, sources: mazdaSource("auMazda6", sourcedSpecs),
+  },
+  {
+    ...ptCx3,
+    id: "cx3-dk-2015-pt-d105-fwd-mt",
+    label: "2015 CX-3 D105 FWD manual (Portugal)",
+    transmission: "manual", drive: "FWD",
+    ratios: cx3DieselManual, finalDrive: 3.850, mass: 1200,
+  },
+  {
+    ...ptCx3,
+    id: "cx3-dk-2015-pt-d105-awd-mt",
+    label: "2015 CX-3 D105 AWD manual (Portugal)",
+    transmission: "manual", drive: "AWD",
+    ratios: cx3DieselManual, finalDrive: 4.105, mass: 1275,
+  },
+  {
+    ...ptCx3,
+    id: "cx3-dk-2015-pt-d105-awd-at",
+    label: "2015 CX-3 D105 AWD automatic (Portugal)",
+    transmission: "automatic", drive: "AWD",
+    ratios: petrolAutomatic, finalDrive: 4.056, mass: 1295,
+  },
+  {
+    ...usCx3,
+    id: "cx3-dk-2019-us-sport-fwd",
+    label: "2019 CX-3 Sport FWD",
+    drive: "FWD", mass: 1274,
+  },
+  {
+    ...usCx3,
+    id: "cx3-dk-2019-us-sport-awd",
+    label: "2019 CX-3 Sport AWD",
+    drive: "AWD", mass: 1339,
+  },
+  {
+    id: "cx8-kg-2022-au-sport-petrol",
+    label: "2022 CX-8 Sport petrol FWD",
+    generation: "KG", engine: "2.5", transmission: "automatic", drive: "FWD",
+    bodies: ["suv"], years: [2022, 2022], markets: ["AU"],
+    rpm: { limit: 6500 },
+    ratios: petrolAutomatic, finalDrive: 4.957,
+    tyres: ["225/65R17"], mass: 1799,
+    ratedPower: 190.35, powerRpm: 6000, ratedTorque: 252, torqueRpm: 4000,
+    verified: sourcedSpecs, sources: mazdaSource("auCx8", sourcedSpecs),
+  },
+  {
+    id: "cx8-kg-2022-au-sport-diesel",
+    label: "2022 CX-8 Sport diesel AWD",
+    generation: "KG", engine: "2.2D", transmission: "automatic", drive: "AWD",
+    bodies: ["suv"], years: [2022, 2022], markets: ["AU"],
+    rpm: { limit: 5000 },
+    ratios: highTorqueAutomatic, finalDrive: 4.111,
+    tyres: ["225/65R17"], mass: 1949,
+    ratedPower: 190.35, powerRpm: 4500, ratedTorque: 450, torqueRpm: 2000,
+    verified: sourcedSpecs, sources: mazdaSource("auCx8", sourcedSpecs),
+  },
+  {
+    ...usCx9,
+    id: "cx9-tc-2018-us-sport-fwd",
+    label: "2018 CX-9 Sport FWD",
+    drive: "FWD", mass: 1890,
+  },
+  {
+    ...usCx9,
+    id: "cx9-tc-2018-us-sport-awd",
+    label: "2018 CX-9 Sport AWD",
+    drive: "AWD", mass: 1978,
+  },
 ];
 
 // Default display units per region.
@@ -259,5 +502,6 @@ export const MARKET_UNITS = {
   UK: { speed: "mph", distance: "mi", temperature: "C", power: "PS", torque: "Nm", consumption: "mpg UK" },
   US: { speed: "mph", distance: "mi", temperature: "F", power: "hp", torque: "lb-ft", consumption: "mpg US" },
   JP: { speed: "km/h", distance: "km", temperature: "C", power: "PS", torque: "Nm", consumption: "L/100km" },
+  AU: { speed: "km/h", distance: "km", temperature: "C", power: "kW", torque: "Nm", consumption: "L/100km" },
 };
-export const MARKETS = ["EU", "UK", "US", "JP"];
+export const MARKETS = Object.keys(MARKET_UNITS);

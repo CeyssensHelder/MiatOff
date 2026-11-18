@@ -1589,7 +1589,7 @@ function vehicleControls() {
   };
   for (const [key, label, choices] of [
     ["generation", "Generation", Object.values(VEHICLE_MODELS).flat()],
-    ["engine", "Engine (L)", VEHICLE_ENGINES],
+    ["engine", "Engine", VEHICLE_ENGINES],
     ["body", "Body", VEHICLE_BODIES],
     ["transmission", "Transmission", ["manual", "automatic"]],
   ])
