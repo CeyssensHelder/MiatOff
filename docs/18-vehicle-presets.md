@@ -165,17 +165,19 @@ Retrieved 2026-11-11 unless noted. "Secondary" means not from the manufacturer.
 These presets cover the exact model year, trim and original sales market shown. See the
 [Mazda Connect coverage notes](19-mazda-connect-models.md) for head-unit evidence and how to check the car.
 Only forward ratios are used by Meters. Tyre circumference is calculated from the nominal tyre size.
-For the German and UK presets, 6,500 rpm is an assumed warning reference. The cited materials omit a redline.
+For the German and UK configurations below, 6,500 rpm is an assumed warning reference. The cited materials omit a redline.
 
 | Market and preset | 1st / 2nd / 3rd / 4th / 5th / 6th | Final drive | Tyres |
 |---|---|---:|---|
 | EU · 2017 CX-5 KF Center-Line (Germany), 2.0 petrol FWD 6MT | 3.700 / 1.947 / 1.300 / 1.029 / 0.837 / 0.680 | 4.388 | 225/65R17 |
+| EU · 2016 Mazda3 BM Center-Line hatchback (Germany), 2.0 petrol FWD 6MT | 3.700 / 1.947 / 1.300 / 1.029 / 0.837 / 0.680 | 3.619 | 205/60R16 |
 | UK · 2018 Mazda3 BN Sport Black hatchback, 2.0 petrol FWD 6MT | 3.700 / 1.947 / 1.300 / 1.029 / 0.837 / 0.680 | 3.619 | 215/45R18 |
 | US · 2018 Mazda3 BN Sport sedan, 2.0 petrol FWD 6MT | 3.363 / 1.947 / 1.300 / 1.029 / 0.837 / 0.680 | 3.850 | 205/60R16 |
 | US · 2019 CX-5 KF Sport, 2.5 petrol FWD 6AT | 3.552 / 2.022 / 1.452 / 1.000 / 0.708 / 0.599 | 4.325 | 225/65R17 |
 | US · 2019 CX-5 KF Sport, 2.5 petrol AWD 6AT | 3.552 / 2.022 / 1.452 / 1.000 / 0.708 / 0.599 | 4.624 | 225/65R17 |
 
 - **German CX-5.** 165 PS at 6,000 rpm, 210 Nm at 4,000 rpm and minimum kerb mass of 1,360 kg without a driver. The 7-inch MZD Connect starts at Center-Line in the German launch press kit. [Mazda Germany CX-5 press kit, pp. 32–36](https://de.mazda-press.com/api/assets/download/8bba40e3-8975-4266-9879-4233b31d8c40_Default?isDownload=false)
+- **German Mazda3.** 120 PS at 6,000 rpm, 210 Nm at 4,000 rpm and minimum kerb mass of 1,205 kg without a driver. [Mazda Germany technical specifications, pp. 18–19](https://de.mazda-press.com/api/assets/download/3599c9d4-bd34-4904-b761-bec8865432ca_Default?isDownload=false)
 - **UK Mazda3.** 120 PS at 6,000 rpm and 210 Nm at 4,000 rpm. The release identifies the output in PS. Kerb mass of 1,205 kg is the published 1,280 kg less its 75 kg driver allowance. [Mazda UK Sport Black specifications](https://uk.mazda-press.com/news/2018/mazda3-sport-black-on-sale-from-3rd-april/)
 - **US Mazda3.** 155 hp at 6,000 rpm, 150 lb-ft at 4,000 rpm, 2,899 lb kerb mass and a 6,800 rpm redline. Stored as 157.15 PS, 203.37 Nm and 1,315 kg. [Mazda USA 2018 Mazda3 4-door Sport specifications](https://www.mazdausa.com/siteassets/pdf/owners-optimized/2018/mazda3-4door/2018-mazda3-4d-features-specs.pdf)
 - **US CX-5.** Both drivetrains use the naturally aspirated 2.5 petrol rated at 187 hp at 6,000 rpm and 186 lb-ft at 4,000 rpm, with a 6,500 rpm redline. Stored as 189.59 PS and 252.18 Nm. Kerb mass is 3,541 lb FWD or 3,679 lb AWD, stored as 1,606 or 1,669 kg. [Mazda USA 2019 CX-5 Sport specifications](https://www.mazdausa.com/siteassets/pdf/owners-optimized/2019/cx-5/2019-mazda-cx-5-features-specs.pdf)

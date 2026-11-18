@@ -65,6 +65,10 @@ test("choosing an additional model filters the market and requires the CX-5 driv
   const next = page.locator("#setup-next");
   await expect(model).toHaveValue("MX-5");
   await expect(drive).toBeHidden();
+  await expect(model.locator("option")).toHaveText(["MX-5", "CX-5", "Mazda3"]);
+  await model.selectOption("Mazda3");
+  await expect(page.locator("#setup-preset")).toHaveText("2016 Mazda3 Center-Line (Germany)");
+  await expect(page.locator("#setup-generation")).toHaveValue("BM");
   await page.locator("#setup-market").selectOption("UK");
   await expect(model.locator("option")).toHaveText(["MX-5", "Mazda3"]);
   await model.selectOption("Mazda3");

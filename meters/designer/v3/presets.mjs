@@ -5,6 +5,7 @@
 // mass is in kg without a driver (US curb weight converted; see notes where the source differs).
 const SRC = {
   deCx5: { title: "Mazda Germany, 2017 CX-5 press kit", url: "https://de.mazda-press.com/api/assets/download/8bba40e3-8975-4266-9879-4233b31d8c40_Default?isDownload=false" },
+  deMazda3: { title: "Mazda Germany, April 2016 Mazda3 technical specifications", url: "https://de.mazda-press.com/api/assets/download/3599c9d4-bd34-4904-b761-bec8865432ca_Default?isDownload=false" },
   ukMazda3: { title: "Mazda UK, 2018 Mazda3 Sport Black", url: "https://uk.mazda-press.com/news/2018/mazda3-sport-black-on-sale-from-3rd-april/" },
   usMazda3: { title: "Mazda USA, 2018 Mazda3 4-door specifications", url: "https://www.mazdausa.com/siteassets/pdf/owners-optimized/2018/mazda3-4door/2018-mazda3-4d-features-specs.pdf" },
   usCx5: { title: "Mazda USA, 2019 CX-5 specifications", url: "https://www.mazdausa.com/siteassets/pdf/owners-optimized/2019/cx-5/2019-mazda-cx-5-features-specs.pdf" },
@@ -22,7 +23,7 @@ const src = (key, fields) => ({ fields, ...SRC[key], retrieved: RETRIEVED });
 
 export const VEHICLE_MODELS = {
   "MX-5": ["ND1", "ND2"],
-  Mazda3: ["BN"],
+  Mazda3: ["BM", "BN"],
   "CX-5": ["KF"],
 };
 export const VEHICLE_ENGINES = ["1.5", "2.0", "2.5"];
@@ -193,6 +194,21 @@ export const PRESETS = [
     verified: sourcedSpecs,
     sources: mazdaSource("deCx5", sourcedSpecs),
     notes: "German trim. Curb mass is the published minimum without the driver. Dashboard redline is assumed.",
+  },
+  {
+    id: "mazda3-bm-2016-de-g120-mt",
+    label: "2016 Mazda3 Center-Line (Germany)",
+    generation: "BM", engine: "2.0", transmission: "manual", drive: "FWD",
+    bodies: ["hatchback"], years: [2016, 2016], markets: ["EU"],
+    rpm: { limit: 6500 },
+    ratios: [3.700, 1.947, 1.300, 1.029, 0.837, 0.680], finalDrive: 3.619,
+    tyres: ["205/60R16"],
+    ratedPower: 120, powerRpm: 6000,
+    ratedTorque: 210, torqueRpm: 4000,
+    mass: 1205,
+    verified: sourcedSpecs,
+    sources: mazdaSource("deMazda3", sourcedSpecs),
+    notes: "German G120 hatchback. Curb mass is the published minimum without the driver. Dashboard redline is assumed.",
   },
   {
     id: "mazda3-bn-2018-uk-sport-black",
