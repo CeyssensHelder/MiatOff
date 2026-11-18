@@ -7,6 +7,11 @@ aa-touch.sh, AATOUCH.ID and oem-aa-mod/libpatch.conf
   watchdog handling and the SafeReboot request follow TouchTune 1.2.1 by Miatafy
   (GPL-3.0-or-later), https://github.com/Miatafy/TouchTune
 
+miatoff-commander
+  Part of MiatOff, GPL-3.0-or-later. Statically linked with musl 1.1.24
+  (see miatoff-commander.COPYRIGHT). Source and pinned build recipe are in
+  aa-touch-stick/commander/ of the MiatOff source release.
+
 touchtune/
   The complete, unmodified TouchTune 1.2.1 release by Miatafy (GPL-3.0-or-later),
   with its own LICENSE, NOTICE and SOURCE.txt. aa-touch.sh only starts its

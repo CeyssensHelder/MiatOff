@@ -284,6 +284,13 @@ def dump_kit() -> stickkit.Kit:
     )
 
 
+def commander_helper() -> bytes:
+    data = (INSTALL_STICK / "miatoff-commander").read_bytes()
+    if sha256(data) != pinned("COMMANDER_SHA256"):
+        raise StickError("ERROR: miatoff-commander does not match COMMANDER_SHA256 in aa-touch.sh")
+    return data
+
+
 def _make_install_kit(custom=None, home=None, car=None) -> stickkit.Kit:
     conf = stickkit.lf_bytes(INSTALL_STICK / "libpatch.conf")
     if sha256(conf) != pinned("CONF_SHA256"):
@@ -294,6 +301,8 @@ def _make_install_kit(custom=None, home=None, car=None) -> stickkit.Kit:
         script="aa-touch.sh",
         script_bytes=stickkit.lf_bytes(INSTALL_STICK / "aa-touch.sh"),
         extra={
+            "miatoff-commander": commander_helper(),
+            "miatoff-commander.COPYRIGHT": (INSTALL_STICK / "miatoff-commander.COPYRIGHT").read_bytes(),
             "oem-aa-mod/libpatch-blmjciaapa.so": release_shim(),
             "oem-aa-mod/libpatch.conf": conf,
             "LICENSE": (INSTALL_DIR / "LICENSE").read_bytes(),
@@ -348,6 +357,7 @@ def bundle_sources() -> list:
         "launcher/main_instructions.ini", "launcher/versions.ini",
         "dump-stick/LICENSE", "dump-stick/stick/MIATOFF.ID", "dump-stick/stick/dump.sh",
         "aa-touch-stick/LICENSE", "aa-touch-stick/stick/AATOUCH.ID", "aa-touch-stick/stick/aa-touch.sh",
+        "aa-touch-stick/stick/miatoff-commander", "aa-touch-stick/stick/miatoff-commander.COPYRIGHT",
         "aa-touch-stick/stick/libpatch.conf", "aa-touch-stick/stick/NOTICE",
         "vendor/oem-aa-mod/oem-aa-mod-0.10.0.zip", "vendor/oem-aa-mod/SHA256SUMS",
         "vendor/touchtune/TouchTune-1.2.1.zip", "vendor/touchtune/TouchTune-1.2.1.zip.sha256",

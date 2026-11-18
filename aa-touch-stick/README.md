@@ -223,8 +223,8 @@ plan or delete `miatoff-plan.txt`. An invalid plan is ignored, and with no plan 
    python aa-touch-stick/build_stick.py E:\
    ```
    The builder checks the oem-aa-mod ZIP against `vendor/oem-aa-mod/SHA256SUMS`, the TouchTune ZIP against its
-   `.sha256`, and the shim and `libpatch.conf` against the hashes in `aa-touch.sh`. Then it writes 41 files
-   (including `miatoff-app/` with the Meters files and their `MANIFEST`) and reads them back. Check again later: `python aa-touch-stick/build_stick.py --check E:\`.
+   `.sha256`, and the shim, `libpatch.conf`, and Commander helper against the hashes in `aa-touch.sh`. It writes the
+   payload and reads it back. Check an existing stick with `python aa-touch-stick/build_stick.py --check E:\`.
 3. Eject the stick safely.
 
 ## In the car
@@ -275,6 +275,7 @@ touch in Android Auto has not been proven yet (docs/10 §10). The log notes the 
 ## Acceptance (docs/12)
 - [ ] Tap, swipe, drag and the on-screen keyboard in Android Auto, stationary and while driving (no pinch).
 - [ ] Rotary knob, steering-wheel buttons, voice, calling, radio/DAB, navigation and Bose as before.
+- [ ] Commander works in the install prompts on each enabled profile. See [Commander qualification](commander/README.md).
 - [ ] 3 cold starts and 3 normal starts without problems.
 - [ ] DISABLE and ENABLE tested once.
 - [ ] REMOVE tested once; a new dump afterwards shows the stock state again.

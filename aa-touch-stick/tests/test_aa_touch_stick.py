@@ -30,7 +30,7 @@ bs = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bs)
 
 DUMP = HERE.parent.parent / "dumps/eu-74.00.324/001-full-up174s/static/files"
-REAL = (DUMP / "jci/sm/sm.conf").is_file() and os.environ.get("MO_SYNTHETIC") != "1"
+REAL = os.environ.get("MO_SYNTHETIC") != "1" and (DUMP / "jci/sm/sm.conf").is_file()
 DOCKER_IMAGE = os.environ.get("MO_DOCKER_IMAGE", "")
 FAILURES = []
 
@@ -535,6 +535,123 @@ def custom_bundle(count: int) -> dict:
             "items": items}
 
 
+def test_commander_dialogs(base: Path):
+    car = fresh(base, "commander")
+    original_helper = (car.stick / "miatoff-commander").read_bytes()
+    check(sha(original_helper) == bs.pinned("COMMANDER_SHA256"), "install kit carries the pinned ARM helper")
+    dialog = write(car.root, "jci/tools/jci-dialog", """#!/bin/sh
+usb="$MO_ROOT/tmp/mnt/sda1"
+if [ -e "$usb/fail-touch" ]; then
+    rm -f "$usb/AATOUCH.ID"
+    exit 99
+fi
+exit 1
+""")
+    dialog.chmod(0o755)
+    with (car.root / "jci/version.ini").open("a", encoding="ascii", newline="\n") as version:
+        version.write('JCI_SW_FLAVOR="cmu150_EU"\n')
+    helper = b'''#!/bin/sh
+[ "$1" != "--check-runtime" ] || exit 0
+usb=${2%/*}
+printf '%s %s\n' "$5" "$8" >> "$usb/commander-calls"
+read -r result < "$usb/commander-answer"
+case "$result" in
+    unplug) rm -f "$2"; exit 0 ;;
+    *) exit "$result" ;;
+esac
+'''
+    (car.stick / "miatoff-commander").write_bytes(helper)
+    plan = car.stick / "miatoff-plan.txt"
+    answer = car.stick / "commander-answer"
+    calls = car.stick / "commander-calls"
+    log = car.stick / "miatoff-aa-touch.log"
+    marker = car.stick / "AATOUCH.ID"
+    car.extra.update(COMMANDER_TEST_DIALOGS="1", COMMANDER_SHA256=sha(helper))
+    plan.write_text("aa_touch=install\n", encoding="ascii")
+    answer.write_bytes(b"0\n")
+    before = car.digest()
+    r = car.run("")
+    check(r.returncode == 0 and not calls.exists() and car.digest() == before,
+          "unqualified dialogs take the normal touch path even with a valid helper on USB")
+
+    car.extra["COMMANDER_PROFILES"] = f"'cmu150_EU {sha(dialog.read_bytes())} 0000:0000:0000:0000 + 01 012'"
+    profile = car.extra["COMMANDER_PROFILES"]
+    car.extra["COMMANDER_PROFILES"] = profile.replace("cmu150_EU", "cmu150_NA")
+    r = car.run("")
+    check(r.returncode == 0 and not calls.exists() and car.digest() == before,
+          "the same dialog hash on an unqualified firmware flavor stays on touch")
+    car.extra["COMMANDER_PROFILES"] = profile
+    (car.stick / "miatoff-commander").write_bytes(b"unverified helper\n")
+    r = car.run("")
+    check(r.returncode == 0 and not calls.exists() and "helper could not be verified" in log.read_text(),
+          "helper hash mismatch takes the touch path")
+    incompatible = b"#!/bin/sh\nexit 2\n"
+    (car.stick / "miatoff-commander").write_bytes(incompatible)
+    car.extra["COMMANDER_SHA256"] = sha(incompatible)
+    r = car.run("")
+    check(r.returncode == 0 and "cannot run on this unit; using touch" in log.read_text() and car.digest() == before,
+          "a runtime startup error cannot count as button two")
+    (car.stick / "miatoff-commander").write_bytes(helper)
+    car.extra["COMMANDER_SHA256"] = sha(helper)
+
+    answer.write_bytes(b"4\n")
+    r = car.run("")
+    check(r.returncode == 0 and "using touch" in log.read_text() and car.digest() == before,
+          "device unavailable before the Commander prompt falls back to touch")
+
+    plan.unlink()
+    calls.unlink()
+    answer.write_bytes(b"3\n")
+    r = car.run("")
+    check(r.returncode == 0 and calls.read_text().splitlines() == ["012 ANDROID AUTO"] and car.digest() == before,
+          "dismissal in the three-button main menu skips the Android Auto submenu")
+
+    car.extra["COMMANDER_TEST_DIALOGS"] = "0"
+    r = car.run("delay_on")
+    check(r.returncode == 0 and car.state("list delay:") == "patched", "dialog fixture has an HMI tweak to preserve")
+    car.extra["COMMANDER_TEST_DIALOGS"] = "1"
+    plan.write_text("aa_touch=install\nwarning=install\n", encoding="ascii")
+    before = car.digest()
+    r = car.run("")
+    check(r.returncode == 0 and car.digest() == before and "EMERGENCY" not in log.read_text(),
+          "Commander dismissal with an HMI tweak skips both action dispatch and emergency rollback")
+
+    answer.write_bytes(b"unplug\n")
+    marker_bytes = marker.read_bytes()
+    r = car.run("")
+    check(r.returncode == 0 and car.digest() == before and "USB removed before the action" in log.read_text(),
+          "a successful prompt result is discarded if the USB disappears before dispatch")
+    marker.write_bytes(marker_bytes)
+
+    (car.stick / "fail-touch").touch()
+    answer.write_bytes(b"4\n")
+    r = car.run("")
+    check(r.returncode == 0 and not marker.exists() and car.digest() == before
+          and "USB removed during the prompt" in log.read_text() and "EMERGENCY" not in log.read_text(),
+          "losing the USB during stock touch fallback cannot trigger emergency rollback")
+    (car.stick / "fail-touch").unlink()
+    marker.write_bytes(marker_bytes)
+
+    answer.write_bytes(b"0\n")
+    r = car.run("")
+    check(r.returncode == 0 and car.state("disclaimer:") == "patched" and car.state() == "stock",
+          "index zero runs just the confirmed plan step, leaving the next step pending")
+    check(not car.guard.exists(), "the staged helper and installer guard are cleaned up")
+
+    plan.unlink()
+    car.extra["COMMANDER_TEST_DIALOGS"] = "0"
+    car.run("install", fault="kill:rename-sm")
+    car.run("cancel")
+    before = car.digest()
+    calls.unlink()
+    car.extra["COMMANDER_TEST_DIALOGS"] = "1"
+    answer.write_bytes(b"3\n")
+    r = car.run("")
+    check(r.returncode == 0 and car.state() == "partial" and calls.read_text().splitlines() == ["012 FINISH"]
+          and car.digest() == before and "EMERGENCY" not in log.read_text(),
+          "Back from interrupted-install recovery preserves the partial state without selecting FINISH or REMOVE")
+
+
 def main():
     print(f"mode: {'real dump files' if REAL else 'synthetic files'}"
           f"{', docker ' + DOCKER_IMAGE if DOCKER_IMAGE else ''}")
@@ -598,6 +715,7 @@ def main():
 
     base = Path(tempfile.mkdtemp(prefix="mo-aa-"))
     try:
+        test_commander_dialogs(base)
         # --- happy path
         car = fresh(base, "happy")
         stock_digest = car.digest()
@@ -1710,4 +1828,8 @@ def main():
 
 
 if __name__ == "__main__":
+    if sys.argv[1:] == ["--commander"]:
+        with tempfile.TemporaryDirectory(prefix="mo-cmd-", ignore_cleanup_errors=True) as folder:
+            test_commander_dialogs(Path(folder))
+        sys.exit(1 if FAILURES else 0)
     main()

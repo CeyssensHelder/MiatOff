@@ -43,7 +43,8 @@ class KnownKit:
 # Hard-coded on purpose: this is the list of what may ever be deleted. A test keeps it in step with tools/kits.py.
 KNOWN_KITS = {
     "MIATOFF.ID": KnownKit("check", b"miatoff-dump-v1\n", ("dump.sh",), ()),
-    "AATOUCH.ID": KnownKit("install", b"miatoff-aa-touch-v1\n", ("aa-touch.sh", "LICENSE", "NOTICE"),
+    "AATOUCH.ID": KnownKit("install", b"miatoff-aa-touch-v1\n",
+                           ("aa-touch.sh", "LICENSE", "NOTICE", "miatoff-commander", "miatoff-commander.COPYRIGHT"),
                            ("touchtune", "oem-aa-mod", "miatoff-app", "images")),
 }
 RESTORE_MARKER = "MIATOFF-RESTORE"
