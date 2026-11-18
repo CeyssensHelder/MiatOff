@@ -133,6 +133,34 @@ class CustomPagesBuildTests(unittest.TestCase):
             self.assertFalse(bs.check(Path(folder)))
             self.assertEqual((Path(folder) / "miatoff-app/app/meters/js/car-profile.js").read_bytes(), data)
 
+    def test_new_mazda_presets_round_trip_into_the_payload(self):
+        designer = ROOT / "meters/designer/v3"
+        source = f"""
+          import {{ defaults }} from {json.dumps((designer / "model.mjs").as_uri())};
+          import {{ PRESETS }} from {json.dumps((designer / "presets.mjs").as_uri())};
+          import {{ applyPreset, carLabel }} from {json.dumps((designer / "car-setup.mjs").as_uri())};
+          console.log(JSON.stringify(PRESETS.filter(p => p.drive).map(p => {{
+            const project = defaults();
+            applyPreset(project, p, {{ market: p.markets[0] }});
+            return {{ vehicle: project.vehicle, label: carLabel(project.vehicle) }};
+          }})));
+        """
+        profiles = json.loads(subprocess.check_output(["node", "--input-type=module", "-e", source], cwd=ROOT))
+        self.assertEqual(len(profiles), 5)
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "library.sqlite3"
+            library = ml.CarProfile(ml.PageLibrary(path))
+            for item in profiles:
+                vehicle = item["vehicle"]
+                with self.subTest(preset=vehicle["preset"]):
+                    profile = library.set(vehicle, item["label"])
+                    reopened = ml.CarProfile(ml.PageLibrary(path)).get()
+                    self.assertEqual(reopened, profile)
+                    data = bs.payload(car=reopened)[CAR].decode("ascii")
+                    payload = json.loads(data.split(" = ", 1)[1].rstrip(";\n"))
+                    for key in ("preset", "finalDrive", "ratios", "circumference", "units", "rpm"):
+                        self.assertEqual(payload[key], vehicle[key])
+
     def test_shift_sound_travels_per_page_and_per_style(self):
         setup = deepcopy(self.pages[0])
         self.assertNotIn("shiftSound", bs.kits.car_page(setup, {}))

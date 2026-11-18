@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import * as M from "../../designer/v3/model.mjs";
 import { CommandStore } from "../../designer/v3/commands.mjs";
-import { PRESETS, MARKETS, MARKET_UNITS } from "../../designer/v3/presets.mjs";
+import {
+  PRESETS, MARKETS, MARKET_UNITS, VEHICLE_MODELS, VEHICLE_ENGINES, VEHICLE_BODIES,
+} from "../../designer/v3/presets.mjs";
 import {
   applyPreset,
   circumferenceFor,
@@ -28,11 +30,11 @@ test("presets are well formed and their sourced fields name a source", () => {
     assert.match(p.id, /^[a-z0-9-]{1,40}$/);
     assert.ok(!ids.has(p.id), "duplicate " + p.id);
     ids.add(p.id);
-    assert.ok(["ND1", "ND2"].includes(p.generation));
-    assert.ok(["1.5", "2.0"].includes(p.engine));
+    assert.ok(Object.values(VEHICLE_MODELS).flat().includes(p.generation));
+    assert.ok(VEHICLE_ENGINES.includes(p.engine));
     assert.ok(["manual", "automatic"].includes(p.transmission));
     assert.ok(p.markets.length && p.markets.every((m) => MARKETS.includes(m)));
-    assert.ok(p.bodies.length && p.bodies.every((b) => ["roadster", "RF"].includes(b)));
+    assert.ok(p.bodies.length && p.bodies.every((b) => VEHICLE_BODIES.includes(b)));
     for (const t of p.tyres) assert.ok(circumferenceFor(t), p.id + " tyre " + t);
     assert.deepEqual(Object.keys(p.rpm), ["limit"], p.id + " carries only the limiter");
     assert.ok(Number.isInteger(p.rpm.limit) && p.rpm.limit > 5000, p.id + " limit");
@@ -57,6 +59,9 @@ test("each preset applied to a default project still validates", () => {
         const v = project.vehicle;
         assert.equal(v.preset, p.id);
         assert.equal(v.market, market);
+        const reopened = JSON.parse(JSON.stringify(project));
+        M.validate(reopened);
+        assert.equal(resolveChoices(choicesFromVehicle(reopened.vehicle)).preset.id, p.id);
         assert.equal(v.body, body);
         assert.equal(v.tyre, p.tyres[0] ?? null);
         if (p.tyres[0]) assert.equal(v.circumference, circumferenceFor(p.tyres[0]));
@@ -97,6 +102,23 @@ test("choices only offer what exists for the region", () => {
   const { choices, preset } = resolveChoices({ market: "EU", generation: "nope" });
   assert.ok(preset, "falls back to an existing preset");
   assert.equal(findPreset(choices), preset);
+});
+
+test("market and model filter the configurations and an ambiguous drivetrain needs a choice", () => {
+  assert.deepEqual(resolveChoices({ market: "JP" }).options.model, ["MX-5"]);
+  assert.deepEqual(resolveChoices({ market: "EU" }).options.model, ["MX-5", "CX-5"]);
+  assert.deepEqual(resolveChoices({ market: "UK" }).options.model, ["MX-5", "Mazda3"]);
+  const us = resolveChoices({ market: "US", model: "CX-5" });
+  assert.deepEqual(us.options.drive, ["FWD", "AWD"]);
+  assert.equal(us.preset, null);
+  for (const [drive, finalDrive] of [["FWD", 4.325], ["AWD", 4.624]]) {
+    const { preset } = resolveChoices({ ...us.choices, drive });
+    assert.equal(preset.finalDrive, finalDrive);
+    const project = M.defaults();
+    applyPreset(project, preset, { market: "US" });
+    assert.equal(project.vehicle.finalDrive, finalDrive);
+    assert.equal(choicesFromVehicle(project.vehicle).drive, drive);
+  }
 });
 
 test("applying a preset converts custom scales and undoes in one step", () => {

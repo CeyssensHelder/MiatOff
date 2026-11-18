@@ -1,3 +1,4 @@
+import { VEHICLE_MODELS, VEHICLE_ENGINES, VEHICLE_BODIES } from "./presets.mjs";
 import {
   signals,
   unitChoices,
@@ -656,8 +657,8 @@ export function validate(s) {
   const v = s.vehicle;
   requireValue(
     v &&
-      ["ND1", "ND2"].includes(v.generation) &&
-      ["1.5", "2.0"].includes(v.engine),
+      Object.values(VEHICLE_MODELS).flat().includes(v.generation) &&
+      VEHICLE_ENGINES.includes(v.engine),
     "Invalid vehicle",
   );
   for (const [k, choices] of Object.entries(unitChoices))
@@ -665,7 +666,7 @@ export function validate(s) {
   for (const k of ["max", "amber", "red", "shift", "limit"])
     requireValue(Number.isInteger(v.rpm?.[k]), "RPM values must be integers");
   requireValue(
-    ["roadster", "RF", "rf"].includes(v.body) &&
+    [...VEHICLE_BODIES, "rf"].includes(v.body) &&
       ["manual", "automatic"].includes(v.transmission),
     "Invalid vehicle body/transmission",
   );

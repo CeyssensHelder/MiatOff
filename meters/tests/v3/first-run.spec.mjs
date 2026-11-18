@@ -58,6 +58,38 @@ test("first run asks for the car, applies a US preset, and does not ask again", 
   await expect(page.locator("#setup-skip")).toHaveText("Cancel");
 });
 
+test("choosing an additional model filters the market and requires the CX-5 drivetrain", async ({ page }) => {
+  const db = await open(page);
+  const model = page.locator("#setup-model");
+  const drive = page.locator("#setup-drive");
+  const next = page.locator("#setup-next");
+  await expect(model).toHaveValue("MX-5");
+  await expect(drive).toBeHidden();
+  await page.locator("#setup-market").selectOption("UK");
+  await expect(model.locator("option")).toHaveText(["MX-5", "Mazda3"]);
+  await model.selectOption("Mazda3");
+  await expect(page.locator("#setup-preset")).toHaveText("2018 Mazda3 Sport Black");
+  await page.locator("#setup-market").selectOption("US");
+  await model.selectOption("CX-5");
+  await expect(drive).toHaveValue("");
+  await expect(next).toBeDisabled();
+  await drive.selectOption("AWD");
+  await expect(page.locator("#setup-preset")).toHaveText("2019 CX-5 Sport AWD");
+  await next.click();
+  await expect(page.locator("#setup-summary-body")).toContainText("calculated");
+  await next.click();
+  await expect(dialog(page)).toBeHidden();
+  expect(await vehicle(page)).toMatchObject({
+    preset: "cx5-kf-2019-us-sport-awd", finalDrive: 4.624, tyre: "225/65R17", year: 2019,
+  });
+  await page.evaluate(() => __studio.flush());
+  await open(page, db);
+  await page.locator("#project-open").click();
+  await page.locator("#car-setup-open").click();
+  await expect(model).toHaveValue("CX-5");
+  await expect(drive).toHaveValue("AWD");
+});
+
 test("keeping the defaults leaves the legacy profile and is remembered", async ({ page }) => {
   const db = await open(page);
   const before = await vehicle(page);

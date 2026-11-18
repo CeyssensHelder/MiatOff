@@ -199,8 +199,8 @@ def car_profile(vehicle, label=None):
 def validate_vehicle(v):
     """Check the vehicle profile of a setup (identity, rpm, units, numbers, gearing, preset, tyre). Returns it."""
     require(isinstance(v, dict), "Invalid vehicle identity")
-    require(v.get("generation") in ("ND1", "ND2") and v.get("engine") in ("1.5", "2.0") and
-            v.get("body") in ("roadster", "RF", "rf") and v.get("transmission") in ("manual", "automatic")
+    require(v.get("generation") in ("ND1", "ND2", "BN", "KF") and v.get("engine") in ("1.5", "2.0", "2.5") and
+            v.get("body") in ("roadster", "RF", "rf", "sedan", "hatchback", "suv") and v.get("transmission") in ("manual", "automatic")
             and number(v.get("year"), 1989, 2100, True) and text(v.get("market"), 40), "Invalid vehicle identity")
     rpm = [v.get("rpm", {}).get(key) for key in ("amber", "red", "shift", "limit", "max")]
     require(all(number(n, 1, 15000, True) for n in rpm) and rpm == sorted(rpm), "Invalid RPM settings")

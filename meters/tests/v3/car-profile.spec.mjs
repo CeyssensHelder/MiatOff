@@ -5,6 +5,8 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { defaults } from "../../designer/v3/model.mjs";
+import { applyPreset, presetById } from "../../designer/v3/car-setup.mjs";
 import { metersRoot, serveMeters } from "./car-fixture.mjs";
 
 // Keeps the shared API for the test (appended to the real custom.js; app.js hands every set the same object).
@@ -75,6 +77,25 @@ test("a car profile sets the RPM warnings, gearing and power figures of the buil
     await served.close();
   }
 });
+
+for (const [drive, finalDrive] of [["fwd", 4.325], ["awd", 4.624]]) {
+  test(`the US CX-5 ${drive.toUpperCase()} uses its final drive to infer gear`, async ({ page }) => {
+    const project = defaults();
+    applyPreset(project, presetById("cx5-kf-2019-us-sport-" + drive), { market: "US" });
+    const profile = project.vehicle;
+    const served = await serveMeters({ "/js/custom.js": custom, "/js/car-profile.js": script(profile) });
+    try {
+      await open(page, served);
+      const expected = { finalDrive, circumference: 2.275 };
+      expect(await gearAt(page, 80, Math.round(80 * perKmh(1.452, expected)))).toBe(3);
+      expect(await gearAt(page, 110, Math.round(110 * perKmh(0.599, expected)))).toBe(6);
+      // The app's 12% tolerance can accept the other final drive. Check the thresholds too.
+      expect(await gearAt(page, 100, 1750)).toBe(drive === "fwd" ? 6 : undefined);
+    } finally {
+      await served.close();
+    }
+  });
+}
 
 test("every built-in style draws with a car profile", async ({ page }) => {
   const served = await serveMeters({ "/js/custom.js": custom, "/js/car-profile.js": script(PROFILE) });

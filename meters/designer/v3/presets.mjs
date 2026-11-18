@@ -4,6 +4,10 @@
 // shift, gauge maximum) are not specifications: the car setup works them out from the limit and the warning margin.
 // mass is in kg without a driver (US curb weight converted; see notes where the source differs).
 const SRC = {
+  deCx5: { title: "Mazda Germany, 2017 CX-5 press kit", url: "https://de.mazda-press.com/api/assets/download/8bba40e3-8975-4266-9879-4233b31d8c40_Default?isDownload=false" },
+  ukMazda3: { title: "Mazda UK, 2018 Mazda3 Sport Black", url: "https://uk.mazda-press.com/news/2018/mazda3-sport-black-on-sale-from-3rd-april/" },
+  usMazda3: { title: "Mazda USA, 2018 Mazda3 4-door specifications", url: "https://www.mazdausa.com/siteassets/pdf/owners-optimized/2018/mazda3-4door/2018-mazda3-4d-features-specs.pdf" },
+  usCx5: { title: "Mazda USA, 2019 CX-5 specifications", url: "https://www.mazdausa.com/siteassets/pdf/owners-optimized/2019/cx-5/2019-mazda-cx-5-features-specs.pdf" },
   us16: { title: "Mazda USA, 2016 MX-5 Miata specifications", url: "https://portal.mazdausa.com/m176/MusaWeb/musa2/pdf/specs/2016_MX-5_Features_Specs.pdf" },
   us19: { title: "Mazda USA, 2019 MX-5 Miata features and specifications", url: "https://www.mazdausa.com/siteassets/pdf/owners-optimized/2019/mx-5-miata-st/2019_mazda_mx5_features_specs.pdf" },
   jp18: { title: "Mazda Japan, Roadster RF 2.0 Specifications (as of 2018-05)", url: "https://autoprove.net/wp-content/uploads/2018/09/a893f0469f176a8b3d23686a7d720840.pdf" },
@@ -15,6 +19,31 @@ const SRC = {
 };
 const RETRIEVED = "2026-11-11";
 const src = (key, fields) => ({ fields, ...SRC[key], retrieved: RETRIEVED });
+
+export const VEHICLE_MODELS = {
+  "MX-5": ["ND1", "ND2"],
+  Mazda3: ["BN"],
+  "CX-5": ["KF"],
+};
+export const VEHICLE_ENGINES = ["1.5", "2.0", "2.5"];
+export const VEHICLE_BODIES = ["roadster", "RF", "sedan", "hatchback", "suv"];
+
+const sourcedSpecs = [
+  "ratios", "finalDrive", "tyres", "ratedPower", "powerRpm", "ratedTorque", "torqueRpm", "mass",
+];
+const withRedline = [...sourcedSpecs, "rpm.limit"];
+const mazdaSource = (key, fields) => [{ ...src(key, fields), retrieved: "2026-11-18" }];
+const usCx5 = {
+  generation: "KF", engine: "2.5", transmission: "automatic",
+  bodies: ["suv"], years: [2019, 2019], markets: ["US"],
+  rpm: { limit: 6500 },
+  ratios: [3.552, 2.022, 1.452, 1.000, 0.708, 0.599],
+  tyres: ["225/65R17"],
+  ratedPower: 189.59, powerRpm: 6000,
+  ratedTorque: 252.18, torqueRpm: 4000,
+  verified: withRedline,
+  sources: mazdaSource("usCx5", withRedline),
+};
 
 export const PRESETS = [
   {
@@ -149,6 +178,62 @@ export const PRESETS = [
       src("uk22", ["ratedPower", "powerRpm", "ratedTorque", "torqueRpm", "tyres"]),
     ],
     notes: "Ratios and final drive are from the US and Japan sheets; the UK/EU automatic (RF only in the UK guide) is assumed to match. Mass is the US soft-top curb weight 2,388 lb (no driver); the UK RF automatic is 1,194 kg with a 75 kg driver. Fuel cut is unsourced.",
+  },
+  {
+    id: "cx5-kf-2017-de-g165-mt",
+    label: "2017 CX-5 Center-Line (Germany)",
+    generation: "KF", engine: "2.0", transmission: "manual", drive: "FWD",
+    bodies: ["suv"], years: [2017, 2017], markets: ["EU"],
+    rpm: { limit: 6500 },
+    ratios: [3.700, 1.947, 1.300, 1.029, 0.837, 0.680], finalDrive: 4.388,
+    tyres: ["225/65R17"],
+    ratedPower: 165, powerRpm: 6000,
+    ratedTorque: 210, torqueRpm: 4000,
+    mass: 1360,
+    verified: sourcedSpecs,
+    sources: mazdaSource("deCx5", sourcedSpecs),
+    notes: "German trim. Curb mass is the published minimum without the driver. Dashboard redline is assumed.",
+  },
+  {
+    id: "mazda3-bn-2018-uk-sport-black",
+    label: "2018 Mazda3 Sport Black",
+    generation: "BN", engine: "2.0", transmission: "manual", drive: "FWD",
+    bodies: ["hatchback"], years: [2018, 2018], markets: ["UK"],
+    rpm: { limit: 6500 },
+    ratios: [3.700, 1.947, 1.300, 1.029, 0.837, 0.680], finalDrive: 3.619,
+    tyres: ["215/45R18"],
+    ratedPower: 120, powerRpm: 6000,
+    ratedTorque: 210, torqueRpm: 4000,
+    mass: 1205,
+    verified: sourcedSpecs,
+    sources: mazdaSource("ukMazda3", sourcedSpecs),
+    notes: "Mazda's press release rates it at 120 PS. Curb mass excludes the published 75 kg driver allowance. Dashboard redline is assumed.",
+  },
+  {
+    id: "mazda3-bn-2018-us-sport-mt",
+    label: "2018 Mazda3 Sport sedan",
+    generation: "BN", engine: "2.0", transmission: "manual", drive: "FWD",
+    bodies: ["sedan"], years: [2018, 2018], markets: ["US"],
+    rpm: { limit: 6800 },
+    ratios: [3.363, 1.947, 1.300, 1.029, 0.837, 0.680], finalDrive: 3.850,
+    tyres: ["205/60R16"],
+    ratedPower: 157.15, powerRpm: 6000,
+    ratedTorque: 203.37, torqueRpm: 4000,
+    mass: 1315,
+    verified: withRedline,
+    sources: mazdaSource("usMazda3", withRedline),
+  },
+  {
+    ...usCx5,
+    id: "cx5-kf-2019-us-sport-fwd",
+    label: "2019 CX-5 Sport FWD",
+    drive: "FWD", finalDrive: 4.325, mass: 1606,
+  },
+  {
+    ...usCx5,
+    id: "cx5-kf-2019-us-sport-awd",
+    label: "2019 CX-5 Sport AWD",
+    drive: "AWD", finalDrive: 4.624, mass: 1669,
   },
 ];
 

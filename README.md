@@ -7,6 +7,9 @@ refuses to touch anything it does not recognise.
 > **Who this is for:** the **MX-5 ND1 and ND2** (EU, UK and US spec) with Mazda Connect on firmware **74.00.324A**.
 > See [Support status](#support-status).
 
+Meters Designer also includes profiles for selected Mazda3 and CX-5 configurations. Check the
+[regional Mazda Connect research](docs/19-mazda-connect-models.md) for hardware and firmware evidence.
+
 > ⚠️ Modifying a head unit can leave it unusable and is not covered by Mazda's warranty. You use this at your own risk.
 > Read [Is it safe?](#is-it-safe) first.
 
@@ -82,7 +85,7 @@ that show the unit is recognised.
 ### Your own Meters pages
 
 1. In the app, open **Design your Meters** and press **Open designer**. It opens in your web browser on this PC. The
-   first time, it asks which MX-5 you have and which units you use (*Project → Car setup* changes it later). The Meters
+   first time, it asks which Mazda you have and which units you use (*Project → Car setup* changes it later). The Meters
    use that car for the rev warnings, the gear and the units, in the built-in styles too.
 2. Design your pages and press **Send to MiatOff**. Back in the app, tick up to eight pages.
 3. Under **Choose tweaks**, set Meters to *Install* (or *Update* if it is already on the car) and prepare the stick.

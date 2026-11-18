@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // First-run car setup: choose a car and units, fill the project's vehicle profile from a sourced preset.
-import { PRESETS, MARKETS, MARKET_UNITS } from "./presets.mjs";
+import { PRESETS, MARKETS, MARKET_UNITS, VEHICLE_MODELS } from "./presets.mjs";
 import { unitChoices, setUnits, toUnit } from "./signals.mjs";
 
 // Vehicle specifications a preset can supply, in display order. Anything not backed by a source stays "assumed".
@@ -67,20 +67,19 @@ const unique = (items) => [...new Set(items)];
 export function presetsFor(market) {
   return PRESETS.filter((p) => p.markets.includes(market));
 }
-export function findPreset({ market, generation, engine, transmission }) {
-  return (
-    presetsFor(market).find(
-      (p) =>
-        p.generation === generation &&
-        p.engine === engine &&
-        p.transmission === transmission,
-    ) ?? null
+function modelFor(generation) {
+  return Object.keys(VEHICLE_MODELS).find((model) => VEHICLE_MODELS[model].includes(generation));
+}
+export function findPreset({ market, generation, engine, transmission, drive }) {
+  const matching = presetsFor(market).filter(
+    (p) => p.generation === generation && p.engine === engine && p.transmission === transmission,
   );
+  return (matching.length === 1 ? matching[0] : matching.find((p) => p.drive === drive)) ?? null;
 }
 export function presetById(id) {
   return PRESETS.find((p) => p.id === id) ?? null;
 }
-// Options left for each choice once the earlier ones are fixed; invalid choices fall back to the first option.
+// Options left after the earlier selections. Require an explicit choice when multiple drivetrains match.
 export function resolveChoices(choices) {
   const c = { ...choices };
   if (!MARKETS.includes(c.market)) c.market = MARKETS[0];
@@ -89,10 +88,11 @@ export function resolveChoices(choices) {
     return list;
   };
   let pool = presetsFor(c.market);
-  const options = {
-    market: MARKETS,
-    generation: pick("generation", unique(pool.map((p) => p.generation))),
-  };
+  c.model ??= modelFor(c.generation);
+  const options = { market: MARKETS };
+  options.model = pick("model", unique(pool.map((p) => modelFor(p.generation))));
+  pool = pool.filter((p) => modelFor(p.generation) === c.model);
+  options.generation = pick("generation", unique(pool.map((p) => p.generation)));
   pool = pool.filter((p) => p.generation === c.generation);
   options.engine = pick("engine", unique(pool.map((p) => p.engine)));
   pool = pool.filter((p) => p.engine === c.engine);
@@ -100,6 +100,10 @@ export function resolveChoices(choices) {
     "transmission",
     unique(pool.map((p) => p.transmission)),
   );
+  pool = pool.filter((p) => p.transmission === c.transmission);
+  options.drive = unique(pool.map((p) => p.drive).filter(Boolean));
+  if (options.drive.length === 1) c.drive = options.drive[0];
+  else if (!options.drive.includes(c.drive)) c.drive = undefined;
   const preset = findPreset(c);
   options.body = pick("body", preset?.bodies ?? []);
   options.tyre = pick("tyre", preset?.tyres ?? []);
@@ -117,6 +121,7 @@ export function choicesFromVehicle(v) {
     market: MARKETS.includes(v.market) ? v.market : "EU",
     generation: preset?.generation ?? v.generation,
     engine: preset?.engine ?? v.engine,
+    drive: preset?.drive,
     transmission: preset?.transmission ?? v.transmission,
     body: v.body === "rf" ? "RF" : v.body,
     tyre: v.tyre ?? null,
@@ -160,9 +165,11 @@ export function presetValues(preset, { body, tyre }) {
 export function applyPreset(project, preset, choices) {
   const { choices: c } = resolveChoices({
     ...choices,
+    model: modelFor(preset.generation),
     generation: preset.generation,
     engine: preset.engine,
     transmission: preset.transmission,
+    drive: preset.drive,
   });
   if (!preset.markets.includes(c.market))
     throw Error(preset.label + " is not listed for " + c.market);
@@ -248,11 +255,13 @@ export class CarSetup {
     this.firstRun = false;
     this.choices = null;
     const $ = this.$;
-    for (const key of ["market", "generation", "engine", "transmission", "body", "tyre"])
+    for (const key of ["market", "model", "generation", "engine", "transmission", "drive", "body", "tyre"])
       $("setup-" + key).onchange = () => {
         this.choices[key] = $("setup-" + key).value;
         // A new region brings its own default units.
         if (key === "market") this.choices.units = null;
+        if (["market", "model", "generation", "engine", "transmission"].includes(key))
+          this.choices.drive = undefined;
         this.render();
       };
     const host = $("setup-unit-fields");
@@ -316,7 +325,7 @@ export class CarSetup {
     this.choices = choicesFromVehicle(this.api.vehicle());
     this.$("setup-error").textContent = "";
     this.$("setup-intro").textContent = firstRun
-      ? "Which MX-5 do you have? The designer fills in its rev limits, gearing and tyre size, and the units you prefer. You can change this later under Project → Car setup."
+      ? "Which Mazda do you have? The designer fills in its rev warnings, gearing and tyre size, and the units you prefer. You can change this later under Project → Car setup."
       : "Choose your car to replace the vehicle settings of this project. Undo brings the previous ones back.";
     this.$("setup-skip").textContent = firstRun
       ? "Keep the default settings"
@@ -336,26 +345,36 @@ export class CarSetup {
       el.disabled = list.length < 2;
     };
     fill("market", options.market, (m) => MARKET_NAMES[m] ?? m);
+    fill("model", options.model);
     fill("generation", options.generation, (g) => {
-      const years = PRESETS.filter((p) => p.generation === g).flatMap(
+      const years = presetsFor(choices.market).filter((p) => p.generation === g).flatMap(
           (p) => p.years ?? [],
         ),
         from = Math.min(...years.filter(Number.isInteger)),
         to = Math.max(...years.filter(Number.isInteger));
-      return Number.isFinite(from)
-        ? `${g} (${from}–${to >= new Date().getFullYear() ? "" : to})`
-        : g;
+      if (!Number.isFinite(from)) return g;
+      if (from === to) return `${g} (${from})`;
+      return `${g} (${from}–${to >= new Date().getFullYear() ? "" : to})`;
     });
     fill("engine", options.engine, (e) => e + " L");
     fill("transmission", options.transmission, (t) =>
       t === "manual" ? "Manual (6-speed)" : "Automatic (6-speed)",
     );
-    fill("body", options.body, (b) => (b === "RF" ? "RF (retractable fastback)" : "Roadster"));
+    fill("drive", options.drive);
+    $("setup-drive").parentElement.hidden = options.drive.length === 0;
+    if (options.drive.length > 1) {
+      $("setup-drive").prepend(new Option("Choose drivetrain", ""));
+      $("setup-drive").value = choices.drive ?? "";
+    }
+    const bodyNames = { roadster: "Roadster", RF: "RF (retractable fastback)", sedan: "Sedan", hatchback: "Hatchback", suv: "SUV" };
+    fill("body", options.body, (body) => bodyNames[body]);
     fill("tyre", options.tyre);
     for (const [k, u] of Object.entries(choices.units))
       $("setup-unit-" + k).value = u;
     $("setup-margin").value = String(choices.margin);
     $("setup-car").hidden = this.step !== 1;
+    $("setup-preset").hidden = this.step !== 1 || !preset || !preset.drive;
+    $("setup-preset").textContent = preset?.label ?? "";
     $("setup-intro").hidden = this.step !== 1;
     $("setup-units").hidden = this.step !== 2;
     $("setup-back").hidden = this.step !== 2;
@@ -364,7 +383,7 @@ export class CarSetup {
     $("setup-title").textContent =
       this.step === 1 ? "Your car" : "Units and summary";
     if (!preset) {
-      $("setup-error").textContent = "No preset for this combination yet.";
+      $("setup-error").textContent = options.drive.length > 1 ? "Choose FWD or AWD." : "No preset for this combination yet.";
       return;
     }
     $("setup-error").textContent = "";
@@ -386,7 +405,7 @@ export class CarSetup {
         return tr;
       },
       rows = SPEC_FIELDS.flatMap((f) => [
-        row(f, values[f].value, values[f].sourced ? "sourced" : "assumed"),
+        row(f, values[f].value, values[f].sourced ? (f === "circumference" ? "calculated" : "sourced") : "assumed"),
         ...(f === "rpm.limit"
           ? WARNING_FIELDS.map((w) => row(w, warnings[w.slice(4)], "your margin"))
           : []),
