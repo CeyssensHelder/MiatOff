@@ -989,15 +989,22 @@
         show(cur + 1);
     }
 
+    // On the template's touch surface, keep touches out of the HMI document as the iframe did before;
+    // only wheel events (Commander turns) go on to the HMI.
+    function own(e) { if (touchSurface !== stage) e.stopPropagation(); }
+
     // A reloaded frame replaces the handlers on the template's touch surface.
     touchSurface.ontouchstart = function (e) {
-        lastTouch = Date.now(); start(local(e.touches[0])); e.preventDefault();
+        own(e); lastTouch = Date.now(); start(local(e.touches[0])); e.preventDefault();
     };
+    touchSurface.ontouchmove = own;
     touchSurface.ontouchend = function (e) {
-        lastTouch = Date.now(); end(local(e.changedTouches[0])); e.preventDefault();
+        own(e); lastTouch = Date.now(); end(local(e.changedTouches[0])); e.preventDefault();
     };
-    touchSurface.onmousedown = function (e) { if (Date.now() - lastTouch > 800) start(local(e)); };
-    touchSurface.onmouseup = function (e) { if (Date.now() - lastTouch > 800) end(local(e)); };
+    touchSurface.onmousedown = function (e) { own(e); if (Date.now() - lastTouch > 800) start(local(e)); };
+    touchSurface.onmousemove = own;
+    touchSurface.onmouseup = function (e) { own(e); if (Date.now() - lastTouch > 800) end(local(e)); };
+    touchSurface.onclick = own;
     doc.addEventListener('keydown', function (e) {
         var k = e.keyCode;
         if (k === 37 || k === 38) move(-1);

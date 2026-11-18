@@ -122,8 +122,18 @@ MiatoffMetersTmplt.prototype.cleanUp = function()
 {
     if (this.frame)
     {
-        this.divElt.removeChild(this.frame.miatoffTouchSurface);
+        var touchSurface = this.frame.miatoffTouchSurface;
         this.frame.miatoffTouchSurface = null;
+        try
+        {
+            if (touchSurface && touchSurface.parentNode)
+            {
+                touchSurface.parentNode.removeChild(touchSurface);
+            }
+        }
+        catch (e)
+        {
+        }
         try
         {
             this.frame.src = "about:blank";

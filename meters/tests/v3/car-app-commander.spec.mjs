@@ -17,6 +17,10 @@ test.beforeAll(async () => {
         MIATOFF_METERS_URL = "/index.html?src=sim";
         var t = new MiatoffMetersTmplt("miatoff", document.querySelector("main"), "meters", {});
         document.addEventListener("wheel", e => t.handleControllerEvent(e.deltaX > 0 ? "cw" : "ccw"));
+        // The HMI never saw touches inside Meters while they landed in the iframe; it still should not.
+        var pointerSeen = [];
+        ["touchstart", "touchmove", "touchend", "mousedown", "mousemove", "mouseup", "click"].forEach(type =>
+          document.addEventListener(type, e => { if (e.target.className === "MiatoffMetersTouch") pointerSeen.push(type); }));
         document.addEventListener("keydown", e => {
           if (e.key === "Enter") t.handleControllerEvent("select");
           if (e.key === "ArrowRight") t.handleControllerEvent("right");
@@ -63,6 +67,7 @@ for (const input of ["touch", "mouse"]) {
     await expect(dots.nth(1)).toHaveClass("on");
     await page.mouse.wheel(-120, 0);
     await expect(dots.nth(0)).toHaveClass("on");
+    expect(await page.evaluate(() => window.pointerSeen)).toEqual([]);
     await page.keyboard.press("Backspace"); // return to picker, tilt and press
     await expect(stage).toHaveClass("mode-menu");
     await page.keyboard.press("ArrowRight");
