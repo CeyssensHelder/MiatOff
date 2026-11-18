@@ -871,13 +871,13 @@ dialog label > select {
 #setup-title:focus {
   outline: none;
 }
-.setup-model-grid {
+.setup-choice-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin: 16px 0 22px;
 }
-dialog .setup-model-card {
+dialog .setup-choice-card {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -893,13 +893,13 @@ dialog .setup-model-card {
   color: var(--muted);
   cursor: pointer;
 }
-.setup-model-card input {
+.setup-choice-card input {
   position: absolute;
   opacity: 0;
   width: 1px;
   height: 1px;
 }
-.setup-model-card svg {
+.setup-choice-card svg {
   display: block;
   width: 100%;
   flex: 1 1 auto;
@@ -911,33 +911,31 @@ dialog .setup-model-card {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.setup-model-card span {
+.setup-choice-card span {
   color: var(--ink);
   font-size: 16px;
   font-weight: 650;
 }
-.setup-model-card .setup-model-body {
-  fill: currentColor;
-  fill-opacity: 0.08;
+.setup-market-grid .setup-choice-card {
+  min-height: 126px;
 }
-.setup-model-card .setup-model-detail {
-  opacity: 0.65;
-  stroke-width: 1.35;
+.setup-market-grid svg {
+  stroke-width: 1.45;
 }
-.setup-model-card:hover {
+.setup-choice-card:hover {
   border-color: var(--muted);
 }
-.setup-model-card:has(input:checked) {
+.setup-choice-card:has(input:checked) {
   color: var(--accent);
   border-color: var(--accent);
   background: rgba(93, 225, 194, 0.08);
 }
-.setup-model-card:has(input:focus-visible) {
+.setup-choice-card:has(input:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 @media (max-width: 650px) {
-  .setup-model-grid {
+  .setup-choice-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

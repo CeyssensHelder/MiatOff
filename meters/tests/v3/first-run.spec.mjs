@@ -8,6 +8,9 @@ async function open(page, db = crypto.randomUUID(), extra = "&setup=1") {
   return db;
 }
 const dialog = (page) => page.locator("#setup-dialog");
+const markets = (page) => page.getByRole("radiogroup", { name: "Original sales market" });
+const pickMarket = (page, name) =>
+  markets(page).locator(".setup-choice-card").filter({ hasText: name }).click();
 const vehicle = (page) =>
   page.evaluate(() => JSON.parse(JSON.stringify(__studio.store.project.vehicle)));
 
@@ -16,7 +19,7 @@ test("first run asks for the car, applies a US preset, and does not ask again", 
   await expect(dialog(page)).toBeVisible();
   await expect(page.locator("#setup-title")).toHaveText("Choose your Mazda");
   await page.locator("#setup-next").click();
-  await page.locator("#setup-market").selectOption("US");
+  await pickMarket(page, "United States");
   await page.locator("#setup-next").click();
   const preset = await page.evaluate(async () => {
     const S = await import("./v3/car-setup.mjs");
@@ -63,8 +66,9 @@ test("first run asks for the car, applies a US preset, and does not ask again", 
 test("the model narrows market choices, then market narrows the detailed specs", async ({ page }) => {
   await open(page);
   const models = page.getByRole("radiogroup", { name: "Mazda model" });
-  const pickModel = (name) => models.locator(".setup-model-card").filter({ hasText: name }).click();
-  const market = page.locator("#setup-market");
+  const pickModel = (name) => models.locator(".setup-choice-card").filter({ hasText: name }).click();
+  const market = markets(page);
+  const marketCards = market.locator(".setup-choice-card:visible");
   const engine = page.locator("#setup-engine");
   const drive = page.locator("#setup-drive");
   const next = page.locator("#setup-next");
@@ -72,13 +76,14 @@ test("the model narrows market choices, then market narrows the detailed specs",
   await expect(models.getByRole("radio", { name: "MX-5" })).toBeChecked();
   await expect(market).toBeHidden();
   await expect(engine).toBeHidden();
-  await expect(models.locator(".setup-model-card")).toHaveText([
+  await expect(models.locator(".setup-choice-card")).toHaveText([
     "MX-5", "Mazda2", "Mazda3", "Mazda6", "CX-3", "CX-5", "CX-8", "CX-9",
   ]);
   await expect(models.locator("svg")).toHaveCount(8);
   await pickModel("CX-8");
   await next.click();
-  await expect(market.locator("option")).toHaveText(["Australia"]);
+  await expect(marketCards).toHaveText(["Australia"]);
+  await expect.poll(() => marketCards.locator("use").evaluate((element) => element.getBBox().width)).toBeGreaterThan(30);
   await next.click();
   await expect(engine.locator("option")).toHaveText(["2.5 L", "2.2 L diesel"]);
   await engine.selectOption("2.2D");
@@ -87,26 +92,26 @@ test("the model narrows market choices, then market narrows the detailed specs",
   await back.click();
   await pickModel("Mazda3");
   await next.click();
-  await expect(market.locator("option")).toHaveText(["Continental Europe", "United Kingdom", "United States"]);
-  await market.selectOption("EU");
+  await expect(marketCards).toHaveText(["Continental Europe", "United Kingdom", "United States"]);
+  await pickMarket(page, "Continental Europe");
   await expect(engine).toBeHidden();
   await next.click();
   await expect(page.locator("#setup-preset")).toHaveText("2016 Mazda3 Center-Line (Germany)");
   await expect(page.locator("#setup-generation")).toHaveValue("BM");
   await back.click();
-  await market.selectOption("UK");
+  await pickMarket(page, "United Kingdom");
   await next.click();
   await expect(page.locator("#setup-preset")).toHaveText("2018 Mazda3 Sport Black");
   await back.click();
   await back.click();
   await pickModel("CX-5");
   await next.click();
-  await expect(market.locator("option")).toHaveText(["Continental Europe", "United States", "Australia"]);
-  await expect(market).toHaveValue("EU");
+  await expect(marketCards).toHaveText(["Continental Europe", "United States", "Australia"]);
+  await expect(market.getByRole("radio", { name: "Continental Europe" })).toBeChecked();
   await next.click();
   await expect(engine).toHaveValue("2.0");
   await back.click();
-  await market.selectOption("US");
+  await pickMarket(page, "United States");
   await next.click();
   await expect(engine).toHaveValue("2.5");
   await expect(drive).toHaveValue("");
@@ -124,7 +129,7 @@ test("the model narrows market choices, then market narrows the detailed specs",
   await page.locator("#car-setup-open").click();
   await expect(models.getByRole("radio", { name: "CX-5" })).toBeChecked();
   await next.click();
-  await expect(market).toHaveValue("US");
+  await expect(market.getByRole("radio", { name: "United States" })).toBeChecked();
   await next.click();
   await expect(drive).toHaveValue("AWD");
 });
@@ -152,7 +157,7 @@ test("an existing draft is asked once, prefilled from its vehicle", async ({ pag
   await open(page, db);
   await expect(dialog(page)).toBeVisible();
   await page.locator("#setup-next").click();
-  await expect(page.locator("#setup-market")).toHaveValue("UK");
+  await expect(markets(page).getByRole("radio", { name: "United Kingdom" })).toBeChecked();
   await page.keyboard.press("Escape");
   await expect(dialog(page)).toBeHidden();
   await open(page, db);

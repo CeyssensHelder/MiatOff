@@ -261,20 +261,22 @@ export class CarSetup {
     this.firstRun = false;
     this.choices = null;
     const $ = this.$;
-    this.modelCards = [...$("setup-step-model").querySelectorAll("input")];
-    for (const input of this.modelCards) {
-      input.onchange = () => {
-        this.choices.model = input.value;
-        this.choices.drive = undefined;
-        this.render();
-      };
+    this.cards = {};
+    for (const key of ["model", "market"]) {
+      this.cards[key] = [...$("setup-step-" + key).querySelectorAll('input[type="radio"]')];
+      for (const input of this.cards[key]) {
+        input.onchange = () => {
+          this.choices[key] = input.value;
+          if (key === "market") this.choices.units = null;
+          this.choices.drive = undefined;
+          this.render();
+        };
+      }
     }
-    for (const key of ["market", "generation", "engine", "transmission", "drive", "body", "tyre"])
+    for (const key of ["generation", "engine", "transmission", "drive", "body", "tyre"])
       $("setup-" + key).onchange = () => {
         this.choices[key] = $("setup-" + key).value;
-        // A new region brings its own default units.
-        if (key === "market") this.choices.units = null;
-        if (["market", "generation", "engine", "transmission"].includes(key))
+        if (["generation", "engine", "transmission"].includes(key))
           this.choices.drive = undefined;
         this.render();
       };
@@ -359,8 +361,13 @@ export class CarSetup {
       el.value = choices[key] ?? "";
       el.disabled = list.length < 2;
     };
-    fill("market", options.market, (m) => MARKET_NAMES[m] ?? m);
-    for (const input of this.modelCards) input.checked = input.value === choices.model;
+    for (const [key, cards] of Object.entries(this.cards)) {
+      for (const input of cards) {
+        input.checked = input.value === choices[key];
+        input.disabled = !options[key].includes(input.value);
+        input.parentElement.hidden = input.disabled;
+      }
+    }
     fill("generation", options.generation, (g) => {
       const years = presetsFor(choices.market).filter((p) => p.generation === g).flatMap(
           (p) => p.years ?? [],

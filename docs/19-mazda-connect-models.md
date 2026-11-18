@@ -111,3 +111,15 @@ verified for that configuration. Manufacturer output is reported in the original
 - Mazda USA lists the same CX-3 final drive for both drivetrains. The Peruvian grade has different published engine output, and its brochure identifies the transmission types without publishing their individual ratios. [US CX-3 specifications, pp. 26–27](https://news.mazdausa.com/download/2019-Mazda-CX-3-Press-Kit_Version-1.pdf) · [Peru CX-3 specifications](https://www.pdn.mazda.pe/media/iyph0e5q/2024-03-26-vf_ficha_te-cnica_mazda_cx3_25marzo24.pdf)
 - Both 2022 Australian Sport CX-8 engines appear in the same 8-inch MZD Connect grade. The US CX-9 Sport figures are for that model year and fuel rating. [Australia CX-8 technical specifications](https://www.mazda.com.au/4a2887/globalassets/brochures/owners-brochures/mazda_cx-8_digital_brochure_2022.pdf) · [US CX-9 Sport specifications](https://www.mazdausa.com/siteassets/pdf/features--specs/2018/cx-9/2018-mazda-cx-9-features-specs.pdf)
 - Some Mazda diesel manuals publish different final-drive ratios for groups of gears. The current Meters profile stores one final drive. Record the individual final drives and affected gears when gathering those specifications. [Example CX-5 diesel gear tables, pp. 37–40](https://de.mazda-press.com/api/assets/download/8bba40e3-8975-4266-9879-4233b31d8c40_Default?isDownload=false)
+
+## Car Setup illustrations
+
+The vehicle cards use representative profiles for the generations in the preset catalog. Each profile follows the
+body proportions, wheel placement and roofline of a side-on reference.
+
+- [ND MX-5 roadster](https://toppng.com/uploads/preview/mazda-cars-transparent-background-116630202573c5r5pvhok.png) · [DJ Mazda2 hatch](https://www.mazda.com.au/4ab451/globalassets/settings/vehicle-assets/mazda2/2021-10-ipm/ext-360s/1.-hatch/1.-pure/47s/mazv1564_mazda2_hb_g15-pure_auto_platinum-quartz_demkaae_0026.png) · [BN Mazda3 hatch](https://file.kelleybluebookimages.com/kbb/base/evox/CP/12211/2018-MAZDA-MAZDA3-side_12211_001_2400x1800_25D.png) · [GL Mazda6 sedan](https://file.kelleybluebookimages.com/kbb/base/evox/CP/12759/2018-MAZDA-MAZDA6-side_12759_001_2400x1800_25D.png)
+- [DK CX-3](https://file.kelleybluebookimages.com/kbb/base/evox/CP/12864/2019-MAZDA-CX-3-side_12864_001_2400x1800_47A.png) · [KF CX-5](https://autoimage.capitalone.com/stock-media/evox/2019-Mazda-CX-5-Sport-45B-13339_cc2400_001_45B.png?height=480&width=640) · [KG CX-8](https://www.mazda.com.hk/media/kavij3op/cx8.jpg) · [TC CX-9](https://platform.cstatic-images.com/in/v2/stock_photos/e0a47617-b43d-4088-af51-448112e2033b/42eca9e9-1567-4a8a-88cb-20cb040307e7.png)
+
+The market cards use simplified geographic boundaries from public-domain Natural Earth data. Continental Europe
+is a geographic illustration. The preset label identifies the specific country where applicable.
+[Natural Earth 1:110m Admin 0 countries](https://www.naturalearthdata.com/downloads/110m-cultural-vectors/)
