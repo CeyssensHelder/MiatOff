@@ -948,9 +948,10 @@
 
     // ------------------------------------------------------------------ input
     var down = null, lastTouch = 0;
+    var touchSurface = (W.frameElement && W.frameElement.miatoffTouchSurface) || stage;
 
     function local(e) {
-        var r = stage.getBoundingClientRect();
+        var r = touchSurface.getBoundingClientRect();
         return { x: e.clientX - r.left, y: e.clientY - r.top };
     }
     function start(p) { p.t = Date.now(); down = p; }
@@ -988,14 +989,15 @@
         show(cur + 1);
     }
 
-    stage.addEventListener('touchstart', function (e) {
+    // A reloaded frame replaces the handlers on the template's touch surface.
+    touchSurface.ontouchstart = function (e) {
         lastTouch = Date.now(); start(local(e.touches[0])); e.preventDefault();
-    }, false);
-    stage.addEventListener('touchend', function (e) {
+    };
+    touchSurface.ontouchend = function (e) {
         lastTouch = Date.now(); end(local(e.changedTouches[0])); e.preventDefault();
-    }, false);
-    stage.addEventListener('mousedown', function (e) { if (Date.now() - lastTouch > 800) start(local(e)); }, false);
-    stage.addEventListener('mouseup', function (e) { if (Date.now() - lastTouch > 800) end(local(e)); }, false);
+    };
+    touchSurface.onmousedown = function (e) { if (Date.now() - lastTouch > 800) start(local(e)); };
+    touchSurface.onmouseup = function (e) { if (Date.now() - lastTouch > 800) end(local(e)); };
     doc.addEventListener('keydown', function (e) {
         var k = e.keyCode;
         if (k === 37 || k === 38) move(-1);
