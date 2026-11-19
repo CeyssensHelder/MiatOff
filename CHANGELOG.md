@@ -4,6 +4,15 @@ Each release on the [Releases page](https://github.com/CeyssensHelder/MiatOff/re
 with its version below. Everything is for the **MX-5 ND1 and ND2** with Mazda Connect on firmware **74.00.324A** only;
 the tools check the car first and change nothing they do not recognise.
 
+## Unreleased
+
+### Fixed
+
+- **Commander knob turns ignored in Meters after touching the screen:** after a tap or swipe, turning the knob did
+  nothing until you left Meters and opened it again (tilting and pressing still worked). Turns now keep working after
+  touch. Update Meters from the app (*Update*, then **REPAIR** in the car) to get it. Tested in our ND1; not yet
+  confirmed on the ND2 where it was reported.
+
 ## v1.0.2-rc.1
 
 Pre-release for testing one fix. Not tested in a car yet.

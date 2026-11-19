@@ -34,8 +34,14 @@ function MiatoffMetersTmplt(uiaId, parentDiv, templateId, controlProperties)
     this.frame.className = "MiatoffMetersFrame";
     this.frame.setAttribute("frameborder", "0");
     this.frame.setAttribute("scrolling", "no");
+    // Keep pointer input in the HMI document, where Commander turns are routed.
+    // The page binds its ordinary gesture handlers to this layer above the iframe.
+    var touchSurface = document.createElement("div");
+    touchSurface.className = "MiatoffMetersTouch";
+    this.frame.miatoffTouchSurface = touchSurface;
     this.frame.src = MIATOFF_METERS_URL;
     this.divElt.appendChild(this.frame);
+    this.divElt.appendChild(touchSurface);
 
     parentDiv.appendChild(this.divElt);
 }
@@ -116,6 +122,18 @@ MiatoffMetersTmplt.prototype.cleanUp = function()
 {
     if (this.frame)
     {
+        var touchSurface = this.frame.miatoffTouchSurface;
+        this.frame.miatoffTouchSurface = null;
+        try
+        {
+            if (touchSurface && touchSurface.parentNode)
+            {
+                touchSurface.parentNode.removeChild(touchSurface);
+            }
+        }
+        catch (e)
+        {
+        }
         try
         {
             this.frame.src = "about:blank";
