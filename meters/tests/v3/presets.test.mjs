@@ -15,6 +15,7 @@ import {
   presetValues,
   warningRpm,
   MARGINS,
+  marginOf,
   SPEC_FIELDS,
 } from "../../designer/v3/car-setup.mjs";
 
@@ -172,4 +173,62 @@ test("a hand edit of a preset value marks it assumed; the default profile maps b
   const choices = choicesFromVehicle(legacy);
   assert.equal(choices.market, "EU");
   assert.equal(choices.generation, "ND1");
+});
+
+test("outputs of one engine need an explicit version, like FWD or AWD", () => {
+  const base = { model: "Mazda2", market: "EU", generation: "DJ", engine: "1.5", transmission: "manual" };
+  let r = resolveChoices(base);
+  assert.equal(r.preset, null, "no silent pick between 75, 90 and 115 PS");
+  assert.deepEqual(r.options.version, [
+    "mazda2-dj-2022-eu-g75-mt", "mazda2-dj-2022-eu-g90-mt", "mazda2-dj-2022-eu-g115-mt",
+  ]);
+  r = resolveChoices({ ...base, version: "mazda2-dj-2022-eu-g115-mt" });
+  assert.equal(r.preset.ratedPower, 115);
+  assert.deepEqual(r.options.tyre, ["185/60R16"]);
+  r = resolveChoices({ ...base, transmission: "automatic" });
+  assert.equal(r.preset.id, "mazda2-dj-2022-eu-g90-at");
+  assert.deepEqual(r.options.version, []);
+  r = resolveChoices({ model: "CX-3", market: "EU", generation: "DK", engine: "2.0", transmission: "manual" });
+  assert.equal(r.preset, null, "drivetrain first");
+  assert.deepEqual(r.options.version, []);
+  r = resolveChoices({ model: "CX-3", market: "EU", generation: "DK", engine: "2.0", transmission: "manual", drive: "AWD" });
+  assert.equal(r.preset.ratedPower, 150);
+});
+
+test("every family offers a European market", () => {
+  for (const model of Object.keys(VEHICLE_MODELS)) {
+    if (["CX-8", "CX-9"].includes(model)) continue; // not sold in Europe
+    const markets = new Set(PRESETS.filter((p) => VEHICLE_MODELS[model].includes(p.generation)).flatMap((p) => p.markets));
+    assert.ok(markets.has("EU"), model);
+  }
+});
+
+test("the Fiat and Abarth 124 Spider share the 1.4 turbo and are told apart by version", () => {
+  const eu = { model: "124 Spider", market: "EU", generation: "348", engine: "1.4T", transmission: "manual" };
+  let r = resolveChoices(eu);
+  assert.equal(r.preset, null);
+  assert.deepEqual(r.options.version, ["fiat124-348-eu-mt", "abarth124-348-mt"]);
+  r = resolveChoices({ ...eu, version: "abarth124-348-mt" });
+  assert.equal(r.preset.ratedTorque, 250);
+  assert.deepEqual(r.options.body, ["roadster"]);
+  r = resolveChoices({ ...eu, market: "AU" });
+  assert.equal(r.preset.id, "abarth124-348-mt", "only the Abarth was sold in Australia");
+  r = resolveChoices({ ...eu, market: "US", version: "fiat124-348-us-mt" });
+  assert.equal(r.preset.rpm.limit, 6250);
+});
+
+test("a custom margin is any 0-2000 rpm in steps of 50 and survives reopening", () => {
+  assert.equal(marginOf(1210), 1200);
+  assert.equal(marginOf("875"), 900);
+  assert.equal(marginOf(5000), 2000);
+  assert.equal(marginOf(-10), 0);
+  assert.equal(marginOf(null), 500);
+  assert.equal(marginOf("x"), 500);
+  assert.equal(resolveChoices({ market: "EU", margin: 1200 }).choices.margin, 1200);
+  const project = M.defaults(),
+    p = PRESETS.find((x) => x.rpm.limit === 5000);
+  applyPreset(project, p, { market: p.markets[0], margin: 2000 });
+  const r = project.vehicle.rpm;
+  assert.ok(1000 < r.amber && r.amber <= r.red && r.red <= r.shift && r.shift <= r.limit && r.limit <= r.max, JSON.stringify(r));
+  assert.equal(choicesFromVehicle(project.vehicle).margin, 2000);
 });

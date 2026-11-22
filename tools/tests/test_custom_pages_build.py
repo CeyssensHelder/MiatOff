@@ -133,20 +133,20 @@ class CustomPagesBuildTests(unittest.TestCase):
             self.assertFalse(bs.check(Path(folder)))
             self.assertEqual((Path(folder) / "miatoff-app/app/meters/js/car-profile.js").read_bytes(), data)
 
-    def test_new_mazda_presets_round_trip_into_the_payload(self):
+    def test_presets_beyond_the_mx5_round_trip_into_the_payload(self):
         designer = ROOT / "meters/designer/v3"
         source = f"""
           import {{ defaults }} from {json.dumps((designer / "model.mjs").as_uri())};
           import {{ PRESETS }} from {json.dumps((designer / "presets.mjs").as_uri())};
           import {{ applyPreset, carLabel }} from {json.dumps((designer / "car-setup.mjs").as_uri())};
-          console.log(JSON.stringify(PRESETS.filter(p => p.drive).map(p => {{
+          console.log(JSON.stringify(PRESETS.filter(p => !["ND1", "ND2"].includes(p.generation)).map(p => {{
             const project = defaults();
             applyPreset(project, p, {{ market: p.markets[0] }});
             return {{ vehicle: project.vehicle, label: carLabel(project.vehicle) }};
           }})));
         """
         profiles = json.loads(subprocess.check_output(["node", "--input-type=module", "-e", source], cwd=ROOT))
-        self.assertEqual(len(profiles), 26)
+        self.assertEqual(len(profiles), 47)
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "library.sqlite3"
             library = ml.CarProfile(ml.PageLibrary(path))

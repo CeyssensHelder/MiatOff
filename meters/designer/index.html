@@ -564,13 +564,13 @@
     <dialog id="setup-dialog" class="wide-dialog">
       <form id="setup-form">
         <div class="dialog-heading">
-          <h2 id="setup-title" tabindex="-1">Choose your Mazda</h2>
+          <h2 id="setup-title" tabindex="-1">Choose your car</h2>
           <button type="button" data-close aria-label="Close car setup">
             ×
           </button>
         </div>
         <p id="setup-intro" class="hint"></p>
-        <div id="setup-step-model" class="setup-choice-grid" role="radiogroup" aria-label="Mazda model">
+        <div id="setup-step-model" class="setup-choice-grid" role="radiogroup" aria-label="Car model">
           <label class="setup-choice-card">
             <input type="radio" name="setup-model" value="MX-5" />
             <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
@@ -627,6 +627,13 @@
             </svg>
             <span>CX-9</span>
           </label>
+          <label class="setup-choice-card">
+            <input type="radio" name="setup-model" value="124 Spider" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <use href="./setup-outlines.svg#fiat124" />
+            </svg>
+            <span>Fiat / Abarth 124</span>
+          </label>
         </div>
         <div id="setup-step-market" hidden>
           <p class="hint">Choose the market where your car was originally sold.</p>
@@ -636,7 +643,7 @@
               <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
                 <use href="./setup-outlines.svg#eu" />
               </svg>
-              <span>Continental Europe</span>
+              <span>Europe</span>
             </label>
             <label class="setup-choice-card">
               <input type="radio" name="setup-market" value="UK" />
@@ -674,6 +681,7 @@
             <label>Engine<select id="setup-engine"></select></label>
             <label>Gearbox<select id="setup-transmission"></select></label>
             <label hidden>Drivetrain<select id="setup-drive"></select></label>
+            <label hidden>Version<select id="setup-version"></select></label>
             <label>Body<select id="setup-body"></select></label>
             <label>Tyre size<select id="setup-tyre"></select></label>
           </div>
@@ -684,6 +692,15 @@
           <label
             >Turn the gauges red<select id="setup-margin"></select
           ></label>
+          <label id="setup-margin-custom-field" hidden
+            >Rpm before the limiter (0 to 2000)<input
+              id="setup-margin-custom"
+              type="number"
+              min="0"
+              max="2000"
+              step="50"
+              inputmode="numeric"
+          /></label>
           <table id="setup-summary">
             <caption id="setup-summary-caption"></caption>
             <tbody id="setup-summary-body"></tbody>

@@ -3,7 +3,7 @@
 MiatOff uses the original Mazda Connect (MZD Connect or 6G). Mazda uses the Mazda Connect name for several generations.
 Use the country of original sale, model year or build date, and trim to identify a candidate. The actual unit's
 version and the file hashes from **Check your car** determine which installer actions can run. The models below
-are research candidates for MiatOff. The model picker includes all eight families. Each choice offers sourced configurations with specific markets, years and trims.
+are research candidates for MiatOff. The model picker includes all eight Mazda families and the Fiat / Abarth 124 Spider. Each choice offers sourced configurations with specific markets, years and trims.
 
 ## Model families
 
@@ -73,11 +73,36 @@ firmware/build evidence in other export markets remain incomplete.
 | Region | Observed display label near 74.00.324 |
 |---|---|
 | North America | 74.00.324A, NA N |
-| Europe and UK | 74.00.324, EU N |
+| Europe and UK | 74.00.324, EU N (but both EU ND1 dumps of this project show **74.00.324A**; see [11](11-dump-analysis.md)) |
 | Export (including Australia and Gulf examples) | 74.00.324, 4A N |
 | Japan | 74.00.324, JP M |
 
 [Miatafy regional firmware observations](https://miatafy.com/compatibility/supported-vehicles/)
+
+## Fiat and Abarth 124 Spider
+
+The Fiat 124 Spider and Abarth 124 Spider (type 348, 2016–2020) are built by Mazda in Hiroshima on the ND, with the
+same head unit running Fiat-branded software (confirmed by the project owner, 2026-11-18). The car setup offers them
+as **Fiat / Abarth 124**; their presets are in [18](18-vehicle-presets.md#fiat-and-abarth-124-spider). Whether the
+installer recognises the Fiat software is decided by **Check your car**, as for any car.
+
+## Not in the model picker
+
+The picker offers a family only where a sourced preset exists. These cars are also documented or reported with the
+original system (checked 2026-11-18 against the [Mazda bulletin](https://static.nhtsa.gov/odi/tsbs/2022/MC-10226834-0001.pdf)
+and [Miatafy's list](https://miatafy.com/compatibility/supported-vehicles/)) and have no card or preset yet:
+
+| Car | Status |
+|---|---|
+| Mazda6 GJ facelift (2015–2017) | Mazda Connect from the 2015 update; only the GL has presets. |
+| CX-5 KE facelift (2015–2017) | Mazda Connect from the 2015 update; only the KF has presets. |
+| Mazda2 DL sedan (Mexico and others) | In the North American bulletin (Mexico spec); only the DJ hatch has a preset. |
+| CX-4 (China, 2016 on) | Reported, not confirmed. China is a separate firmware region. |
+
+A family only shows the markets that have a preset. Every family sold in Europe now has European presets
+(see [the European presets](18-vehicle-presets.md#european-mazda2-mazda6-and-cx-3)); the CX-8 and CX-9 were not
+sold there. Any car still needs **Check your car**: the installer changes nothing it does not recognise, whatever
+the card says.
 
 ## Technical specifications for additional configurations
 
@@ -114,12 +139,32 @@ verified for that configuration. Manufacturer output is reported in the original
 
 ## Car Setup illustrations
 
-The vehicle cards use representative profiles for the generations in the preset catalog. Each profile follows the
-body proportions, wheel placement and roofline of a side-on reference.
+The car cards are blueprint-style side views (outline, glass, seams, lamps, detailed wheels) made by
+[tools/make_car_outlines.py](../tools/make_car_outlines.py), all at one scale from each generation's published
+length, wheelbase and height and a tyre size from the presets, so the cards show the real size differences.
 
-- [ND MX-5 roadster](https://toppng.com/uploads/preview/mazda-cars-transparent-background-116630202573c5r5pvhok.png) · [DJ Mazda2 hatch](https://www.mazda.com.au/4ab451/globalassets/settings/vehicle-assets/mazda2/2021-10-ipm/ext-360s/1.-hatch/1.-pure/47s/mazv1564_mazda2_hb_g15-pure_auto_platinum-quartz_demkaae_0026.png) · [BN Mazda3 hatch](https://file.kelleybluebookimages.com/kbb/base/evox/CP/12211/2018-MAZDA-MAZDA3-side_12211_001_2400x1800_25D.png) · [GL Mazda6 sedan](https://file.kelleybluebookimages.com/kbb/base/evox/CP/12759/2018-MAZDA-MAZDA6-side_12759_001_2400x1800_25D.png)
-- [DK CX-3](https://file.kelleybluebookimages.com/kbb/base/evox/CP/12864/2019-MAZDA-CX-3-side_12864_001_2400x1800_47A.png) · [KF CX-5](https://autoimage.capitalone.com/stock-media/evox/2019-Mazda-CX-5-Sport-45B-13339_cc2400_001_45B.png?height=480&width=640) · [KG CX-8](https://www.mazda.com.hk/media/kavij3op/cx8.jpg) · [TC CX-9](https://platform.cstatic-images.com/in/v2/stock_photos/e0a47617-b43d-4088-af51-448112e2033b/42eca9e9-1567-4a8a-88cb-20cb040307e7.png)
+Where a car is traced over a photo, the photo is pinned to those dimensions first (bumpers, wheel centres, ground)
+to take out the camera's perspective, and its lines are then traced in millimetres. Traced:
 
-The market cards use simplified geographic boundaries from public-domain Natural Earth data. Continental Europe
+- **MX-5 (ND):** [Mazda MX-5 Miata (ND, roadster)](https://commons.wikimedia.org/wiki/File:Mazda_MX-5_Miata_(ND,_roadster).jpg)
+  by PlotagonNoah, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The drawing is an adaptation
+  of it under the same licence (CC BY-SA 4.0 adaptations may be shared under GPL-3.0). The front overhang (800 mm)
+  is measured from it, checked against the Fiat 124's published overhangs on the same platform.
+
+- **Fiat 124 Spider:** [Fiat 124 Spider side.jpg](https://commons.wikimedia.org/wiki/File:Fiat_124_Spider_side.jpg) by zombieite, CC BY 2.0.
+- **Mazda2 (DJ):** the only side photo found was too distorted (close wide-angle shot); it is the CX-3 trace
+  (same platform and wheelbase) stretched to its own length and height.
+- **Mazda3 (BM) sedan:** [Mazda 3 GT side (20846440748).jpg](https://commons.wikimedia.org/wiki/File:Mazda_3_GT_side_(20846440748).jpg) by Zytonits, CC BY-SA 2.0.
+- **Mazda6 (GJ/GL):** no square side photo was found; it is the Mazda3 sedan trace stretched to its own overhangs,
+  wheelbase and height (the two sedans share the profile).
+- **CX-3 (DK):** [2015 Mazda CX-3 Maxx AWD - Dynamic Blue (16822456507).jpg](https://commons.wikimedia.org/wiki/File:2015_Mazda_CX-3_Maxx_AWD_-_Dynamic_Blue_(16822456507).jpg) by TuRbO_J from Adelaide, Australia, CC BY 2.0.
+- **CX-5 (KF):** [Mazda CX5 2017 Seitenansicht.JPG](https://commons.wikimedia.org/wiki/File:Mazda_CX5_2017_Seitenansicht.JPG) by KarleHorn, CC BY 3.0.
+- **CX-8 (KG) and CX-9 (TC):** no square side photo was found; both are the CX-5 trace stretched to their own
+  overhangs, wheelbase and height.
+
+Where a photo was taken at an angle, the front overhang is a published or estimated value instead of the photo's,
+and the heights are scaled to the published height.
+
+The market cards use simplified geographic boundaries from public-domain Natural Earth data. The Europe card
 is a geographic illustration. The preset label identifies the specific country where applicable.
 [Natural Earth 1:110m Admin 0 countries](https://www.naturalearthdata.com/downloads/110m-cultural-vectors/)

@@ -17,7 +17,7 @@ const vehicle = (page) =>
 test("first run asks for the car, applies a US preset, and does not ask again", async ({ page }) => {
   const db = await open(page);
   await expect(dialog(page)).toBeVisible();
-  await expect(page.locator("#setup-title")).toHaveText("Choose your Mazda");
+  await expect(page.locator("#setup-title")).toHaveText("Choose your car");
   await page.locator("#setup-next").click();
   await pickMarket(page, "United States");
   await page.locator("#setup-next").click();
@@ -34,13 +34,19 @@ test("first run asks for the car, applies a US preset, and does not ask again", 
   await expect(page.locator("#setup-margin")).toHaveValue("500");
   await page.locator("#setup-margin").selectOption("750");
   await expect(page.locator("#setup-summary-body")).toContainText("Red from" + (preset.limit - 750) + " rpm");
+  await expect(page.locator("#setup-margin-custom")).toBeHidden();
+  await page.locator("#setup-margin").selectOption("custom");
+  await expect(page.locator("#setup-margin-custom")).toHaveValue("750");
+  await page.locator("#setup-margin-custom").fill("1210");
+  await page.locator("#setup-margin-custom").blur();
+  await expect(page.locator("#setup-summary-body")).toContainText("Red from" + (preset.limit - 1200) + " rpm");
   await page.locator("#setup-next").click();
   await expect(dialog(page)).toBeHidden();
   const v = await vehicle(page);
   expect(v.preset).toBe(preset.id);
   expect(v.units.speed).toBe("mph");
   expect(v.rpm.limit).toBe(preset.limit);
-  expect(v.rpm.red).toBe(preset.limit - 750);
+  expect(v.rpm.red).toBe(preset.limit - 1200);
   expect(v.ratios).toEqual(preset.ratios.map((r, i) => r ?? v.ratios[i]));
   // The Vehicle and units rows follow the new profile.
   await page.locator("#project-open").click();
@@ -65,7 +71,7 @@ test("first run asks for the car, applies a US preset, and does not ask again", 
 
 test("the model narrows market choices, then market narrows the detailed specs", async ({ page }) => {
   await open(page);
-  const models = page.getByRole("radiogroup", { name: "Mazda model" });
+  const models = page.getByRole("radiogroup", { name: "Car model" });
   const pickModel = (name) => models.locator(".setup-choice-card").filter({ hasText: name }).click();
   const market = markets(page);
   const marketCards = market.locator(".setup-choice-card:visible");
@@ -77,9 +83,9 @@ test("the model narrows market choices, then market narrows the detailed specs",
   await expect(market).toBeHidden();
   await expect(engine).toBeHidden();
   await expect(models.locator(".setup-choice-card")).toHaveText([
-    "MX-5", "Mazda2", "Mazda3", "Mazda6", "CX-3", "CX-5", "CX-8", "CX-9",
+    "MX-5", "Mazda2", "Mazda3", "Mazda6", "CX-3", "CX-5", "CX-8", "CX-9", "Fiat / Abarth 124",
   ]);
-  await expect(models.locator("svg")).toHaveCount(8);
+  await expect(models.locator("svg")).toHaveCount(9);
   await pickModel("CX-8");
   await next.click();
   await expect(marketCards).toHaveText(["Australia"]);
@@ -92,8 +98,8 @@ test("the model narrows market choices, then market narrows the detailed specs",
   await back.click();
   await pickModel("Mazda3");
   await next.click();
-  await expect(marketCards).toHaveText(["Continental Europe", "United Kingdom", "United States"]);
-  await pickMarket(page, "Continental Europe");
+  await expect(marketCards).toHaveText(["Europe", "United Kingdom", "United States"]);
+  await pickMarket(page, "Europe");
   await expect(engine).toBeHidden();
   await next.click();
   await expect(page.locator("#setup-preset")).toHaveText("2016 Mazda3 Center-Line (Germany)");
@@ -106,8 +112,8 @@ test("the model narrows market choices, then market narrows the detailed specs",
   await back.click();
   await pickModel("CX-5");
   await next.click();
-  await expect(marketCards).toHaveText(["Continental Europe", "United States", "Australia"]);
-  await expect(market.getByRole("radio", { name: "Continental Europe" })).toBeChecked();
+  await expect(marketCards).toHaveText(["Europe", "United States", "Australia"]);
+  await expect(market.getByRole("radio", { name: "Europe" })).toBeChecked();
   await next.click();
   await expect(engine).toHaveValue("2.0");
   await back.click();

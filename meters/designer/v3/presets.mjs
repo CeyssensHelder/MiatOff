@@ -4,6 +4,15 @@
 // shift, gauge maximum) are not specifications: the car setup works them out from the limit and the warning margin.
 // mass is in kg without a driver (US curb weight converted; see notes where the source differs).
 const SRC = {
+  itFiat124: { title: "Fiat Italy, 124 Spider technical sheet, 18 November 2015 (press copy)", url: "https://www.motorinolimits.com/wp-content/uploads/2015/11/151118_Fiat_124-Spider_Scheda-Tecnica.pdf" },
+  usFiat124: { title: "FCA US, 2018 Fiat 124 Spider specifications (press copy)", url: "https://www.motorshow.me/uploadImages/GalleryDocs/Doc7209.pdf" },
+  auAbarth124: { title: "Fiat Australia, Abarth 124 Spider Series 1 buyer's guide, October 2017", url: "https://tools.fiat.com.au/assets/ABARTH_124_SPIDER_S1%20v1-06aa34a539f56503988e2ecbfa2e5954.pdf" },
+  ukMazda2: { title: "Mazda UK, Mazda2 price and specification guide, September 2022", url: "https://media-assets.mazda.eu/raw/upload//mazdauk/globalassets/uk/pdfs/fy157/p2/sept-pricing/mazda2-price--specs.pdf" },
+  deMazda2: { title: "Mazda Germany, Mazda2 price list, 1 December 2022 (dealer copy)", url: "https://www.sueverkruep.de/mazda/wp-content/uploads/sites/5/2023/01/01-12-2022_preisliste_mazda2_0_kl.pdf" },
+  ukMazda6: { title: "Mazda UK, Mazda6 price and specification guide, October 2022", url: "https://s3-eu-west-2.amazonaws.com/2021.mazda.epa.epresspacks.com/epa/2cf9a00fc9c4a9e4/documents/Mazda6-Price-and-Spec-Guide-sept-22.pdf" },
+  deMazda6: { title: "Mazda Germany, Mazda6 price list, 3 June 2019 (dealer copy)", url: "https://www.sueverkruep.de/mazda/wp-content/uploads/sites/5/2019/08/Mazda-6-Preisliste.pdf" },
+  deCx3: { title: "Mazda Germany, CX-3 price list, 3 June 2019 (dealer copy)", url: "https://www.sueverkruep.de/mazda/wp-content/uploads/sites/5/2019/08/Mazda-CX-3-Preisliste.pdf" },
+  yarisIa: { title: "SECONDARY: TrueCar, Toyota Yaris iA manual specifications (Mazda-built, same 1.5 and 6MT)", url: "https://www.truecar.com/toyota/yaris-ia/manual/specs/" },
   auMazda2: { title: "Mazda Australia, October 2026 Mazda2 brochure", url: "https://www.mazda.com.au/4aaf8f/globalassets/brochures/mazda2-digital-brochure.pdf" },
   auMazda6: { title: "Mazda Australia, 2022 Mazda6 brochure", url: "https://www.mazda.com.au/49de26/globalassets/brochures/owners-brochures/archived/mazda6_2022.pdf" },
   ptCx3: { title: "Mazda Portugal, 2015 CX-3 press kit", url: "https://pt.mazda-press.com/api/assets/download/fe6bff4a-268c-48cd-852f-94ccee59846d_Pdf?isDownload=false" },
@@ -38,6 +47,7 @@ export const VEHICLE_MODELS = {
   "CX-5": ["KF"],
   "CX-8": ["KG"],
   "CX-9": ["TC"],
+  "124 Spider": ["348"],
 };
 export const ENGINE_NAMES = {
   "1.5": "1.5 L",
@@ -46,6 +56,7 @@ export const ENGINE_NAMES = {
   "2.2D": "2.2 L diesel",
   "2.5": "2.5 L",
   "2.5T": "2.5 L turbo petrol",
+  "1.4T": "1.4 L turbo petrol (MultiAir)",
 };
 export const VEHICLE_ENGINES = Object.keys(ENGINE_NAMES);
 export const VEHICLE_BODIES = ["roadster", "RF", "sedan", "hatchback", "suv"];
@@ -132,6 +143,215 @@ const usCx9 = {
   sources: mazdaSource("usCx9", withRedline),
   notes: "Power is rated on 87 AKI. Mazda quotes 250 hp on 93 AKI.",
 };
+
+// Europe (EU and UK). Mazda publishes no gear ratios or final drives for these European cars: the price lists give
+// power, torque, kerb weight and tyres. Gearing comes from Mazda's figures for the same engine and gearbox in another
+// market (Mazda2 manual: a secondary Yaris iA table) and is marked assumed. Kerb mass is the German minimum
+// (incl. 75 kg driver) less the driver; the UK guides only give the maximum. `version` tells apart presets that
+// share engine size, gearbox and drivetrain.
+const euSpecs = ["ratedPower", "powerRpm", "ratedTorque", "torqueRpm", "mass", "tyres"];
+const ukSpecs = ["ratedPower", "powerRpm", "ratedTorque", "torqueRpm", "tyres"];
+const on = (key, fields) => ({ ...src(key, fields), retrieved: "2026-11-18" });
+const mazda2Manual = [3.583, 1.904, 1.290, 0.972, 0.795, 0.645];
+const mazda2Eu = {
+  generation: "DJ", engine: "1.5", drive: "FWD",
+  bodies: ["hatchback"], years: [2022, 2022], markets: ["EU", "UK"],
+  rpm: { limit: 6500 },
+  powerRpm: 6000, torqueRpm: 3500,
+  verified: euSpecs,
+  sources: [on("deMazda2", euSpecs), on("ukMazda2", ukSpecs)],
+};
+const mazda2EuManual = {
+  ...mazda2Eu, transmission: "manual", ratios: mazda2Manual, finalDrive: 4.105,
+  sources: [...mazda2Eu.sources, on("yarisIa", ["ratios", "finalDrive"])],
+  notes: "Mazda publishes no European gearing: the ratios and final drive are a secondary table for the Mazda-built Toyota Yaris iA (same 1.5 and 6-speed manual), so assumed. Redline assumed.",
+};
+const mazda6Eu = {
+  generation: "GL", drive: "FWD",
+  bodies: ["sedan"], years: [2019, 2022], markets: ["EU", "UK"],
+  rpm: { limit: 6500 },
+  tyres: ["225/55R17", "225/45R19"],
+  powerRpm: 6000, torqueRpm: 4000,
+  verified: euSpecs,
+  sources: [on("deMazda6", euSpecs), on("ukMazda6", ukSpecs)],
+};
+const mazda6EuManual = {
+  ...mazda6Eu, engine: "2.0", transmission: "manual", ratios: petrolManual, finalDrive: 4.105, ratedTorque: 213,
+  notes: "Ratios and final drive are Mazda USA's for the 2018 Mazda6 2.5 manual (no European figures published), so assumed. Redline assumed.",
+};
+const mazda6EuAuto = {
+  ...mazda6Eu, transmission: "automatic", ratios: petrolAutomatic, finalDrive: 4.325,
+  notes: "Ratios and final drive are Mazda Australia's for the 2022 Mazda6 2.5 automatic (no European figures published), so assumed. Redline assumed.",
+};
+const cx3Eu = {
+  generation: "DK", engine: "2.0",
+  bodies: ["suv"], years: [2018, 2019], markets: ["EU"],
+  rpm: { limit: 6500 },
+  tyres: ["215/60R16", "215/50R18"],
+  powerRpm: 6000, ratedTorque: 207, torqueRpm: 2800,
+  verified: euSpecs,
+  sources: [on("deCx3", euSpecs)],
+};
+const cx3EuManual = {
+  ...cx3Eu, transmission: "manual", ratios: petrolManual, finalDrive: 3.850,
+  notes: "Facelift (2018), Germany; Mazda Connect from Center-Line. Ratios are the 2.0 petrol 6MT's in other Mazda sheets and the final drive is the Portuguese CX-3 FWD manual's, so both assumed. Redline assumed.",
+};
+const cx3EuAuto = {
+  ...cx3Eu, transmission: "automatic", ratios: petrolAutomatic, finalDrive: 4.325,
+  notes: "Facelift (2018), Germany; Mazda Connect from Center-Line. Ratios and final drive are Mazda USA's for the 2019 CX-3 2.0 automatic, so assumed. Redline assumed.",
+};
+const europe = [
+  {
+    ...mazda2EuManual, id: "mazda2-dj-2022-eu-g75-mt", label: "2022 Mazda2 1.5 75 PS manual", version: "75 PS",
+    tyres: ["185/65R15"], ratedPower: 75, ratedTorque: 143, mass: 1021,
+  },
+  {
+    ...mazda2EuManual, id: "mazda2-dj-2022-eu-g90-mt", label: "2022 Mazda2 1.5 90 PS M Hybrid manual",
+    version: "90 PS M Hybrid", tyres: ["185/65R15", "185/60R16"], ratedPower: 90, ratedTorque: 151, mass: 1035,
+  },
+  {
+    ...mazda2EuManual, id: "mazda2-dj-2022-eu-g115-mt", label: "2022 Mazda2 1.5 115 PS M Hybrid manual",
+    version: "115 PS M Hybrid", tyres: ["185/60R16"], ratedPower: 115, ratedTorque: 151, mass: 1042,
+  },
+  {
+    ...mazda2Eu, id: "mazda2-dj-2022-eu-g90-at", label: "2022 Mazda2 1.5 90 PS automatic",
+    transmission: "automatic", ratios: [3.529, 2.025, 1.348, 1.000, 0.742, 0.594], finalDrive: 4.060,
+    tyres: ["185/65R15", "185/60R16"], ratedPower: 90, ratedTorque: 151, mass: 1037,
+    notes: "Ratios and final drive are Mazda Australia's for the Mazda2 1.5 automatic (no European figures published), so assumed. Redline assumed.",
+  },
+  {
+    ...mazda6EuManual, id: "mazda6-gl-2019-eu-g145-mt", label: "Mazda6 2.0 145 PS manual", version: "145 PS",
+    ratedPower: 145, mass: 1391,
+  },
+  {
+    ...mazda6EuManual, id: "mazda6-gl-2019-eu-g165-mt", label: "Mazda6 2.0 165 PS manual", version: "165 PS",
+    ratedPower: 165, mass: 1391,
+  },
+  {
+    ...mazda6EuAuto, id: "mazda6-gl-2019-de-g165-at", label: "Mazda6 2.0 165 PS automatic", markets: ["EU"],
+    engine: "2.0", ratedPower: 165, ratedTorque: 213, mass: 1423,
+  },
+  {
+    ...mazda6EuAuto, id: "mazda6-gl-2022-uk-g145-at", label: "Mazda6 2.0 145 PS automatic", markets: ["UK"],
+    engine: "2.0", ratedPower: 145, ratedTorque: 213, mass: 1487,
+    sources: [on("ukMazda6", euSpecs)],
+    notes: "UK only (the German list has a 165 PS automatic instead). Mass is the UK maximum 1,562 kg less the 75 kg driver, so an upper bound. Ratios and final drive are Mazda Australia's 2.5 automatic figures, so assumed. Redline assumed.",
+  },
+  {
+    ...mazda6EuAuto, id: "mazda6-gl-2019-eu-g194-at", label: "Mazda6 2.5 194 PS automatic",
+    engine: "2.5", ratedPower: 194, ratedTorque: 258, mass: 1462,
+  },
+  {
+    ...cx3EuManual, id: "cx3-dk-2019-de-g121-fwd-mt", label: "2019 CX-3 2.0 121 PS FWD manual",
+    drive: "FWD", ratedPower: 121, mass: 1184,
+  },
+  {
+    ...cx3EuAuto, id: "cx3-dk-2019-de-g121-fwd-at", label: "2019 CX-3 2.0 121 PS FWD automatic",
+    drive: "FWD", ratedPower: 121, mass: 1213,
+  },
+  {
+    ...cx3EuManual, id: "cx3-dk-2019-de-g150-awd-mt", label: "2019 CX-3 2.0 150 PS AWD manual",
+    drive: "AWD", ratedPower: 150, mass: 1256, finalDrive: 4.105,
+    notes: "Facelift (2018), Germany; Mazda Connect from Center-Line. Ratios are the 2.0 petrol 6MT's in other Mazda sheets and the final drive is the Portuguese CX-3 AWD manual's, so both assumed. Redline assumed.",
+  },
+  {
+    ...cx3EuAuto, id: "cx3-dk-2019-de-g150-awd-at", label: "2019 CX-3 2.0 150 PS AWD automatic",
+    drive: "AWD", ratedPower: 150, mass: 1288,
+  },
+];
+
+// Fiat 124 Spider and Abarth 124 Spider (type 348, 2016-2020): built by Mazda on the ND, with the same head unit
+// running Fiat software. 1.4 MultiAir turbo, Fiat C635 manual or Aisin automatic. Sources are Fiat's own sheets.
+const fiat124 = { generation: "348", engine: "1.4T", bodies: ["roadster"], years: [2016, 2020] };
+const fiat124Manual = [4.363, 2.348, 1.647, 1.262, 1.000, 0.844];
+const fiat124Auto = [3.530, 2.060, 1.400, 1.000, 0.710, 0.580];
+const usFiatSpecs = [...withRedline];
+const fiat = [
+  {
+    ...fiat124, id: "fiat124-348-eu-mt", label: "Fiat 124 Spider 1.4 MultiAir manual", version: "Fiat 124 Spider, 140 CV",
+    transmission: "manual", markets: ["EU", "UK"],
+    rpm: { limit: 6500 }, ratios: fiat124Manual, finalDrive: 3.454,
+    tyres: ["195/50R16", "205/45R17"],
+    ratedPower: 140, powerRpm: 5000, ratedTorque: 240, torqueRpm: 2250, mass: 1050,
+    verified: withRedline, sources: [on("itFiat124", withRedline)],
+    notes: "Fiat Italy's sheet: 6,500 rpm maximum engine speed, mass 1,050 kg in running order (taken as without driver: the US curb weight is 1,105 kg). UK cars are assumed to match.",
+  },
+  {
+    ...fiat124, id: "fiat124-348-eu-at", label: "Fiat 124 Spider 1.4 MultiAir automatic", version: "Fiat 124 Spider, 140 CV",
+    transmission: "automatic", markets: ["EU", "UK"],
+    rpm: { limit: 6500 }, ratios: fiat124Auto, finalDrive: 3.583,
+    tyres: ["195/50R16", "205/45R17"],
+    ratedPower: 140, powerRpm: 5000, ratedTorque: 240, torqueRpm: 2250,
+    verified: ["rpm.limit", "ratedPower", "powerRpm", "ratedTorque", "torqueRpm", "tyres"],
+    sources: [
+      on("itFiat124", ["rpm.limit", "ratedPower", "powerRpm", "ratedTorque", "torqueRpm", "tyres"]),
+      on("usFiat124", ["ratios", "finalDrive"]),
+    ],
+    notes: "Engine figures from Fiat Italy's sheet (manual version, same engine). Ratios and final drive are FCA US's for the Aisin automatic, so assumed for Europe; no European kerb mass found, so the mass is left as it was.",
+  },
+  {
+    ...fiat124, id: "abarth124-348-mt", label: "Abarth 124 Spider manual", version: "Abarth 124 Spider, 170 PS",
+    transmission: "manual", markets: ["EU", "UK", "AU"],
+    rpm: { limit: 6500 }, ratios: fiat124Manual, finalDrive: 3.454,
+    tyres: ["205/45R17"],
+    ratedPower: 169.95, powerRpm: 5500, ratedTorque: 250, torqueRpm: 2500, mass: 1100,
+    verified: ["ratios", "ratedPower", "powerRpm", "ratedTorque", "torqueRpm", "mass", "tyres"],
+    sources: [
+      on("auAbarth124", ["ratios", "ratedPower", "powerRpm", "ratedTorque", "torqueRpm", "mass", "tyres"]),
+      on("usFiat124", ["finalDrive"]),
+    ],
+    notes: "Fiat Australia's sheet: 125 kW (stored as 169.95 PS), tare mass 1,100 kg; the European cars have the same 170 PS engine. Final drive is FCA US's for the manual (all trims), so assumed here. Redline assumed equal to the Fiat's 6,500 rpm.",
+  },
+  {
+    ...fiat124, id: "abarth124-348-at", label: "Abarth 124 Spider automatic", version: "Abarth 124 Spider, 170 PS",
+    transmission: "automatic", markets: ["EU", "UK", "AU"],
+    rpm: { limit: 6500 }, ratios: fiat124Auto, finalDrive: 3.583,
+    tyres: ["205/45R17"],
+    ratedPower: 169.95, powerRpm: 5500, ratedTorque: 250, torqueRpm: 2500, mass: 1110,
+    verified: ["ratios", "ratedPower", "powerRpm", "ratedTorque", "torqueRpm", "mass", "tyres"],
+    sources: [
+      on("auAbarth124", ["ratios", "ratedPower", "powerRpm", "ratedTorque", "torqueRpm", "mass", "tyres"]),
+      on("usFiat124", ["finalDrive"]),
+    ],
+    notes: "Fiat Australia's sheet: 125 kW (stored as 169.95 PS), tare mass 1,110 kg. Final drive is FCA US's for the automatic, so assumed here. Redline assumed equal to the Fiat's 6,500 rpm.",
+  },
+  {
+    ...fiat124, id: "fiat124-348-us-mt", label: "Fiat 124 Spider Classica / Lusso manual", version: "Fiat 124 Spider, 160 hp",
+    transmission: "manual", markets: ["US"],
+    rpm: { limit: 6250 }, ratios: fiat124Manual, finalDrive: 3.454,
+    tyres: ["195/50R16", "205/45R17"],
+    ratedPower: 162.22, powerRpm: 5500, ratedTorque: 250, torqueRpm: 3200, mass: 1105,
+    verified: usFiatSpecs, sources: [on("usFiat124", usFiatSpecs)],
+    notes: "FCA US: 160 hp (stored as 162.22 PS), 184 lb-ft at 3,200 rpm, maximum engine speed 6,250 rpm (electronically limited), curb weight 2,436 lb.",
+  },
+  {
+    ...fiat124, id: "fiat124-348-us-at", label: "Fiat 124 Spider Classica / Lusso automatic", version: "Fiat 124 Spider, 160 hp",
+    transmission: "automatic", markets: ["US"],
+    rpm: { limit: 6250 }, ratios: fiat124Auto, finalDrive: 3.583,
+    tyres: ["195/50R16", "205/45R17"],
+    ratedPower: 162.22, powerRpm: 5500, ratedTorque: 250, torqueRpm: 3200, mass: 1123,
+    verified: usFiatSpecs, sources: [on("usFiat124", usFiatSpecs)],
+    notes: "FCA US: 160 hp (stored as 162.22 PS), curb weight 2,476 lb.",
+  },
+  {
+    ...fiat124, id: "abarth124-348-us-mt", label: "Fiat 124 Spider Abarth manual", version: "Abarth, 164 hp",
+    transmission: "manual", markets: ["US"],
+    rpm: { limit: 6250 }, ratios: fiat124Manual, finalDrive: 3.454,
+    tyres: ["205/45R17"],
+    ratedPower: 166.27, powerRpm: 5500, ratedTorque: 250, torqueRpm: 2500, mass: 1124,
+    verified: usFiatSpecs, sources: [on("usFiat124", usFiatSpecs)],
+    notes: "FCA US: 164 hp (stored as 166.27 PS), 184 lb-ft at 2,500 rpm in Sport mode, curb weight 2,477 lb.",
+  },
+  {
+    ...fiat124, id: "abarth124-348-us-at", label: "Fiat 124 Spider Abarth automatic", version: "Abarth, 164 hp",
+    transmission: "automatic", markets: ["US"],
+    rpm: { limit: 6250 }, ratios: fiat124Auto, finalDrive: 3.583,
+    tyres: ["205/45R17"],
+    ratedPower: 166.27, powerRpm: 5500, ratedTorque: 250, torqueRpm: 2500, mass: 1141,
+    verified: usFiatSpecs, sources: [on("usFiat124", usFiatSpecs)],
+    notes: "FCA US: 164 hp (stored as 166.27 PS), curb weight 2,516 lb.",
+  },
+];
 
 export const PRESETS = [
   {
@@ -278,9 +498,11 @@ export const PRESETS = [
     ratedPower: 165, powerRpm: 6000,
     ratedTorque: 210, torqueRpm: 4000,
     mass: 1360,
-    verified: sourcedSpecs,
+    // The Mazda Germany press kit is behind the press-site login, so these values could not be checked
+    // (2026-11-18). Public listings give 210 Nm at 4,800 rpm and 1,435-1,486 kg for this engine. All assumed.
+    verified: [],
     sources: mazdaSource("deCx5", sourcedSpecs),
-    notes: "German trim. Curb mass is the published minimum without the driver. Dashboard redline is assumed.",
+    notes: "German trim. Not checked: the Mazda Germany press kit needs a press login, and public listings disagree on the torque peak (4,000 or 4,800 rpm) and the kerb mass. Every value is marked assumed.",
   },
   {
     id: "mazda3-bm-2016-de-g120-mt",
@@ -293,9 +515,11 @@ export const PRESETS = [
     ratedPower: 120, powerRpm: 6000,
     ratedTorque: 210, torqueRpm: 4000,
     mass: 1205,
-    verified: sourcedSpecs,
+    // Behind the Mazda Germany press-site login, so not checked (2026-11-18). Power, torque, ratios and final drive
+    // equal the public UK BN G120 figures (same engine and gearbox); the mass equals the UK 18-inch car's. All assumed.
+    verified: [],
     sources: mazdaSource("deMazda3", sourcedSpecs),
-    notes: "German G120 hatchback. Curb mass is the published minimum without the driver. Dashboard redline is assumed.",
+    notes: "German G120 hatchback. Not checked: the Mazda Germany sheet needs a press login. The powertrain figures match the public UK Mazda3 G120 data, but every value is marked assumed.",
   },
   {
     id: "mazda3-bn-2018-uk-sport-black",
@@ -494,6 +718,8 @@ export const PRESETS = [
     label: "2018 CX-9 Sport AWD",
     drive: "AWD", mass: 1978,
   },
+  ...europe,
+  ...fiat,
 ];
 
 // Default display units per region.

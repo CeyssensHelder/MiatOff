@@ -916,6 +916,9 @@ dialog .setup-choice-card {
   font-size: 16px;
   font-weight: 650;
 }
+#setup-step-model {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .setup-market-grid .setup-choice-card {
   min-height: 126px;
 }
@@ -937,6 +940,209 @@ dialog .setup-choice-card {
 @media (max-width: 650px) {
   .setup-choice-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* The car setup window as a blueprint sheet: grid paper, white linework, mono lettering. Car and market cards are
+   small figures; hovering (or focusing) one redraws its drawing line by line while a scan line sweeps across. */
+#setup-dialog {
+  --paper: #0f3a66;
+  --blue-ink: #eef6ff;
+  --blue-dim: rgba(238, 246, 255, 0.72);
+  --blue-line: rgba(238, 246, 255, 0.32);
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  color: var(--blue-ink);
+  border: 1px solid rgba(238, 246, 255, 0.55);
+  border-radius: 6px;
+  background-color: var(--paper);
+  background-image: linear-gradient(rgba(238, 246, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(238, 246, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(238, 246, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(238, 246, 255, 0.035) 1px, transparent 1px);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+  box-shadow: inset 0 0 0 6px var(--paper), inset 0 0 0 7px rgba(238, 246, 255, 0.35), 0 20px 90px #000a;
+}
+#setup-dialog::backdrop {
+  background: #020a14c4;
+}
+#setup-dialog .dialog-heading {
+  align-items: baseline;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(238, 246, 255, 0.5);
+  box-shadow: 0 3px 0 -2px rgba(238, 246, 255, 0.25);
+}
+#setup-dialog #setup-title {
+  font: 600 18px/1.2 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+#setup-dialog #setup-title::after {
+  margin-left: 14px;
+  font: 400 11px/1 var(--mono);
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+}
+#setup-dialog:has(#setup-step-model:not([hidden])) #setup-title::after { content: "Sheet 1 of 4"; }
+#setup-dialog:has(#setup-step-market:not([hidden])) #setup-title::after { content: "Sheet 2 of 4"; }
+#setup-dialog:has(#setup-step-car:not([hidden])) #setup-title::after { content: "Sheet 3 of 4"; }
+#setup-dialog:has(#setup-step-units:not([hidden])) #setup-title::after { content: "Sheet 4 of 4"; }
+#setup-dialog .dialog-heading > button {
+  color: var(--blue-ink);
+}
+#setup-dialog .hint,
+#setup-dialog #setup-preset {
+  color: var(--blue-dim);
+}
+#setup-dialog label {
+  color: var(--blue-dim);
+  font: 500 11px/1.4 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+#setup-dialog select,
+#setup-dialog input[type="number"] {
+  color: var(--blue-ink);
+  font: 13px/1.3 var(--mono);
+  letter-spacing: 0;
+  text-transform: none;
+  background: rgba(238, 246, 255, 0.07);
+  border: 1px solid rgba(238, 246, 255, 0.45);
+  border-radius: 3px;
+}
+#setup-dialog select:hover,
+#setup-dialog select:focus-visible,
+#setup-dialog input[type="number"]:hover,
+#setup-dialog input[type="number"]:focus-visible {
+  border-color: var(--blue-ink);
+}
+#setup-dialog select option {
+  color: var(--blue-ink);
+  background: var(--paper);
+}
+#setup-dialog #setup-summary {
+  font-family: var(--mono);
+  border-top: 1px solid rgba(238, 246, 255, 0.5);
+}
+#setup-dialog #setup-summary caption {
+  color: var(--blue-dim);
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+#setup-dialog #setup-summary th,
+#setup-dialog #setup-summary td {
+  border-color: var(--blue-line);
+}
+#setup-dialog #setup-summary th {
+  color: var(--blue-dim);
+}
+#setup-dialog .setup-actions button:not(.primary) {
+  color: var(--blue-ink);
+  border: 1px solid rgba(238, 246, 255, 0.4);
+  border-radius: 3px;
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+#setup-dialog .setup-actions button:not(.primary):hover {
+  background: rgba(238, 246, 255, 0.1);
+}
+#setup-dialog .setup-actions button.primary {
+  border-radius: 3px;
+  font-family: var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+#setup-dialog .setup-choice-grid {
+  counter-reset: setup-fig;
+}
+#setup-dialog .setup-choice-card {
+  overflow: hidden;
+  border-color: rgba(238, 246, 255, 0.3);
+  border-radius: 4px;
+  color: var(--blue-ink);
+  background: rgba(15, 58, 102, 0.55);
+  counter-increment: setup-fig;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, background-color 0.2s;
+}
+#setup-dialog .setup-choice-card::before {
+  content: "FIG. " counter(setup-fig, decimal-leading-zero);
+  position: absolute;
+  top: 7px;
+  right: 10px;
+  font: 10px/1 var(--mono);
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+}
+#setup-dialog .setup-choice-card span {
+  color: var(--blue-ink);
+  font: 600 13px/1.2 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+#setup-dialog .setup-choice-card::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 -30%;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(160, 215, 255, 0.22) 70%, rgba(238, 246, 255, 0.55) 98%, transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+#setup-dialog .setup-choice-card:hover,
+#setup-dialog .setup-choice-card:has(input:focus-visible) {
+  border-color: rgba(238, 246, 255, 0.8);
+  background-color: rgba(18, 73, 125, 0.75);
+  box-shadow: 0 0 0 1px rgba(238, 246, 255, 0.2), 0 6px 18px rgba(4, 18, 36, 0.55);
+  transform: translateY(-1px);
+}
+#setup-dialog .setup-choice-card:hover svg,
+#setup-dialog .setup-choice-card:has(input:focus-visible) svg {
+  stroke-dasharray: 520;
+  animation: setup-draft 1.1s cubic-bezier(0.3, 0.6, 0.2, 1) both;
+}
+#setup-dialog .setup-choice-card:hover::after,
+#setup-dialog .setup-choice-card:has(input:focus-visible)::after {
+  animation: setup-scan 1.1s ease-in-out;
+}
+#setup-dialog .setup-choice-card:has(input:checked) {
+  color: #ffffff;
+  border-color: var(--accent);
+  background-color: rgba(18, 73, 125, 0.9);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(103, 220, 194, 0.25);
+}
+#setup-dialog .setup-choice-card:has(input:checked) span,
+#setup-dialog .setup-choice-card:has(input:checked)::before {
+  color: var(--accent);
+  opacity: 1;
+}
+@keyframes setup-draft {
+  from {
+    stroke-dashoffset: 520;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes setup-scan {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(440%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #setup-dialog .setup-choice-card,
+  #setup-dialog .setup-choice-card:hover svg,
+  #setup-dialog .setup-choice-card:hover::after,
+  #setup-dialog .setup-choice-card:has(input:focus-visible) svg,
+  #setup-dialog .setup-choice-card:has(input:focus-visible)::after {
+    animation: none;
+    transition: none;
+    transform: none;
   }
 }
 .setup-grid {
