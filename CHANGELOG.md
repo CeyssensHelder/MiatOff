@@ -2,9 +2,29 @@
 
 Each release on the [Releases page](https://github.com/CeyssensHelder/MiatOff/releases) takes its notes from the section
 with its version below. Everything is for the **MX-5 ND1 and ND2** with Mazda Connect on firmware **74.00.324A** only;
-the tools check the car first and change nothing they do not recognise.
+the tools check the car first and change nothing they do not recognise. The Meters Designer's car setup also offers
+other cars with the same head unit (from the unreleased version on), to fit the gauges to them; the installer itself
+is still built and tested for the MX-5 only.
 
 ## Unreleased
+
+### New
+
+- **More cars in the Meters car setup** (experimental): besides the MX-5, the car setup offers the Mazda2, Mazda3,
+  Mazda6, CX-3, CX-5, CX-8 and CX-9 with the original Mazda Connect, and the **Fiat / Abarth 124 Spider**, which has
+  the same head unit. Each preset fills in the rev warnings, gearing, tyre size, power and weight from the maker's own
+  data; values without a public source are marked *assumed* in the summary. European presets for the Mazda2, Mazda6
+  and CX-3. Not tried in any of these cars; whether a car can be updated is still decided by **Check your car**.
+- **Version** choice in the car setup where one engine comes in several outputs (for example the Mazda2 1.5 with 75,
+  90 or 115 PS, or Fiat versus Abarth).
+- **Custom warning margin:** *Turn the gauges red* has a **Custom** option, from 0 to 2000 rpm before the limiter.
+
+### Changed
+
+- The car setup window has a blueprint look, with drawings of each car traced from photos at true scale. The
+  *Continental Europe* market is now called *Europe*.
+- All presets were checked against the sources they cite; the two whose source is no longer public are now marked
+  *assumed*.
 
 ### Fixed
 
