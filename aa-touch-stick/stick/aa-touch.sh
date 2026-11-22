@@ -65,7 +65,7 @@ USB=$(CDPATH='' cd "$(dirname "$0")" && pwd) || exit 1
 # From the read-only dump of this unit (docs/11) and the oem-aa-mod release.
 
 FW_WANTED=74.00.324A
-COMMANDER_SHA256=f90a7e9d1015cda024365aedf5d7dc5e56eca9fe9d9ec2e748c3acc5376f28cd
+COMMANDER_SHA256=560e1a4c340f426044b942e91ddad5a9a1d1b6b0ef4578d140ab37092edb90a0
 # Qualified profiles only: firmware flavor, jci-dialog sha256, input ID, rotary sign, 2- and 3-button order.
 COMMANDER_PROFILES=''
 COMMANDER_TEST_DIALOGS=0
@@ -606,7 +606,9 @@ ask_touch() {
     case "$code" in 0|1|2) echo "$code" ;; *) return 1 ;; esac
 }
 
-# The helper can dismiss a prompt independently of its visible button positions.
+# The helper can dismiss a prompt independently of its visible button positions (3). A dialog that
+# could not start or ended without a button (5) is asked again by touch, so a failure still reaches the
+# retry and the HMI emergency route below.
 ask() {
     local code
     usb_present || { printf '%s\n' dismiss; return 0; }
@@ -621,7 +623,7 @@ ask() {
         code=$?
         case "$code" in
             0|1|2) printf '%s\n' "$code"; return 0 ;;
-            4|126|127) log "Commander unavailable ($code); using touch" >&2 ;;
+            4|5|126|127) log "Commander unavailable ($code); using touch" >&2 ;;
             *) printf '%s\n' dismiss; return 0 ;;
         esac
         usb_present || { printf '%s\n' dismiss; return 0; }
@@ -2763,6 +2765,8 @@ NVRAM_LVDS=
 log "NVRAM lvds_speed_restriction=${NVRAM_LVDS:-absent (factory: enable)} (touch while driving needs TouchTune)"
 
 if [ "$MO_TEST" != 1 ] || [ "$COMMANDER_TEST_DIALOGS" = 1 ]; then
+    # FAT numbers an inode again when it is read back from disk; an open file keeps its number.
+    ! is_file "$USB_MARKER" || exec 8<"$USB_MARKER"
     USB_IDENTITY=$(stat -c '%d:%i' "$USB_MARKER" 2>/dev/null)
     [ ! -e "$R/sys/class/block/${USB##*/}" ] || USB_BLOCK="$R/sys/class/block/${USB##*/}"
     prepare_commander

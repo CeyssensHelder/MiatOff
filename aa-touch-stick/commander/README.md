@@ -29,7 +29,8 @@ Linux host fixtures. The AA-touch simulator also exercises the installer dialog 
    repeat as needed. Check that Enter held through a transition cannot choose the next prompt and that Back never
    selects the middle button. On the three-choice screen press Enter before turning. The dialog must stay open.
    For a knob selection, check the log for `fresh Enter selected button` with the same index as the dialog result.
-   Back must produce `Back dismissed the prompt` and exit 3. An exit from Mazda's dialog alone can also be a touch
+   Back must produce `Back dismissed the prompt` and exit 3. Exit 5 means the dialog failed or closed without a
+   button; the installer then asks again by touch, so a broken dialog still reaches its emergency route. An exit from Mazda's dialog alone can also be a touch
    and cannot establish that the helper handled the knob. Record the visible left-to-right order by tapping each button.
    If the mapping differs from the defaults, rebuild the inert ZIP with the measured values using
    `--polarity`, `--order-two`, and `--order-three`, then repeat these tests before trying an install stick.

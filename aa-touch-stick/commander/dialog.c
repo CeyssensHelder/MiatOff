@@ -19,7 +19,8 @@
 #include <time.h>
 #include <unistd.h>
 
-enum { DISMISS = 3, UNAVAILABLE = 4, RUNNING = -1 };
+/* DIALOG_FAILED: jci-dialog ended without a button index, so the caller treats it like a failed touch dialog. */
+enum { DISMISS = 3, UNAVAILABLE = 4, DIALOG_FAILED = 5, RUNNING = -1 };
 enum { POLL_MS = 25, REDRAW_MS = 75, SETTLE_MS = 350, DEADLINE_MS = 120000 };
 
 struct prompt {
@@ -39,6 +40,7 @@ struct media {
     const char *marker;
     struct stat original;
     char block[64];
+    int fd;
 };
 
 static volatile sig_atomic_t interrupted;
@@ -64,7 +66,9 @@ static int64_t now_ms(void)
 
 static bool media_open(struct media *media)
 {
-    if (lstat(media->marker, &media->original) < 0 || !S_ISREG(media->original.st_mode))
+    /* FAT numbers an inode again when it is read back from disk. An open file keeps its number. */
+    media->fd = open(media->marker, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    if (media->fd < 0 || fstat(media->fd, &media->original) < 0 || !S_ISREG(media->original.st_mode))
         return false;
     snprintf(media->block, sizeof(media->block), "/sys/dev/block/%u:%u",
              major(media->original.st_dev), minor(media->original.st_dev));
@@ -272,7 +276,7 @@ static int reap_dialog(pid_t *child, int count, bool redraw)
         return WEXITSTATUS(status);
     if (redraw && waited > 0 && WIFSIGNALED(status) && WTERMSIG(status) == SIGKILL)
         return RUNNING;
-    return DISMISS;
+    return DIALOG_FAILED;
 }
 
 static int run_prompt(const struct prompt *prompt, const struct media *media, int fd, bool probe)
@@ -313,8 +317,10 @@ static int run_prompt(const struct prompt *prompt, const struct media *media, in
                 break;
             }
             child = show_dialog(prompt, selection.focus);
-            if (child < 0)
+            if (child < 0) {
+                result = DIALOG_FAILED;
                 break;
+            }
             selection.shown = selection.focus;
             selection.arm_at = now_ms() + SETTLE_MS;
         }

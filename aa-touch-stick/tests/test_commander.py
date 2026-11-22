@@ -190,6 +190,18 @@ class CommanderTests(unittest.TestCase):
         self.press()
         self.result(0)
 
+    def test_dialog_failure_is_not_a_dismissal(self):
+        pid, _ = self.start("012", "REPAIR", "REMOVE", "CANCEL", touch=7)
+        os.kill(pid, signal.SIGUSR1)
+        self.result(5)
+
+    def test_marker_stays_open_for_the_prompt(self):
+        self.start("01", "INSTALL", "CANCEL")
+        fds = Path(f"/proc/{self.process.pid}/fd")
+        self.assertIn(str(self.marker), [os.readlink(fd) for fd in fds.iterdir()])
+        self.press(KEY_BACKSPACE)
+        self.result(3)
+
     def test_timeout_dismisses(self):
         self.start("01", "INSTALL", "CANCEL", short_timeout=True)
         self.result(3)

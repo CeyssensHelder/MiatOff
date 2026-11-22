@@ -541,6 +541,8 @@ def test_commander_dialogs(base: Path):
     check(sha(original_helper) == bs.pinned("COMMANDER_SHA256"), "install kit carries the pinned ARM helper")
     dialog = write(car.root, "jci/tools/jci-dialog", """#!/bin/sh
 usb="$MO_ROOT/tmp/mnt/sda1"
+readlink "/proc/$$/fd/8" > "$usb/dialog-fd" 2>/dev/null
+[ ! -e "$usb/dialog-broken" ] || exit 99
 if [ -e "$usb/fail-touch" ]; then
     rm -f "$usb/AATOUCH.ID"
     exit 99
@@ -573,6 +575,8 @@ esac
     r = car.run("")
     check(r.returncode == 0 and not calls.exists() and car.digest() == before,
           "unqualified dialogs take the normal touch path even with a valid helper on USB")
+    check((car.stick / "dialog-fd").read_text().strip().endswith("/AATOUCH.ID"),
+          "the installer keeps AATOUCH.ID open during a prompt, so its FAT inode number cannot change")
 
     car.extra["COMMANDER_PROFILES"] = f"'cmu150_EU {sha(dialog.read_bytes())} 0000:0000:0000:0000 + 01 012'"
     profile = car.extra["COMMANDER_PROFILES"]
@@ -650,6 +654,17 @@ esac
     check(r.returncode == 0 and car.state() == "partial" and calls.read_text().splitlines() == ["012 FINISH"]
           and car.digest() == before and "EMERGENCY" not in log.read_text(),
           "Back from interrupted-install recovery preserves the partial state without selecting FINISH or REMOVE")
+
+    check(car.state("list delay:") == "patched", "HMI tweaks are still on before the broken-dialog run")
+    (car.stick / "dialog-broken").touch()
+    answer.write_bytes(b"5\n")
+    r = car.run("")
+    text = log.read_text()
+    check(r.returncode == 0 and "Commander unavailable (5); using touch" in text
+          and "EMERGENCY (no dialog twice)" in text and car.state("list delay:") == "stock"
+          and car.state() == "partial",
+          "a dialog that fails under the helper still reaches the HMI emergency route")
+    (car.stick / "dialog-broken").unlink()
 
 
 def main():
