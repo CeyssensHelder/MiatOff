@@ -29,6 +29,7 @@ import {
   markEdited,
   carLabel,
 } from "./car-setup.mjs";
+import { VEHICLE_MODELS, VEHICLE_ENGINES, VEHICLE_BODIES } from "./presets.mjs";
 const $ = (s) => document.getElementById(s),
   testMode = new URLSearchParams(location.search).get("test") === "1";
 const namespace = testMode
@@ -1587,9 +1588,9 @@ function vehicleControls() {
     host.append(row);
   };
   for (const [key, label, choices] of [
-    ["generation", "Generation", ["ND1", "ND2"]],
-    ["engine", "Engine (L)", ["1.5", "2.0"]],
-    ["body", "Body", ["roadster", "RF"]],
+    ["generation", "Generation", Object.values(VEHICLE_MODELS).flat()],
+    ["engine", "Engine", VEHICLE_ENGINES],
+    ["body", "Body", VEHICLE_BODIES],
     ["transmission", "Transmission", ["manual", "automatic"]],
   ])
     add(label, key, 0, choices);

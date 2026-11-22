@@ -4,6 +4,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
+import { defaults } from "../../designer/v3/model.mjs";
+import { PRESETS } from "../../designer/v3/presets.mjs";
+import { applyPreset } from "../../designer/v3/car-setup.mjs";
 
 const source = readFileSync(new URL("../../js/data.js", import.meta.url), "utf8");
 
@@ -80,6 +83,19 @@ test("the simulator drives with the gearing of the car profile", () => {
     assert.ok(inGear.length > 500, "enough samples in gear");
     for (const s of inGear) assert.equal(gearOf(s, car), s.gear, `${s.speed} km/h at ${s.rpm} rpm`);
     assert.ok(laps(samples) > 3, "it keeps lapping");
+  }
+});
+
+test("the presets beyond the MX-5 reach the simulator with their own gearing", () => {
+  const presets = PRESETS.filter((preset) => !["ND1", "ND2"].includes(preset.generation));
+  assert.equal(presets.length, 47);
+  for (const preset of presets) {
+    const project = defaults();
+    applyPreset(project, preset, { market: preset.markets[0] });
+    const inGear = drive(project.vehicle, 60).filter(pulling);
+    assert.ok(inGear.length > 100, preset.id);
+    for (const sample of inGear)
+      assert.equal(gearOf(sample, project.vehicle), sample.gear, preset.id);
   }
 });
 

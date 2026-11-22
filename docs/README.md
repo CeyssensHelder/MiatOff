@@ -3,8 +3,7 @@
 Research and design notes on how the Mazda Connect (CMU) head unit works and how MiatOff changes it. If you only want to use
 MiatOff, the [main README](../README.md) is enough. These notes are for people who want to understand or extend it.
 
-Everything here concerns a 2017 EU MX-5 ND1 on firmware 74.00.324(A). Claims are marked where they come from: verified in
-public source code, from a commercial vendor, or an unconfirmed forum report.
+The 2017 EU MX-5 ND1 on firmware 74.00.324(A) is the original reference car. The regional compatibility and vehicle preset notes cite the sources for other cars.
 
 | # | File | Contents |
 |---|---|---|
@@ -25,7 +24,8 @@ public source code, from a commercial vendor, or an unconfirmed forum report.
 | 15 | [15-meters-designer.md](15-meters-designer.md) | Standalone Meters Designer: editing, v3 migration, recovery and browser acceptance |
 | 16 | [16-mazda-menu-customisation.md](16-mazda-menu-customisation.md) | Home-menu feasibility and native integration research |
 | 17 | [17-unified-designer.md](17-unified-designer.md) | Shared Meters/Home studio, documents and verification |
-| 18 | [18-vehicle-presets.md](18-vehicle-presets.md) | MX-5 ND1/ND2 specifications and sources behind the designer's car setup |
+| 18 | [18-vehicle-presets.md](18-vehicle-presets.md) | Vehicle specifications and sources behind the designer's car setup |
+| 19 | [19-mazda-connect-models.md](19-mazda-connect-models.md) | Original Mazda Connect coverage by sales market, model year and trim |
 | — | [sources.md](sources.md) | All sources |
 
 ## For AI assistants

@@ -57,6 +57,7 @@ python tools/tests/test_stickwriter.py
 node meters-app/tests/test_meters_app.js
 python tools/tests/test_meters_library.py                                             # Meters Designer library and GUI tab
 python tools/tests/test_custom_pages_build.py                                         # custom pages in the Meters payload
+python tools/tests/test_car_outlines.py                                               # car setup drawings match tools/make_car_outlines.py
 node --test meters/tests/v3/*.test.mjs                                                # Meters Designer model, ES5 guard for meters/js
 (cd meters/tests/v3 && npm ci && npx playwright test)                                 # Designer, car app and renderer parity in Chromium; see its README
 #   set METERS_DESIGNER_URL=http://127.0.0.1:<port> and MIATOFF_METERS_LIBRARY=<temp file> when a designer server of yours runs on 8890
