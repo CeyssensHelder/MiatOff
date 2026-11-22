@@ -3,10 +3,14 @@
 Each release on the [Releases page](https://github.com/CeyssensHelder/MiatOff/releases) takes its notes from the section
 with its version below. Everything is for the **MX-5 ND1 and ND2** with Mazda Connect on firmware **74.00.324A** only;
 the tools check the car first and change nothing they do not recognise. The Meters Designer's car setup also offers
-other cars with the same head unit (from the unreleased version on), to fit the gauges to them; the installer itself
-is still built and tested for the MX-5 only.
+other cars with the same head unit (from v1.0.2-rc.2 on), to fit the gauges to them; the installer itself is still
+built and tested for the MX-5 only.
 
-## Unreleased
+## v1.0.2-rc.2
+
+Pre-release for testing more cars in the car setup, the Commander fix and the POWER page in other units. It also has
+the permissions fix from v1.0.2-rc.1. Only the Commander fix has been tried in a car (our ND1). Update Meters from the
+app (*Update*, then **REPAIR** in the car) to get the Meters changes.
 
 ### New
 
@@ -25,13 +29,19 @@ is still built and tested for the MX-5 only.
   *Continental Europe* market is now called *Europe*.
 - All presets were checked against the sources they cite; the two whose source is no longer public are now marked
   *assumed*.
+- The built-in driving simulator of the Meters page (`?src=sim`, for previews on a PC) drives with the gearing and rev
+  limits of the car setup instead of always those of the ND1 1.5.
 
 ### Fixed
 
+- **POWER page in hp, kW or lb-ft:** the chart was still numbered in PS and Nm. It now has a power axis on the left and
+  a torque axis on the right, each in the chosen unit, and the legend and factory figures are converted too. With PS
+  and Nm the page looks as before. Not tried in a car yet.
 - **Commander knob turns ignored in Meters after touching the screen:** after a tap or swipe, turning the knob did
   nothing until you left Meters and opened it again (tilting and pressing still worked). Turns now keep working after
-  touch. Update Meters from the app (*Update*, then **REPAIR** in the car) to get it. Tested in our ND1; not yet
-  confirmed on the ND2 where it was reported.
+  touch. Tested in our ND1; not yet confirmed on the ND2 where it was reported.
+- **"has unexpected permissions" on a unit that had other tweaks** (from v1.0.2-rc.1): stock files owned by root
+  (`775 0 0`) are accepted when the content is the known stock file.
 
 ## v1.0.2-rc.1
 
