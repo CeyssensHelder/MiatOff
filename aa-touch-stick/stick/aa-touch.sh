@@ -65,7 +65,7 @@ USB=$(CDPATH='' cd "$(dirname "$0")" && pwd) || exit 1
 # From the read-only dump of this unit (docs/11) and the oem-aa-mod release.
 
 FW_WANTED=74.00.324A
-COMMANDER_SHA256=560e1a4c340f426044b942e91ddad5a9a1d1b6b0ef4578d140ab37092edb90a0
+COMMANDER_SHA256=780aa9f7d939639c7132143a38c81fdca97efae6f404936d0a648d6a7912b77c
 # Qualified profiles only: firmware flavor, jci-dialog sha256, input ID, rotary sign, 2- and 3-button order.
 COMMANDER_PROFILES=''
 COMMANDER_TEST_DIALOGS=0

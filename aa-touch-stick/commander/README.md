@@ -2,7 +2,9 @@
 
 The install stick carries `miatoff-commander`, a small ARM helper that reads the Mazda virtual keyboard during a
 MiatOff choice prompt. It keeps Mazda's touch buttons and brackets the current knob selection. Turn to move and press
-to select. Back dismisses the prompt. A normal install stick enables the helper only when the firmware flavor, stock
+to select. Back dismisses the prompt. With the helper on, a prompt with no choice closes after two minutes, for touch
+too, and the run ends with nothing done. To redraw the brackets the helper closes the dialog with SIGTERM, as the
+installer's `killall` does, and uses SIGKILL only if it is still open after 200 ms. A normal install stick enables the helper only when the firmware flavor, stock
 `jci-dialog` hash, and input device match a qualified profile. The profile table is empty pending a physical test on
 74.00.324A.
 
@@ -30,8 +32,9 @@ Linux host fixtures. The AA-touch simulator also exercises the installer dialog 
    selects the middle button. On the three-choice screen press Enter before turning. The dialog must stay open.
    For a knob selection, check the log for `fresh Enter selected button` with the same index as the dialog result.
    Back must produce `Back dismissed the prompt` and exit 3. Exit 5 means the dialog failed or closed without a
-   button; the installer then asks again by touch, so a broken dialog still reaches its emergency route. An exit from Mazda's dialog alone can also be a touch
-   and cannot establish that the helper handled the knob. Record the visible left-to-right order by tapping each button.
+   button; the installer then asks again by touch, so a broken dialog still reaches its emergency route. An exit
+   from Mazda's dialog alone can also be a touch and cannot establish that the helper handled the knob. Turn quickly
+   back and forth: each redraw must leave exactly one dialog on screen, with no old one behind or after it. Record the visible left-to-right order by tapping each button.
    If the mapping differs from the defaults, rebuild the inert ZIP with the measured values using
    `--polarity`, `--order-two`, and `--order-three`, then repeat these tests before trying an install stick.
 3. Verify that rotation and press do not move or activate the Mazda UI behind the popup. Test Home and a screen

@@ -21,6 +21,15 @@ ARM_AFTER_REDRAW = 0.43  # production 350 ms settle + one 25 ms poll; leave time
 STUB = """#!/usr/bin/env python3
 import json, os, signal, sys
 signal.signal(signal.SIGUSR1, lambda *_: sys.exit(int(os.environ['MO_STUB_TOUCH'])))
+term = os.environ.get('MO_STUB_TERM')
+if term == 'ignore':
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+elif term:
+    def on_term(*_):
+        with open(os.environ['MO_STUB_LOG'] + '.term', 'a') as log:
+            print(os.getpid(), file=log, flush=True)
+        sys.exit(int(term))
+    signal.signal(signal.SIGTERM, on_term)
 signal.alarm(10)
 with open(os.environ['MO_STUB_LOG'], 'a') as log:
     print(json.dumps([os.getpid(), sys.argv[1:]]), file=log, flush=True)
@@ -59,9 +68,11 @@ class CommanderTests(unittest.TestCase):
             os.close(self.fd)
             self.fd = None
 
-    def start(self, order, *labels, sign="+", touch=1, held=False, short_timeout=False):
+    def start(self, order, *labels, sign="+", touch=1, held=False, short_timeout=False, term=None):
         env = dict(os.environ, MO_COMMANDER_EVENTS=str(self.fixture), MO_STUB_LOG=str(self.log),
                    MO_STUB_TOUCH=str(touch))
+        if term is not None:
+            env["MO_STUB_TERM"] = str(term)
         if held:
             env["MO_COMMANDER_ENTER_HELD"] = "1"
         if short_timeout:
@@ -199,6 +210,26 @@ class CommanderTests(unittest.TestCase):
         self.start("01", "INSTALL", "CANCEL")
         fds = Path(f"/proc/{self.process.pid}/fd")
         self.assertIn(str(self.marker), [os.readlink(fd) for fd in fds.iterdir()])
+        self.press(KEY_BACKSPACE)
+        self.result(3)
+
+    def test_redraw_closes_with_sigterm_and_ignores_its_exit_code(self):
+        pid, _ = self.start("01", "INSTALL", "CANCEL", term=0)  # exit 0 on SIGTERM looks like INSTALL
+        self.send((EV_REL, REL_HWHEEL, 1))
+        _, args = self.wait_dialogs(2)[-1]
+        self.assertIn("--ok-label=[INSTALL]", args)
+        self.assertEqual(Path(f"{self.log}.term").read_text().split()[0], str(pid))
+        time.sleep(ARM_AFTER_REDRAW)
+        self.assertIsNone(self.process.poll())
+        self.press(KEY_BACKSPACE)
+        self.result(3)
+
+    def test_redraw_kills_a_dialog_that_ignores_sigterm(self):
+        pid, _ = self.start("01", "INSTALL", "CANCEL", term="ignore")
+        self.send((EV_REL, REL_HWHEEL, 1))
+        self.wait_dialogs(2)
+        with self.assertRaises(ProcessLookupError):
+            os.kill(pid, 0)
         self.press(KEY_BACKSPACE)
         self.result(3)
 

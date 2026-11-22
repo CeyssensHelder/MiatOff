@@ -21,7 +21,7 @@
 
 /* DIALOG_FAILED: jci-dialog ended without a button index, so the caller treats it like a failed touch dialog. */
 enum { DISMISS = 3, UNAVAILABLE = 4, DIALOG_FAILED = 5, RUNNING = -1 };
-enum { POLL_MS = 25, REDRAW_MS = 75, SETTLE_MS = 350, DEADLINE_MS = 120000 };
+enum { POLL_MS = 25, REDRAW_MS = 75, SETTLE_MS = 350, CLOSE_MS = 200, DEADLINE_MS = 120000 };
 
 struct prompt {
     const char *dialog, *title, *text;
@@ -246,7 +246,8 @@ static pid_t show_dialog(const struct prompt *prompt, int position)
     pid_t parent = getpid();
     child = fork();
     if (!child) {
-        if (!on_parent_exit(SIGKILL, parent))
+        /* SIGTERM, like the installer's killall, lets jci-dialog take its window off the screen. */
+        if (!on_parent_exit(SIGTERM, parent))
             _exit(127);
         execv(prompt->dialog, args);
         _exit(127);
@@ -257,26 +258,48 @@ done:
     return child;
 }
 
-/* Only a normal exit from this child can be a touch choice. A signal used for a redraw cannot be a choice. */
-static int reap_dialog(pid_t *child, int count, bool redraw)
+static int exit_result(pid_t waited, int status, int count)
+{
+    if (waited > 0 && WIFEXITED(status) && WEXITSTATUS(status) < count)
+        return WEXITSTATUS(status);
+    return DIALOG_FAILED;
+}
+
+static pid_t wait_child(pid_t child, int *status, int options)
+{
+    pid_t waited;
+    do {
+        waited = waitpid(child, status, options);
+    } while (waited < 0 && errno == EINTR);
+    return waited;
+}
+
+/* Only an exit before we signal the child can be a touch choice. To close it, send SIGTERM as the installer's
+ * killall does, so jci-dialog can take its window off the screen, and SIGKILL only if it is still there after
+ * CLOSE_MS. Whatever it exits with after our signal is discarded: a dialog may exit 0 or 1 on SIGTERM. */
+static int reap_dialog(pid_t *child, int count, bool closing)
 {
     int status;
     if (*child <= 0)
         return RUNNING;
-    if (redraw)
+    pid_t waited = wait_child(*child, &status, WNOHANG);
+    if (waited) {
+        *child = -1;
+        return exit_result(waited, status, count);
+    }
+    if (!closing)
+        return RUNNING;
+    kill(*child, SIGTERM);
+    for (int waited_ms = 0; !waited && waited_ms < CLOSE_MS; waited_ms += 10) {
+        nanosleep(&(struct timespec){.tv_nsec = 10 * 1000000}, NULL);
+        waited = wait_child(*child, &status, WNOHANG);
+    }
+    if (!waited) {
         kill(*child, SIGKILL);
-    pid_t waited;
-    do {
-        waited = waitpid(*child, &status, redraw ? 0 : WNOHANG);
-    } while (waited < 0 && errno == EINTR);
-    if (!waited)
-        return RUNNING;
+        waited = wait_child(*child, &status, 0);
+    }
     *child = -1;
-    if (waited > 0 && WIFEXITED(status) && WEXITSTATUS(status) < count)
-        return WEXITSTATUS(status);
-    if (redraw && waited > 0 && WIFSIGNALED(status) && WTERMSIG(status) == SIGKILL)
-        return RUNNING;
-    return DIALOG_FAILED;
+    return waited > 0 ? RUNNING : DIALOG_FAILED;
 }
 
 static int run_prompt(const struct prompt *prompt, const struct media *media, int fd, bool probe)
