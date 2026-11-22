@@ -948,9 +948,10 @@
 
     // ------------------------------------------------------------------ input
     var down = null, lastTouch = 0;
+    var touchSurface = (W.frameElement && W.frameElement.miatoffTouchSurface) || stage;
 
     function local(e) {
-        var r = stage.getBoundingClientRect();
+        var r = touchSurface.getBoundingClientRect();
         return { x: e.clientX - r.left, y: e.clientY - r.top };
     }
     function start(p) { p.t = Date.now(); down = p; }
@@ -988,14 +989,22 @@
         show(cur + 1);
     }
 
-    stage.addEventListener('touchstart', function (e) {
-        lastTouch = Date.now(); start(local(e.touches[0])); e.preventDefault();
-    }, false);
-    stage.addEventListener('touchend', function (e) {
-        lastTouch = Date.now(); end(local(e.changedTouches[0])); e.preventDefault();
-    }, false);
-    stage.addEventListener('mousedown', function (e) { if (Date.now() - lastTouch > 800) start(local(e)); }, false);
-    stage.addEventListener('mouseup', function (e) { if (Date.now() - lastTouch > 800) end(local(e)); }, false);
+    // On the template's touch surface, keep touches out of the HMI document as the iframe did before;
+    // only wheel events (Commander turns) go on to the HMI.
+    function own(e) { if (touchSurface !== stage) e.stopPropagation(); }
+
+    // A reloaded frame replaces the handlers on the template's touch surface.
+    touchSurface.ontouchstart = function (e) {
+        own(e); lastTouch = Date.now(); start(local(e.touches[0])); e.preventDefault();
+    };
+    touchSurface.ontouchmove = own;
+    touchSurface.ontouchend = function (e) {
+        own(e); lastTouch = Date.now(); end(local(e.changedTouches[0])); e.preventDefault();
+    };
+    touchSurface.onmousedown = function (e) { own(e); if (Date.now() - lastTouch > 800) start(local(e)); };
+    touchSurface.onmousemove = own;
+    touchSurface.onmouseup = function (e) { own(e); if (Date.now() - lastTouch > 800) end(local(e)); };
+    touchSurface.onclick = own;
     doc.addEventListener('keydown', function (e) {
         var k = e.keyCode;
         if (k === 37 || k === 38) move(-1);

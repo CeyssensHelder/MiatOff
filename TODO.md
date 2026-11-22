@@ -22,6 +22,8 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
   phone sheets (Tools / Properties) instead of panels below the canvas on narrow windows.
 - [ ] **One look for the app's design pages.** *Design your Meters* and *Design your menu* get the same cards, the same
   list with Preview and the same wording for choosing what goes on the stick.
+- [ ] **Installation screen usable with the knob.** Let the installation screen on the unit be operated with the
+  commander knob too (turn to move, press to choose), not only by touch.
 - [ ] **Stick doctor in the app.** Read `miatoff-aa-touch.log` and the state file from a returned stick and explain
   the result in plain words, as the check results already do.
 - [ ] **Automatic laps.** The lap timer is tap-only; GPS in the collector is the missing piece.
