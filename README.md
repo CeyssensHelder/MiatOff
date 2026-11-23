@@ -5,10 +5,12 @@ plug it into the car, and choose what to install. Every change can be undone, an
 refuses to touch anything it does not recognise.
 
 > **Who this is for:** the **MX-5 ND1 and ND2** (EU, UK and US spec) with Mazda Connect on firmware **74.00.324A**.
-> See [Support status](#support-status).
+> Other Mazdas with the same head unit and firmware can use it too, untested so far. See
+> [Support status](#support-status).
 
-Meters Designer also includes profiles for the other Mazdas with this head unit (Mazda2, Mazda3, Mazda6, CX-3,
-CX-5, CX-8, CX-9) and the Fiat / Abarth 124 Spider, for selected markets. Check the
+The installer does not look at the model: it acts only when the firmware and the exact file hashes match what it
+knows, on any car. Meters Designer includes profiles for the other Mazdas with this head unit (Mazda2, Mazda3,
+Mazda6, CX-3, CX-5, CX-8, CX-9) and the Fiat / Abarth 124 Spider, for selected markets. Check the
 [regional Mazda Connect research](docs/19-mazda-connect-models.md) for hardware and firmware evidence.
 
 > ⚠️ Modifying a head unit can leave it unusable and is not covered by Mazda's warranty. You use this at your own risk.
@@ -37,6 +39,7 @@ You choose per tweak: **Install**, **Remove** or **Leave as-is**. The tool never
 | Car | Firmware | Supported |
 |---|---|---|
 | MX-5 ND1 and ND2 (EU, UK and US spec) with Mazda Connect | 74.00.324A | Yes |
+| Mazda2, Mazda3, Mazda6, CX-3, CX-5, CX-8, CX-9, Fiat / Abarth 124 Spider with the original Mazda Connect | 74.00.324A | Untested: **Check your car** decides; tweaks whose files differ are refused |
 | MX-5 ND3 (2024 and later) | any | No: a different head unit |
 | Any car | anything other than 74.00.324A | No: the tools refuse to change anything |
 
@@ -54,7 +57,8 @@ Another car or firmware? Run the check (below) and open an issue with only `SUMM
   (what changed is in [CHANGELOG.md](CHANGELOG.md)): no Python or other tools needed, and it works offline. **Windows** is what we use.
   The macOS and Linux downloads are untested so far. See [Opening the app](#opening-the-app).
 - An **empty USB stick**, 32 GB or smaller, formatted **FAT32** with an **MBR** partition table.
-- An **MX-5 ND1 or ND2** with Mazda Connect on firmware 74.00.324A (see [Support status](#support-status)).
+- An **MX-5 ND1 or ND2**, or another car with the original Mazda Connect (untested), on firmware 74.00.324A (see
+  [Support status](#support-status)).
 
 ## How to use it
 

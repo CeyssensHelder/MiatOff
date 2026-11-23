@@ -394,9 +394,11 @@ class App(tk.Tk):
         body = self.page(self.prepare_tab, "prepare", "Prepare your USB stick",
                          "MiatOff puts everything on one USB stick that you carry to the car. Nothing is installed on this computer.")
         car = self.card(body, "Will this work on my car?")
-        self.paragraph(car, "MiatOff is for the Mazda MX-5 ND (ND1 and ND2) with Mazda Connect on firmware 74.00.324A. It is "
-                            "not for the ND3 or other firmware. You do not need to know your firmware version: the next step "
-                            "checks your car and changes nothing.")
+        self.paragraph(car, "MiatOff is for Mazda Connect on firmware 74.00.324A. It is built and tried on the Mazda MX-5 ND "
+                            "(ND1 and ND2). Other cars with the same head unit (Mazda2, Mazda3, Mazda6, CX-3, CX-5, CX-8, CX-9 "
+                            "and the Fiat / Abarth 124 Spider) can use it too, but nobody has tried them yet. It is not for the "
+                            "MX-5 ND3 or other firmware. You do not need to know your firmware version: the next step checks "
+                            "your car and changes nothing it does not recognise.")
         drive = self.card(body, "Your USB stick")
         row = tk.Frame(drive, bg=CARD)
         row.pack(fill="x", padx=20, pady=(2, 10))
