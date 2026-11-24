@@ -3,8 +3,17 @@
 Each release on the [Releases page](https://github.com/CeyssensHelder/MiatOff/releases) takes its notes from the section
 with its version below. Everything is for the **MX-5 ND1 and ND2** with Mazda Connect on firmware **74.00.324A** only;
 the tools check the car first and change nothing they do not recognise. The Meters Designer's car setup also offers
-other cars with the same head unit (from v1.0.2-rc.2 on), to fit the gauges to them; the installer itself is still
-built and tested for the MX-5 only.
+other cars with the same head unit (from v1.0.2-rc.2 on), to fit the gauges to them. The installer was built and
+tested on the MX-5; it never looks at the model, only at the firmware and the file hashes.
+
+## Unreleased
+
+### Changed
+
+- **Other Mazdas in the app and README:** *Will this work on my car?* and the support table no longer turn away the
+  other cars with the original Mazda Connect on 74.00.324A (Mazda2, Mazda3, Mazda6, CX-3, CX-5, CX-8, CX-9, Fiat /
+  Abarth 124 Spider). The installer itself is unchanged: it already acted on any car whose firmware and files it
+  recognises, and refuses the rest. Not tried in any of these cars.
 
 ## v1.0.2-rc.2
 

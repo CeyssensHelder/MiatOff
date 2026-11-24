@@ -47,4 +47,4 @@ From [TODO.md](../../TODO.md) and the CHANGELOG "Not tested by us":
 - Shift sound: does the unit play the sound file or only its own beep, and how loud over music.
 - Consumption scale (`Drv1AvlFuelE`), and some scales still unknown (BrakePressure, DR_Slope).
 - Bluetooth at startup: where v74 picks the start source is not found yet ([docs/14](../14-bluetooth-startup.md)).
-- Only 74.00.324A is covered; other firmware and the ND3 are refused. Behaviour on cars other than our ND1 and the one ND2 is unknown.
+- Only 74.00.324A is covered; other firmware and the ND3 are refused. The installer has no model check, so other Mazdas pass when their files hash the same; whether their stock files match ours (sm.conf, systemApp.js, the AA binaries) and how the tweaks behave there is unknown, as on cars other than our ND1 and the one ND2.
