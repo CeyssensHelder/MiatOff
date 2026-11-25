@@ -53,7 +53,7 @@
 # 1.2.1 (GPL-3.0-or-later). libpatch-blmjciaapa.so is oem-aa-mod 0.10.0 by
 # Vitaliy Kurokhtin (AGPL-3.0); see NOTICE on this stick.
 
-MO_VERSION=1.6.0
+MO_VERSION=1.7.0
 R="${MO_ROOT:-}"                        # test hook: fixture root; empty on the CMU
 MO_TEST="${MO_TEST:-0}"                 # test hook: 1 = no dialogs, remount, watchdog or reboot
 MO_ACTION="${MO_ACTION:-}"              # test hook: install | disable | enable | remove | cancel
@@ -65,9 +65,10 @@ USB=$(CDPATH='' cd "$(dirname "$0")" && pwd) || exit 1
 # From the read-only dump of this unit (docs/11) and the oem-aa-mod release.
 
 FW_WANTED=74.00.324A
-COMMANDER_SHA256=780aa9f7d939639c7132143a38c81fdca97efae6f404936d0a648d6a7912b77c
-# Qualified profiles only: firmware flavor, jci-dialog sha256, input ID, rotary sign, 2- and 3-button order.
-COMMANDER_PROFILES=''
+COMMANDER_SHA256=997befa17f61657a482850cc2159dfcd21804732cb0bfc17cb9199fba66c6e57
+# Qualified profiles only: firmware flavor, jci-dialog sha256, Virtual Keyboard ID, rotary sign, 2- and 3-button order.
+# cmu150_EU: probe runs 3 and 4 on a stock 74.00.324A unit (aa-touch-stick/commander/README.md).
+COMMANDER_PROFILES='cmu150_EU 864ff455c75a2739fcda8286cf2d7f478dba38b25fb48e78c546cbde2b453051 0003:0000:0000:0000 + 01 012'
 COMMANDER_TEST_DIALOGS=0
 BLM_SHA256=10e7235bfce075b44c1a8ffc99bbc9b63af85d9262df868ca1874ec36d8d3b71   # /jci/aapa/blmjciaapa.so (md5 486628ae...)
 AAP_SHA256=a0187afab34eaf0e0fb84db6974162465004ad1227ad7866eeb15ac7672546cd   # /usr/bin/aap_service (md5 964e9af0...)

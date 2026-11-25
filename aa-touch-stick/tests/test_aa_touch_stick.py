@@ -578,7 +578,7 @@ esac
     check((car.stick / "dialog-fd").read_text().strip().endswith("/AATOUCH.ID"),
           "the installer keeps AATOUCH.ID open during a prompt, so its FAT inode number cannot change")
 
-    car.extra["COMMANDER_PROFILES"] = f"'cmu150_EU {sha(dialog.read_bytes())} 0000:0000:0000:0000 + 01 012'"
+    car.extra["COMMANDER_PROFILES"] = f"'cmu150_EU {sha(dialog.read_bytes())} 0003:0000:0000:0000 + 01 012'"
     profile = car.extra["COMMANDER_PROFILES"]
     car.extra["COMMANDER_PROFILES"] = profile.replace("cmu150_EU", "cmu150_NA")
     r = car.run("")
