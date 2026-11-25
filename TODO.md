@@ -74,8 +74,7 @@ Not worked on for now. Each says why, and what would bring it back.
 
 - [ ] **Shift sound on the radio.** The shift sound works in the car, but not while the radio plays: making it audible
   over FM needs severe work. A poll in the project's Discussions asks whether anybody wants this; build it only if
-  there is interest ([meters/README.md](meters/README.md), [docs/13](docs/13-gauges.md#sound-on-the-unit)). The
-  RX-7 buzzer and the fun car noises wait on this too.
+  there is interest ([meters/README.md](meters/README.md), [docs/13](docs/13-gauges.md#sound-on-the-unit)).
 - [ ] **Start on Bluetooth instead of FM.** A tweak (Install/Remove, stock backup) so the unit plays Bluetooth audio at
   power-on instead of falling back to FM (user request, ND2). Parked because the issue could not be replicated on our
   car. If it comes back: run the [audio research stick](audio-research-stick/README.txt) in the car and find where v74
