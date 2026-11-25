@@ -6,15 +6,12 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
 
 ## Features
 
-- [ ] **Start on Bluetooth instead of FM.** A tweak (Install/Remove, stock backup) so the unit plays Bluetooth audio at
-  power-on instead of falling back to FM (user request, ND2). First step: run the
-  [audio research stick](audio-research-stick/README.txt) in the car and find where v74 picks the start source;
-  background in [docs/14](docs/14-bluetooth-startup.md).
 - [ ] **Media controls in Meters.** Control the audio from the Meters pages without leaving them: what is playing, and
   play/pause and previous/next.
 - [ ] **Day mode in the car app.** The designer already has one; the car draws the night styling only.
 - [ ] **Car setup presets:** the JP-only 1.5 automatic and the 2024 update
-  ([docs/18](docs/18-vehicle-presets.md)).
+  ([docs/18](docs/18-vehicle-presets.md); both are still open there: the 1.5 automatic's ratios are unsourced and the
+  2024 update is not analysed).
 - [ ] **Other Mazda cars in a real car.** The car setup offers them and the installer has no model check, but nobody has
   run **Check your car** on one yet. Collect a `SUMMARY.txt` from another model: if its stock files hash differently
   from our ND1, pin those hashes too (and their `SM_TABLE` variants) so the tweaks can run there.
@@ -50,7 +47,7 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
   menu. Render them from the Designer (or the dev preview) and show them in the README, so people can choose before
   building a stick.
 - [ ] **Video of the shift sounds.** A short clip of the shift sounds playing in the car (or the sound test), for the
-  README and the release page. Needs the car test below first.
+  README and the release page. Parked with the shift sound (see Parked).
 
 ## Tests and CI
 
@@ -61,14 +58,6 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
 
 ## Fixes
 
-- [ ] **Shift sound in the car:** built and tested on the PC only. Use the sound test in the Meters style list to find
-  out whether the unit plays `sounds/tick.wav` and `sounds/shift.wav` or only the Mazda beep, how late, how either
-  mixes with music, and whether the touch-beep setting mutes the Mazda beep. Then tune the ticks and the early tone
-  to the car's 6 Hz rpm ([meters/README.md](meters/README.md), [docs/13](docs/13-gauges.md#sound-on-the-unit)).
-- [ ] **Touch already enabled through the service menu.** A user asks what happens if the "disable warning, enable
-  touch while driving" service-menu trick from [this miata.net thread](https://forum.miata.net/vb/showthread.php?p=10987780)
-  was already applied before using the stick: the analysis reports the files as untouched. Work out which files that
-  trick changes (if any) and what the check and the install plan should say in that case.
 - [ ] **Consumption scale:** calibrate `Drv1AvlFuelE` against the car's own average consumption figure.
 - [ ] **Android Auto taskbar at the bottom instead of the left.** A user reports that the Android Auto taskbar (clock,
   app shortcuts) moved from the left side to the bottom, also with *Quick controls* off
@@ -77,3 +66,16 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
   whether it comes from a phone or Android Auto update or from the unit. Our AA touch edit only adds the
   `<touch_screen>` block to `aap_system_attributes*.xml`, so compare with a stock unit. If the display size or density
   in those XMLs decides it, that could become a hash-guarded tweak with a stock backup.
+
+## Parked
+
+Not worked on for now. Each says why, and what would bring it back.
+
+- [ ] **Shift sound on the radio.** The shift sound works in the car, but not while the radio plays: making it audible
+  over FM needs severe work. A poll in the project's Discussions asks whether anybody wants this; build it only if
+  there is interest ([meters/README.md](meters/README.md), [docs/13](docs/13-gauges.md#sound-on-the-unit)). The
+  RX-7 buzzer, the fun car noises and the shift-sound video wait on this too.
+- [ ] **Start on Bluetooth instead of FM.** A tweak (Install/Remove, stock backup) so the unit plays Bluetooth audio at
+  power-on instead of falling back to FM (user request, ND2). Parked because the issue could not be replicated on our
+  car. If it comes back: run the [audio research stick](audio-research-stick/README.txt) in the car and find where v74
+  picks the start source; background in [docs/14](docs/14-bluetooth-startup.md).
