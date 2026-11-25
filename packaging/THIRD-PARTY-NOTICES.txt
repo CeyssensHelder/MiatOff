@@ -16,6 +16,7 @@ The files written to the USB stick keep their own licenses and notices:
 - TouchTune, GPL-3.0-or-later: vendor/touchtune/, unmodified.
 - oem-aa-mod: vendor/oem-aa-mod/, unmodified.
 - MZD-AIO images: vendor/mzd-aio/, with its LICENSE.
+- musl 1.1.24, statically linked into miatoff-commander: aa-touch-stick/stick/miatoff-commander.COPYRIGHT.
 - Chakra Petch, Share Tech Mono, Rajdhani and Russo One fonts, SIL Open Font License: meters/fonts/.
 
 See NOTICE for the details.

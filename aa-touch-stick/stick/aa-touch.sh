@@ -53,7 +53,7 @@
 # 1.2.1 (GPL-3.0-or-later). libpatch-blmjciaapa.so is oem-aa-mod 0.10.0 by
 # Vitaliy Kurokhtin (AGPL-3.0); see NOTICE on this stick.
 
-MO_VERSION=1.6.0
+MO_VERSION=1.7.0
 R="${MO_ROOT:-}"                        # test hook: fixture root; empty on the CMU
 MO_TEST="${MO_TEST:-0}"                 # test hook: 1 = no dialogs, remount, watchdog or reboot
 MO_ACTION="${MO_ACTION:-}"              # test hook: install | disable | enable | remove | cancel
@@ -65,6 +65,11 @@ USB=$(CDPATH='' cd "$(dirname "$0")" && pwd) || exit 1
 # From the read-only dump of this unit (docs/11) and the oem-aa-mod release.
 
 FW_WANTED=74.00.324A
+COMMANDER_SHA256=997befa17f61657a482850cc2159dfcd21804732cb0bfc17cb9199fba66c6e57
+# Qualified profiles only: firmware flavor, jci-dialog sha256, Virtual Keyboard ID, rotary sign, 2- and 3-button order.
+# cmu150_EU: probe runs 3 and 4 on a stock 74.00.324A unit (aa-touch-stick/commander/README.md).
+COMMANDER_PROFILES='cmu150_EU 864ff455c75a2739fcda8286cf2d7f478dba38b25fb48e78c546cbde2b453051 0003:0000:0000:0000 + 01 012'
+COMMANDER_TEST_DIALOGS=0
 BLM_SHA256=10e7235bfce075b44c1a8ffc99bbc9b63af85d9262df868ca1874ec36d8d3b71   # /jci/aapa/blmjciaapa.so (md5 486628ae...)
 AAP_SHA256=a0187afab34eaf0e0fb84db6974162465004ad1227ad7866eeb15ac7672546cd   # /usr/bin/aap_service (md5 964e9af0...)
 # Every sm.conf variant: AA touch (0 1) plus a boot trim char: bit 1 DVD/TV, 2 SiriusXM,
@@ -563,6 +568,11 @@ TT_SCRIPT="$USB/touchtune/install-patches.sh"   # unmodified TouchTune 1.2.1 rel
 WATCHDOG="$R/sys/class/gpio/Watchdog Disable/value"
 LOG="$USB/miatoff-aa-touch.log"
 REPORT="$USB/aa-touch-state.txt"
+USB_MARKER="$USB/AATOUCH.ID"
+COMMANDER_DIALOG="$R/jci/tools/jci-dialog"
+COMMANDER_HELPER=
+USB_IDENTITY=
+USB_BLOCK=
 
 GUARD_CREATED=0
 ROOT_WRITABLE=0
@@ -581,20 +591,45 @@ popup() {
         --no-cancel >/dev/null 2>&1 &
 }
 
-# ask <ok-label> <cancel-label> [<button3-label>] <text>: prints 0, 1 or 2.
-ask() {
+# ask_touch <ok-label> <cancel-label> [<button3-label>] <text>: prints a button index.
+ask_touch() {
     local code
-    [ -x /jci/tools/jci-dialog ] || return 1
-    killall -q jci-dialog 2>/dev/null || true
+    [ -x "$COMMANDER_DIALOG" ] || return 1
+    [ "$MO_TEST" = 1 ] || killall -q jci-dialog 2>/dev/null || true
     if [ "$#" = 4 ]; then
-        /jci/tools/jci-dialog --3-button-dialog --title="MIATOFF AA-TOUCH" --text="$4" \
+        "$COMMANDER_DIALOG" --3-button-dialog --title="MIATOFF AA-TOUCH" --text="$4" \
             --ok-label="$1" --cancel-label="$2" --button3-label="$3" >/dev/null 2>&1
     else
-        /jci/tools/jci-dialog --confirm --title="MIATOFF AA-TOUCH" --text="$3" \
+        "$COMMANDER_DIALOG" --confirm --title="MIATOFF AA-TOUCH" --text="$3" \
             --ok-label="$1" --cancel-label="$2" >/dev/null 2>&1
     fi
     code=$?
     case "$code" in 0|1|2) echo "$code" ;; *) return 1 ;; esac
+}
+
+# The helper can dismiss a prompt independently of its visible button positions (3). A dialog that
+# could not start or ended without a button (5) is asked again by touch, so a failure still reaches the
+# retry and the HMI emergency route below.
+ask() {
+    local code
+    usb_present || { printf '%s\n' dismiss; return 0; }
+    if [ -n "$COMMANDER_HELPER" ]; then
+        if [ "$#" = 4 ]; then
+            "$COMMANDER_HELPER" "$COMMANDER_DIALOG" "$USB_MARKER" "$COMMANDER_DEVICE" "$COMMANDER_SIGN" \
+                "$COMMANDER_ORDER3" "MIATOFF AA-TOUCH" "$4" "$1" "$2" "$3" >/dev/null
+        else
+            "$COMMANDER_HELPER" "$COMMANDER_DIALOG" "$USB_MARKER" "$COMMANDER_DEVICE" "$COMMANDER_SIGN" \
+                "$COMMANDER_ORDER2" "MIATOFF AA-TOUCH" "$3" "$1" "$2" >/dev/null
+        fi
+        code=$?
+        case "$code" in
+            0|1|2) printf '%s\n' "$code"; return 0 ;;
+            4|5|126|127) log "Commander unavailable ($code); using touch" >&2 ;;
+            *) printf '%s\n' dismiss; return 0 ;;
+        esac
+        usb_present || { printf '%s\n' dismiss; return 0; }
+    fi
+    ask_touch "$@"
 }
 
 OPENSSL=/usr/bin/openssl
@@ -619,6 +654,40 @@ sha256_of() {
 
 is_file() { [ -f "$1" ] && [ ! -L "$1" ]; }
 exists() { [ -e "$1" ] || [ -L "$1" ]; }
+
+prepare_commander() {
+    local flavor hash profile file="$MO_GUARD/miatoff-commander"
+    [ -n "$COMMANDER_PROFILES" ] && [ -x "$COMMANDER_DIALOG" ] || return 0
+    flavor=$(grep '^JCI_SW_FLAVOR=' "$R/jci/version.ini" | cut -d'"' -f2 | tr -d '\r')
+    [ -n "$flavor" ] || return 0
+    hash=$(sha256_of "$COMMANDER_DIALOG") || return 0
+    profile=$(printf '%s\n' "$COMMANDER_PROFILES" | awk -v region="$flavor" -v sum="$hash" '
+        $1 == region && $2 == sum && NF == 6 { line = $0; count++ }
+        END { if (count == 1) print line }')
+    [ -n "$profile" ] || return 0
+    read -r flavor hash COMMANDER_DEVICE COMMANDER_SIGN COMMANDER_ORDER2 COMMANDER_ORDER3 <<EOF
+$profile
+EOF
+    case "$COMMANDER_DEVICE" in ''|-) return 0 ;; esac
+    if is_file "$USB/miatoff-commander" && cp "$USB/miatoff-commander" "$file" &&
+        [ "$(sha256_of "$file")" = "$COMMANDER_SHA256" ] && chmod 700 "$file"; then
+        # ash can report an incompatible executable as exit 2, also a legitimate button index.
+        if "$file" --check-runtime >/dev/null 2>&1; then
+            COMMANDER_HELPER="$file"
+        else
+            log "Commander helper cannot run on this unit; using touch"
+        fi
+    else
+        log "Commander helper could not be verified; using touch"
+    fi
+}
+
+usb_present() {
+    [ "$MO_TEST" = 1 ] && [ "$COMMANDER_TEST_DIALOGS" = 0 ] && return 0
+    is_file "$USB_MARKER" && [ -n "$USB_IDENTITY" ] &&
+        [ "$(stat -c '%d:%i' "$USB_MARKER" 2>/dev/null)" = "$USB_IDENTITY" ] &&
+        { [ -z "$USB_BLOCK" ] || [ -e "$USB_BLOCK" ]; }
+}
 attrs_of() { stat -c '%a %u:%g' "$1" 2>/dev/null; }
 
 fsync_path() {
@@ -2330,7 +2399,7 @@ plan_button() {     # plan_button <action>: INSTALL for steps that add something
 
 choose_action() {   # choose_action <state>: prints the action
     local a next
-    if [ "$MO_TEST" = 1 ]; then
+    if [ "$MO_TEST" = 1 ] && [ "$COMMANDER_TEST_DIALOGS" = 0 ]; then
         if [ -z "$MO_ACTION" ]; then
             next=$(plan_next "$1")
             [ -n "$next" ] || { [ "$1" = partial ] || plan_report "$1"; }
@@ -2357,8 +2426,9 @@ choose_action() {   # choose_action <state>: prints the action
     if [ "$1" != partial ]; then
         a=$(ask "ANDROID AUTO" EXTRA CANCEL "MiatOff\n\nAndroid Auto touch: $1\nBoot trim: $(trim_name "$S_TRIM")\nStartup warning: $(disc_label)\nMeters: $(meters_label)\n\nChoose a component.") || return 1
         case "$a" in
+            0) ;;
             1) choose_extra; return ;;
-            2) echo cancel; return 0 ;;
+            *) echo cancel; return 0 ;;
         esac
     fi
     choose_aa "$1"
@@ -2588,6 +2658,11 @@ safe_reboot() {
 
 # ---------------------------------------------------------------- main
 
+clear_guard() {
+    rm -f "$MO_GUARD/pid" "$MO_GUARD/sm.a" "$MO_GUARD/sm.b" "$MO_GUARD/images" "$MO_GUARD/miatoff-commander"
+    rmdir "$MO_GUARD" 2>/dev/null
+}
+
 cleanup() {
     status=$?
     trap - 0
@@ -2596,7 +2671,7 @@ cleanup() {
     # step leaves a bootable state, so no rollback is attempted here.
     [ "$ROOT_WRITABLE" = 0 ] && [ "$WATCHDOG_DISABLED" = 0 ] || root_ro || status=1
     sync 2>/dev/null
-    [ "$GUARD_CREATED" = 0 ] || { rm -f "$MO_GUARD/pid" "$MO_GUARD/sm.a" "$MO_GUARD/sm.b" "$MO_GUARD/images"; rmdir "$MO_GUARD" 2>/dev/null; }
+    [ "$GUARD_CREATED" = 0 ] || clear_guard
     exit "$status"
 }
 trap cleanup 0
@@ -2633,8 +2708,7 @@ if ! mkdir "$MO_GUARD" 2>/dev/null; then
         exit 0
     fi
     log "stale guard (pid ${old_pid:-?} gone); taking over"
-    rm -f "$MO_GUARD/pid" "$MO_GUARD/sm.a" "$MO_GUARD/sm.b" "$MO_GUARD/images"
-    rmdir "$MO_GUARD" 2>/dev/null
+    clear_guard
     mkdir "$MO_GUARD" 2>/dev/null || { log "ERROR: cannot take guard $MO_GUARD"; exit 1; }
 fi
 GUARD_CREATED=1
@@ -2691,18 +2765,31 @@ NVRAM_LVDS=
     NVRAM_LVDS=$(tr -d '\r\n' < "$R/sys/class/nvram/nv-config/keys/lvds_speed_restriction" 2>/dev/null)
 log "NVRAM lvds_speed_restriction=${NVRAM_LVDS:-absent (factory: enable)} (touch while driving needs TouchTune)"
 
+if [ "$MO_TEST" != 1 ] || [ "$COMMANDER_TEST_DIALOGS" = 1 ]; then
+    # FAT numbers an inode again when it is read back from disk; an open file keeps its number.
+    ! is_file "$USB_MARKER" || exec 8<"$USB_MARKER"
+    USB_IDENTITY=$(stat -c '%d:%i' "$USB_MARKER" 2>/dev/null)
+    [ ! -e "$R/sys/class/block/${USB##*/}" ] || USB_BLOCK="$R/sys/class/block/${USB##*/}"
+    prepare_commander
+fi
 if ! ACTION=$(choose_action "$STATE"); then
+    usb_present || { log "USB removed during the prompt; nothing done"; exit 0; }
     if [ "$S_METERS" = off ] && [ "$S_DISC" != patched ] && [ "$S_MENU" = 0 ] && [ "$S_DELAY" != patched ]; then
         log "ERROR: dialog failed; nothing done"
         exit 1
     fi
     log "dialog failed with HMI changes installed; trying again in 10 s"
     sleep 10
-    ACTION=$(choose_action "$STATE") || hmi_emergency "no dialog twice"
+    usb_present || { log "USB removed before retry; nothing done"; exit 0; }
+    if ! ACTION=$(choose_action "$STATE"); then
+        usb_present || { log "USB removed during retry; nothing done"; exit 0; }
+        hmi_emergency "no dialog twice"
+    fi
 fi
 log "state $STATE, action $ACTION"
 action_allowed "$STATE" "$ACTION" || { log "ERROR: action $ACTION not allowed in state $STATE"; exit 1; }
 [ "$ACTION" = cancel ] && { log "cancelled; nothing done"; exit 0; }
+usb_present || { log "USB removed before the action; nothing done"; exit 0; }
 
 case "$ACTION" in
     install) popup "Installing touch for Android Auto...\n\nDo not remove the USB, do not press any buttons." ;;

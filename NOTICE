@@ -6,6 +6,11 @@ GPL-3.0-or-later; see LICENSE.
 
 Third-party components
 ----------------------
+aa-touch-stick/stick/miatoff-commander.COPYRIGHT
+  musl 1.1.24, MIT and other notices, https://musl.libc.org/
+  Statically linked into the Commander dialog helper built from
+  aa-touch-stick/commander/ using the pinned Bootlin toolchain.
+
 vendor/touchtune/TouchTune-1.2.1.zip
   TouchTune 1.2.1 by Miatafy, GPL-3.0-or-later, https://github.com/Miatafy/TouchTune
   Thank you to Miatafy for releasing it as free, open-source software.
