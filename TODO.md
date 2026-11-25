@@ -47,7 +47,8 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
   menu. Render them from the Designer (or the dev preview) and show them in the README, so people can choose before
   building a stick.
 - [ ] **Video of the shift sounds.** A short clip of the shift sounds playing in the car (or the sound test), for the
-  README and the release page. Parked with the shift sound (see Parked).
+  README and the release page. The sound works in the car, but is not heard while the radio plays (see Parked), so
+  record it with another source or none.
 
 ## Tests and CI
 
@@ -74,7 +75,7 @@ Not worked on for now. Each says why, and what would bring it back.
 - [ ] **Shift sound on the radio.** The shift sound works in the car, but not while the radio plays: making it audible
   over FM needs severe work. A poll in the project's Discussions asks whether anybody wants this; build it only if
   there is interest ([meters/README.md](meters/README.md), [docs/13](docs/13-gauges.md#sound-on-the-unit)). The
-  RX-7 buzzer, the fun car noises and the shift-sound video wait on this too.
+  RX-7 buzzer and the fun car noises wait on this too.
 - [ ] **Start on Bluetooth instead of FM.** A tweak (Install/Remove, stock backup) so the unit plays Bluetooth audio at
   power-on instead of falling back to FM (user request, ND2). Parked because the issue could not be replicated on our
   car. If it comes back: run the [audio research stick](audio-research-stick/README.txt) in the car and find where v74
