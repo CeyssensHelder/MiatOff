@@ -19,3 +19,6 @@ dist/
 miatoff-audio/
 audio-research-stick/*.zip
 audio-research-stick/audio-test-*/
+audio-paths-stick/*.zip
+audio-paths-stick/paths-test-*/
+miatoff-audio-paths/
