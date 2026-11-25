@@ -82,8 +82,9 @@ Open MiatOff. The list on the left is the whole journey; **Back** and **Continue
    **INSTALL** (or **REMOVE**) and **CANCEL**. Each step restarts the unit; leave the stick in and the next step appears
    once the screen is back. When everything is done you see "Your plan is complete".
 
-Use the touchscreen for install prompts on current sticks. The [parked-car Commander test](aa-touch-stick/commander/README.md)
-checks knob navigation on EU 74.00.324A before it can be enabled for that firmware.
+You can answer each dialog by touch or with the Commander knob: turn to move the brackets, press to choose, **Back**
+to cancel. The knob works on EU 74.00.324A units that match the [measured profile](aa-touch-stick/commander/README.md);
+elsewhere the dialogs are touch-only. With the knob on, a dialog left alone for two minutes closes and nothing changes.
 
 For a first try, choose **CANCEL** at the first dialog: nothing changes, but you get a log and a state file on the stick
 that show the unit is recognised.

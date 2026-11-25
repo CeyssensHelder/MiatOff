@@ -6,7 +6,28 @@ the tools check the car first and change nothing they do not recognise. The Mete
 other cars with the same head unit (from v1.0.2-rc.2 on), to fit the gauges to them. The installer was built and
 tested on the MX-5; it never looks at the model, only at the firmware and the file hashes.
 
-## Unreleased
+## v1.0.2
+
+The install prompts in the car now work with the Commander knob, the Meters car setup offers more cars, and the app
+no longer turns away other Mazdas with the same head unit. It also has every fix from v1.0.2-rc.1 and v1.0.2-rc.2.
+Update Meters from the app (*Update*, then **REPAIR** in the car) to get the Meters changes.
+
+### New
+
+- **Commander knob in the install prompts** (EU 74.00.324A): turn the knob to move the brackets to a button, press it
+  to choose, or press **Back** to cancel. Touch still works on every prompt. While a prompt is open, the knob does not
+  also move the Mazda screen behind it. The knob is used only when the firmware, Mazda's dialog program and the knob's
+  input device match the profile measured in our ND1; on any other unit the prompts stay touch-only, as before. With
+  the knob on, a prompt left alone for two minutes closes and the run ends with nothing changed. Tested in our ND1:
+  a parked test stick, then an install run driven with the knob.
+- **More cars in the Meters car setup** (experimental): besides the MX-5, the car setup offers the Mazda2, Mazda3,
+  Mazda6, CX-3, CX-5, CX-8 and CX-9 with the original Mazda Connect, and the **Fiat / Abarth 124 Spider**, which has
+  the same head unit. Each preset fills in the rev warnings, gearing, tyre size, power and weight from the maker's own
+  data; values without a public source are marked *assumed* in the summary. European presets for the Mazda2, Mazda6
+  and CX-3. Not tried in any of these cars; whether a car can be updated is still decided by **Check your car**.
+- **Version** choice in the car setup where one engine comes in several outputs (for example the Mazda2 1.5 with 75,
+  90 or 115 PS, or Fiat versus Abarth).
+- **Custom warning margin:** *Turn the gauges red* has a **Custom** option, from 0 to 2000 rpm before the limiter.
 
 ### Changed
 
@@ -14,6 +35,32 @@ tested on the MX-5; it never looks at the model, only at the firmware and the fi
   other cars with the original Mazda Connect on 74.00.324A (Mazda2, Mazda3, Mazda6, CX-3, CX-5, CX-8, CX-9, Fiat /
   Abarth 124 Spider). The installer itself is unchanged: it already acted on any car whose firmware and files it
   recognises, and refuses the rest. Not tried in any of these cars.
+- The car setup window has a blueprint look, with drawings of each car traced from photos at true scale. The
+  *Continental Europe* market is now called *Europe*.
+- All presets were checked against the sources they cite; the two whose source is no longer public are now marked
+  *assumed*.
+- The built-in driving simulator of the Meters page (`?src=sim`, for previews on a PC) drives with the gearing and rev
+  limits of the car setup instead of always those of the ND1 1.5.
+
+### Fixed
+
+- **POWER page in hp, kW or lb-ft:** the chart was still numbered in PS and Nm. It now has a power axis on the left and
+  a torque axis on the right, each in the chosen unit, and the legend and factory figures are converted too. With PS
+  and Nm the page looks as before.
+- **Commander knob turns ignored in Meters after touching the screen:** after a tap or swipe, turning the knob did
+  nothing until you left Meters and opened it again (tilting and pressing still worked). Turns now keep working after
+  touch.
+- **"has unexpected permissions" on a unit that had other tweaks:** stock files owned by root (`775 0 0`), which other
+  tools leave behind when they copy files in as root, were reported as BLOCKED. The check and the installer now accept
+  that owner when the content is the known stock file; the replacement we write has the normal owner again. Any other
+  mode or owner still blocks.
+
+### Tested in a car
+
+On our 2017 EU ND1: the Commander knob in the install prompts (a parked test stick, then an install run with the knob)
+and Commander turns in Meters after touch. Not yet confirmed on the ND2 where the Meters knob problem was reported.
+Not tried in a car: the POWER page in other units, the permissions fix, and the car setup for cars other than the
+MX-5.
 
 ## v1.0.2-rc.2
 

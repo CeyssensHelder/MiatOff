@@ -22,8 +22,6 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
   phone sheets (Tools / Properties) instead of panels below the canvas on narrow windows.
 - [ ] **One look for the app's design pages.** *Design your Meters* and *Design your menu* get the same cards, the same
   list with Preview and the same wording for choosing what goes on the stick.
-- [ ] **Installation screen usable with the knob.** Let the installation screen on the unit be operated with the
-  commander knob too (turn to move, press to choose), not only by touch.
 - [ ] **Stick doctor in the app.** Read `miatoff-aa-touch.log` and the state file from a returned stick and explain
   the result in plain words, as the check results already do.
 - [ ] **Automatic laps.** The lap timer is tap-only; GPS in the collector is the missing piece.
@@ -72,3 +70,10 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
   was already applied before using the stick: the analysis reports the files as untouched. Work out which files that
   trick changes (if any) and what the check and the install plan should say in that case.
 - [ ] **Consumption scale:** calibrate `Drv1AvlFuelE` against the car's own average consumption figure.
+- [ ] **Android Auto taskbar at the bottom instead of the left.** A user reports that the Android Auto taskbar (clock,
+  app shortcuts) moved from the left side to the bottom, also with *Quick controls* off
+  ([article](https://tech.yahoo.com/phones/articles/move-android-auto-taskbar-side-210015325.html)); it may depend
+  on a DPI setting ([Reddit thread](https://www.reddit.com/r/AndroidAuto/comments/1ojfhmg/icons_on_side/)). Find out
+  whether it comes from a phone or Android Auto update or from the unit. Our AA touch edit only adds the
+  `<touch_screen>` block to `aap_system_attributes*.xml`, so compare with a stock unit. If the display size or density
+  in those XMLs decides it, that could become a hash-guarded tweak with a stock backup.
