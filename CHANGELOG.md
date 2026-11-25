@@ -6,14 +6,18 @@ the tools check the car first and change nothing they do not recognise. The Mete
 other cars with the same head unit (from v1.0.2-rc.2 on), to fit the gauges to them. The installer was built and
 tested on the MX-5; it never looks at the model, only at the firmware and the file hashes.
 
-## Unreleased
+## v1.0.3
 
-### New
+Bug fix: the Commander knob now also works on the *Check your car* stick, not only on the install stick. Nothing
+changes in what the sticks do to the car. Write the check stick again from this version to get the fix.
 
-- **Commander knob in the check prompts** too: the *Check your car* stick (dump 1.5.0) carries the same helper and
-  profile, so **FULL**, **SNAPSHOT**, **MORE** and the calibration prompt answer the knob; **Back** cancels with nothing
-  dumped. Same rules as the install prompts: touch-only on any unit that does not match. Covered by the host tests
-  only; not yet run in the car.
+### Fixed
+
+- **Commander knob in the check prompts:** the knob did nothing on the check stick, so a car with a broken
+  touchscreen could not start a check. The check stick (dump 1.5.0) now carries the same helper and profile as the
+  install stick: turn the knob to move the brackets across **FULL**, **SNAPSHOT** and **MORE** and on the calibration
+  prompt, press it to choose, or press **Back** to cancel with nothing dumped. Same rules as the install prompts: touch
+  still works, and any unit that does not match the measured EU 74.00.324A profile stays touch-only. Tested in our ND1.
 
 ## v1.0.2
 
