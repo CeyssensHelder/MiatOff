@@ -13,6 +13,14 @@ shell command that the scanner runs. That command looks in `/tmp/mnt/sd[a-d]1` f
 This approach is taken from [TouchTune](https://github.com/Miatafy/TouchTune) v1.2.1 by Miatafy, which was bench-tested on 74.00.324A.
 In its tests, `build_stick.py` checks that the same template produces exactly TouchTune's launcher name.
 
+## The prompts and the Commander knob
+The choice prompts (FULL / SNAPSHOT / MORE, then CALIBRATE / CANCEL) answer touch and, on a qualified unit, the
+Commander knob: turn to move the brackets, press to choose, **Back** to cancel. Since 1.5.0 the stick carries the
+install stick's `miatoff-commander` helper; `dump.sh` checks it against the same pinned hash and profile as
+`aa-touch.sh` (see [the Commander notes](../aa-touch-stick/commander/README.md)), runs it from its guard in `/tmp`,
+and stays touch-only on any unit that does not match. The helper only reads the knob and shows Mazda's dialog; the
+dump stays read-only.
+
 ## What `dump.sh` does and does not do
 **Does:** read, and write to `miatoff-dumps/NNN-<mode>-up<uptime>s/` on the stick.
 

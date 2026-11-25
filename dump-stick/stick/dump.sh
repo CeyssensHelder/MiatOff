@@ -14,7 +14,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # The USB launch mechanism follows TouchTune (GPL-3.0-or-later).
 
-MO_VERSION=1.4.0
+MO_VERSION=1.5.0
 R="${MO_ROOT:-}"                        # test hook: fixture root; empty on the CMU
 MO_TEST="${MO_TEST:-0}"                 # test hook: 1 = no dialogs
 MO_ACTION="${MO_ACTION:-full}"          # test hook: full | snapshot | cancel
@@ -35,6 +35,18 @@ USER_HZ=100                             # clock ticks per second on the CMU kern
 COMMON_STOCK_SHA256=376b30a46366a543122956d7feb1b44f147425015837a4d83fedf12a67943351
 COMMON_TOUCHTUNE_SHA256=019eba18e8d629ddb1d55563aab138ce1eb3329fab67b71d9b4178377cf9d9ce
 
+# Commander (knob) in the prompts: the install stick's helper, used only on a qualified unit. Both values are
+# copies of COMMANDER_SHA256 and COMMANDER_PROFILES in aa-touch.sh (a test keeps them equal).
+COMMANDER_SHA256=997befa17f61657a482850cc2159dfcd21804732cb0bfc17cb9199fba66c6e57
+COMMANDER_PROFILES='cmu150_EU 864ff455c75a2739fcda8286cf2d7f478dba38b25fb48e78c546cbde2b453051 0003:0000:0000:0000 + 01 012'
+COMMANDER_TEST_DIALOGS=0               # test hook: 1 = run the prompts with fake dialogs
+if [ "$MO_TEST" = 1 ] && [ -n "${MO_TEST_OVERRIDES:-}" ]; then
+    . "$MO_TEST_OVERRIDES" || exit 1    # test hook: fixture values for the lines above
+fi
+COMMANDER_DIALOG="$R/jci/tools/jci-dialog"
+COMMANDER_HELPER=
+USB_MARKER="$USB/MIATOFF.ID"
+
 GUARD_CREATED=0
 OUT=
 T0=
@@ -52,34 +64,71 @@ popup() {
         --no-cancel >/dev/null 2>&1 &
 }
 
+# ask_touch <ok> <cancel> [<third>] <title> <text>: Mazda's dialog (touch only); prints the button index.
+ask_touch() {
+    local code
+    [ -x "$COMMANDER_DIALOG" ] || return 1
+    [ "$MO_TEST" = 1 ] || killall -q jci-dialog 2>/dev/null || true
+    if [ "$#" = 5 ]; then
+        "$COMMANDER_DIALOG" --3-button-dialog --title="$4" --text="$5" \
+            --ok-label="$1" --cancel-label="$2" --button3-label="$3" >/dev/null 2>&1
+    else
+        "$COMMANDER_DIALOG" --confirm --title="$3" --text="$4" \
+            --ok-label="$1" --cancel-label="$2" >/dev/null 2>&1
+    fi
+    code=$?
+    case "$code" in 0|1|2) echo "$code" ;; *) return 1 ;; esac
+}
+
+# ask: the same prompt, with the Commander when the helper is ready (same contract as aa-touch.sh): it prints a
+# button index, or "dismiss" for Back, the two-minute timeout or a removed USB. A helper that cannot read the knob
+# or show the dialog (4, 5) hands the prompt to touch.
+ask() {
+    local code
+    if [ -n "$COMMANDER_HELPER" ]; then
+        if [ "$#" = 5 ]; then
+            "$COMMANDER_HELPER" "$COMMANDER_DIALOG" "$USB_MARKER" "$COMMANDER_DEVICE" "$COMMANDER_SIGN" \
+                "$COMMANDER_ORDER3" "$4" "$5" "$1" "$2" "$3" >/dev/null
+        else
+            "$COMMANDER_HELPER" "$COMMANDER_DIALOG" "$USB_MARKER" "$COMMANDER_DEVICE" "$COMMANDER_SIGN" \
+                "$COMMANDER_ORDER2" "$3" "$4" "$1" "$2" >/dev/null
+        fi
+        code=$?
+        case "$code" in
+            0|1|2) echo "$code"; return 0 ;;
+            4|5|126|127) log "Commander unavailable ($code); using touch" >&2 ;;
+            *) echo dismiss; return 0 ;;
+        esac
+        [ -f "$USB_MARKER" ] || { echo dismiss; return 0; }
+    fi
+    ask_touch "$@"
+}
+
 choose_action() {
-    if [ "$MO_TEST" = 1 ]; then
+    local a
+    if [ "$MO_TEST" = 1 ] && [ "$COMMANDER_TEST_DIALOGS" = 0 ]; then
         printf '%s\n' "$MO_ACTION"
         return 0
     fi
-    [ -x /jci/tools/jci-dialog ] || return 1
-    killall -q jci-dialog 2>/dev/null || true
-    /jci/tools/jci-dialog --3-button-dialog --title="MIATOFF DUMP" \
-        --text="Read-only: NOTHING is changed.\nFULL = status + vehicle data + files\nSNAPSHOT = status only (fast)\nMORE = calibration or cancel" \
-        --ok-label="FULL" --cancel-label="SNAPSHOT" --button3-label="MORE" \
-        >/dev/null 2>&1
-    case $? in
+    a=$(ask FULL SNAPSHOT MORE "MIATOFF DUMP" \
+        "Read-only: NOTHING is changed.\nFULL = status + vehicle data + files\nSNAPSHOT = status only (fast)\nMORE = calibration or cancel") ||
+        return 1
+    case "$a" in
         0) echo full ;;
         1) echo snapshot ;;
         2) choose_more ;;
-        *) return 1 ;;
+        *) echo cancel ;;
     esac
 }
 
 choose_more() {
-    killall -q jci-dialog 2>/dev/null || true
-    /jci/tools/jci-dialog --confirm --title="MIATOFF CALIBRATION" \
-        --text="Calibration: record ${CAL_S}s of vehicle signals (read-only).\nFirst stand still for 15 s on level ground,\nthrottle released and pressed fully twice (neutral),\nthen accelerate hard, brake and corner." \
-        --ok-label="CALIBRATE" --cancel-label="CANCEL" >/dev/null 2>&1
-    case $? in
+    local a
+    a=$(ask CALIBRATE CANCEL "MIATOFF CALIBRATION" \
+        "Calibration: record ${CAL_S}s of vehicle signals (read-only).\nFirst stand still for 15 s on level ground,\nthrottle released and pressed fully twice (neutral),\nthen accelerate hard, brake and corner.") ||
+        return 1
+    case "$a" in
         0) echo calibrate ;;
-        1) echo cancel ;;
-        *) return 1 ;;
+        *) echo cancel ;;
     esac
 }
 
@@ -497,6 +546,37 @@ research() {
     log "research: $(ls "$d/bin" | grep -vc absent.txt) binaries, $(cat "$d"/dbus/*-signals.txt 2>/dev/null | grep -c '^signal') signals in ${DBUS_MONITOR_S}s per bus"
 }
 
+# The Commander helper runs from /tmp (the stick may be noexec) and only on a firmware flavor and stock jci-dialog
+# listed in COMMANDER_PROFILES; anything else, or a helper that does not verify, leaves the prompts on touch.
+prepare_commander() {
+    local flavor hash profile file="$MO_GUARD/miatoff-commander"
+    [ -n "$COMMANDER_PROFILES" ] && [ -x "$COMMANDER_DIALOG" ] || return 0
+    flavor=$(grep '^JCI_SW_FLAVOR=' "$R/jci/version.ini" 2>/dev/null | cut -d'"' -f2 | tr -d '\r')
+    [ -n "$flavor" ] || return 0
+    hash=$(sha256_of "$COMMANDER_DIALOG")
+    profile=$(printf '%s\n' "$COMMANDER_PROFILES" | awk -v region="$flavor" -v sum="$hash" '
+        $1 == region && $2 == sum && NF == 6 { line = $0; count++ }
+        END { if (count == 1) print line }')
+    [ -n "$profile" ] || return 0
+    read -r flavor hash COMMANDER_DEVICE COMMANDER_SIGN COMMANDER_ORDER2 COMMANDER_ORDER3 <<EOF
+$profile
+EOF
+    case "$COMMANDER_DEVICE" in ''|-) return 0 ;; esac
+    if [ -f "$USB/miatoff-commander" ] && [ ! -L "$USB/miatoff-commander" ] &&
+        cp "$USB/miatoff-commander" "$file" && [ "$(sha256_of "$file")" = "$COMMANDER_SHA256" ] &&
+        chmod 700 "$file"; then
+        # ash can report an incompatible executable as exit 2, also a legitimate button index.
+        if "$file" --check-runtime >/dev/null 2>&1; then
+            COMMANDER_HELPER="$file"
+            log "Commander: knob enabled ($flavor)"
+        else
+            log "Commander helper cannot run on this unit; using touch"
+        fi
+    else
+        log "Commander helper could not be verified; using touch"
+    fi
+}
+
 # Calibration recording for the Meters scales (docs/13): CAL_S seconds of the
 # vehicle signals from D-Bus, each signal preceded by "@<uptime>", plus YawRate
 # (only in smdb) as fast as one smdb-read at a time allows. Read-only; written
@@ -684,7 +764,7 @@ cleanup() {
     trap - 0
     [ -z "$OUT" ] || rm -f "$OUT/.copy-list" "$OUT/.hash-list" "$OUT/.key-list" 2>/dev/null
     sync 2>/dev/null
-    [ "$GUARD_CREATED" = 0 ] || { rm -f "$MO_GUARD/pid"; rmdir "$MO_GUARD" 2>/dev/null; }
+    [ "$GUARD_CREATED" = 0 ] || { rm -f "$MO_GUARD/pid" "$MO_GUARD/miatoff-commander"; rmdir "$MO_GUARD" 2>/dev/null; }
     exit "$status"
 }
 trap cleanup 0
@@ -705,9 +785,6 @@ if [ "$MO_TEST" != 1 ]; then
     esac
     # The stick may be mounted read-only; this remount touches only the USB.
     mount -o rw,remount "$USB" 2>/dev/null || true
-    # Lowest CPU priority, inherited by every command below, so Mazda's own
-    # services always win while the dump copies and hashes files.
-    renice -n 19 -p $$ >/dev/null 2>&1 || renice 19 $$ >/dev/null 2>&1 || true
 fi
 if : >> "$USB/miatoff-dump.log" 2>/dev/null; then
     exec >> "$USB/miatoff-dump.log" 2>&1
@@ -727,16 +804,25 @@ if ! mkdir "$MO_GUARD" 2>/dev/null; then
         exit 0
     fi
     log "stale guard (pid ${old_pid:-?} gone); taking over"
-    rm -f "$MO_GUARD/pid"
+    # A run cut off without its cleanup can also leave the staged Commander helper behind.
+    rm -f "$MO_GUARD/pid" "$MO_GUARD/miatoff-commander"
     rmdir "$MO_GUARD" 2>/dev/null
     mkdir "$MO_GUARD" 2>/dev/null || { log "ERROR: cannot take guard $MO_GUARD"; exit 1; }
 fi
 GUARD_CREATED=1
 echo $$ > "$MO_GUARD/pid"
 
+if [ "$MO_TEST" != 1 ] || [ "$COMMANDER_TEST_DIALOGS" = 1 ]; then
+    prepare_commander
+fi
 ACTION=$(choose_action) || { log "ERROR: dialog failed; nothing done"; exit 1; }
 log "action: $ACTION"
 [ "$ACTION" = cancel ] && { log "cancelled"; exit 0; }
+if [ "$MO_TEST" != 1 ]; then
+    # Lowest CPU priority, inherited by every command below, so Mazda's own services always win while the dump
+    # copies and hashes files. Only after the prompt, so the Commander helper answers the knob at once.
+    renice -n 19 -p $$ >/dev/null 2>&1 || renice 19 $$ >/dev/null 2>&1 || true
+fi
 
 if [ "$ACTION" = full ] || [ "$ACTION" = calibrate ]; then
     free_kb=$(df -k "$USB" 2>/dev/null | awk 'NR == 2 { print $4 }')
