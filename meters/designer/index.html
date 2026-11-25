@@ -564,25 +564,143 @@
     <dialog id="setup-dialog" class="wide-dialog">
       <form id="setup-form">
         <div class="dialog-heading">
-          <h2 id="setup-title">Your car</h2>
+          <h2 id="setup-title" tabindex="-1">Choose your car</h2>
           <button type="button" data-close aria-label="Close car setup">
             ×
           </button>
         </div>
         <p id="setup-intro" class="hint"></p>
-        <div id="setup-car" class="setup-grid">
-          <label>Region<select id="setup-market"></select></label>
-          <label>Generation<select id="setup-generation"></select></label>
-          <label>Engine<select id="setup-engine"></select></label>
-          <label>Gearbox<select id="setup-transmission"></select></label>
-          <label>Body<select id="setup-body"></select></label>
-          <label>Tyre size<select id="setup-tyre"></select></label>
+        <div id="setup-step-model" class="setup-choice-grid" role="radiogroup" aria-label="Car model">
+          <label class="setup-choice-card">
+            <input type="radio" name="setup-model" value="MX-5" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <use href="./setup-outlines.svg#mx5" />
+            </svg>
+            <span>MX-5</span>
+          </label>
+          <label class="setup-choice-card">
+            <input type="radio" name="setup-model" value="Mazda2" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <use href="./setup-outlines.svg#mazda2" />
+            </svg>
+            <span>Mazda2</span>
+          </label>
+          <label class="setup-choice-card">
+            <input type="radio" name="setup-model" value="Mazda3" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <use href="./setup-outlines.svg#mazda3" />
+            </svg>
+            <span>Mazda3</span>
+          </label>
+          <label class="setup-choice-card">
+            <input type="radio" name="setup-model" value="Mazda6" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <use href="./setup-outlines.svg#mazda6" />
+            </svg>
+            <span>Mazda6</span>
+          </label>
+          <label class="setup-choice-card">
+            <input type="radio" name="setup-model" value="CX-3" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <use href="./setup-outlines.svg#cx3" />
+            </svg>
+            <span>CX-3</span>
+          </label>
+          <label class="setup-choice-card">
+            <input type="radio" name="setup-model" value="CX-5" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <use href="./setup-outlines.svg#cx5" />
+            </svg>
+            <span>CX-5</span>
+          </label>
+          <label class="setup-choice-card">
+            <input type="radio" name="setup-model" value="CX-8" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <use href="./setup-outlines.svg#cx8" />
+            </svg>
+            <span>CX-8</span>
+          </label>
+          <label class="setup-choice-card">
+            <input type="radio" name="setup-model" value="CX-9" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <use href="./setup-outlines.svg#cx9" />
+            </svg>
+            <span>CX-9</span>
+          </label>
+          <label class="setup-choice-card">
+            <input type="radio" name="setup-model" value="124 Spider" />
+            <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+              <use href="./setup-outlines.svg#fiat124" />
+            </svg>
+            <span>Fiat / Abarth 124</span>
+          </label>
         </div>
-        <div id="setup-units" hidden>
+        <div id="setup-step-market" hidden>
+          <p class="hint">Choose the market where your car was originally sold.</p>
+          <div class="setup-choice-grid setup-market-grid" role="radiogroup" aria-label="Original sales market">
+            <label class="setup-choice-card">
+              <input type="radio" name="setup-market" value="EU" />
+              <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+                <use href="./setup-outlines.svg#eu" />
+              </svg>
+              <span>Europe</span>
+            </label>
+            <label class="setup-choice-card">
+              <input type="radio" name="setup-market" value="UK" />
+              <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+                <use href="./setup-outlines.svg#uk" />
+              </svg>
+              <span>United Kingdom</span>
+            </label>
+            <label class="setup-choice-card">
+              <input type="radio" name="setup-market" value="US" />
+              <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+                <use href="./setup-outlines.svg#us" />
+              </svg>
+              <span>United States</span>
+            </label>
+            <label class="setup-choice-card">
+              <input type="radio" name="setup-market" value="JP" />
+              <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+                <use href="./setup-outlines.svg#jp" />
+              </svg>
+              <span>Japan</span>
+            </label>
+            <label class="setup-choice-card">
+              <input type="radio" name="setup-market" value="AU" />
+              <svg viewBox="0 0 200 80" aria-hidden="true" focusable="false">
+                <use href="./setup-outlines.svg#au" />
+              </svg>
+              <span>Australia</span>
+            </label>
+          </div>
+        </div>
+        <div id="setup-step-car" hidden>
+          <div class="setup-grid">
+            <label>Generation<select id="setup-generation"></select></label>
+            <label>Engine<select id="setup-engine"></select></label>
+            <label>Gearbox<select id="setup-transmission"></select></label>
+            <label hidden>Drivetrain<select id="setup-drive"></select></label>
+            <label hidden>Version<select id="setup-version"></select></label>
+            <label>Body<select id="setup-body"></select></label>
+            <label>Tyre size<select id="setup-tyre"></select></label>
+          </div>
+          <p id="setup-preset" hidden></p>
+        </div>
+        <div id="setup-step-units" hidden>
           <div id="setup-unit-fields" class="setup-grid"></div>
           <label
             >Turn the gauges red<select id="setup-margin"></select
           ></label>
+          <label id="setup-margin-custom-field" hidden
+            >Rpm before the limiter (0 to 2000)<input
+              id="setup-margin-custom"
+              type="number"
+              min="0"
+              max="2000"
+              step="50"
+              inputmode="numeric"
+          /></label>
           <table id="setup-summary">
             <caption id="setup-summary-caption"></caption>
             <tbody id="setup-summary-body"></tbody>

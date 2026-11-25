@@ -170,7 +170,12 @@ for (const opts of [{ noVdt: true }, { noWebsockets: true }]) {
 // --- app and template with a minimal DOM
 function el(tag) {
     return { tag, attrs: {}, children: [], className: "", id: "", src: "",
-             setAttribute(k, v) { this.attrs[k] = v; }, appendChild(c) { this.children.push(c); } };
+             setAttribute(k, v) { this.attrs[k] = v; }, appendChild(c) { this.children.push(c); c.parentNode = this; },
+             removeChild(c) {
+                 const i = this.children.indexOf(c);
+                 if (i < 0) throw new Error("not a child");
+                 this.children.splice(i, 1); c.parentNode = null;
+             } };
 }
 const loaded = [];
 const ctx = { log: { addSrcFile() {}, debug() {} }, document: { createElement: el },
@@ -210,8 +215,15 @@ backResult = false;
 check(t.miatoffBack() === false, "back at the style list: false (app closes)");
 frame.contentWindow.MiatoffMeters.back = function () { throw new Error("x"); };
 check(t.miatoffBack() === false, "a failing page never keeps the back key");
+const touchSurface = frame.miatoffTouchSurface;
 t.cleanUp();
+check(touchSurface && !t.divElt.children.includes(touchSurface), "cleanUp removes the touch surface");
 check(frame.src === "about:blank", "cleanUp stops the page");
+const t2 = vm.runInContext("new MiatoffMetersTmplt('miatoff', parent, 'MiatoffMetersTmplt2', {})", ctx);
+const frame2 = t2.divElt.children[0];
+t2.divElt.removeChild(frame2.miatoffTouchSurface);
+t2.cleanUp();
+check(frame2.src === "about:blank", "cleanUp still stops the page when the touch surface is already gone");
 
 console.log("");
 console.log(failures ? `${failures} failure(s)` : "All tests passed.");

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // First-run car setup: choose a car and units, fill the project's vehicle profile from a sourced preset.
-import { PRESETS, MARKETS, MARKET_UNITS } from "./presets.mjs";
+import { PRESETS, MARKETS, MARKET_UNITS, VEHICLE_MODELS, ENGINE_NAMES } from "./presets.mjs";
 import { unitChoices, setUnits, toUnit } from "./signals.mjs";
 
 // Vehicle specifications a preset can supply, in display order. Anything not backed by a source stays "assumed".
@@ -21,13 +21,21 @@ const MODEL_FIELDS = ["cda", "crr", "eff"];
 // Dashboard warnings: a display choice worked out from the limit and the warning margin, not a specification.
 export const WARNING_FIELDS = ["rpm.red", "rpm.shift", "rpm.amber", "rpm.max"];
 export const MARGINS = [0, 250, 500, 750, 1000];
+export const MAX_MARGIN = 2000;
 export const DEFAULT_MARGIN = 500;
+// Any margin from 0 to MAX_MARGIN rpm before the limiter, in steps of 50 (the listed MARGINS or a custom value).
+export function marginOf(value) {
+  if (value === null || value === undefined || value === "") return DEFAULT_MARGIN;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return DEFAULT_MARGIN;
+  return Math.min(MAX_MARGIN, Math.max(0, Math.round(n / 50) * 50));
+}
 const FIELD_LABELS = {
   "rpm.max": "Gauge maximum",
   "rpm.amber": "Amber from",
   "rpm.red": "Red from",
   "rpm.shift": "Shift lights flash at",
-  "rpm.limit": "Limiter (redline)",
+  "rpm.limit": "Redline reference",
   ratios: "Gear ratios",
   finalDrive: "Final drive",
   circumference: "Rolling circumference",
@@ -42,6 +50,7 @@ export const MARKET_NAMES = {
   UK: "United Kingdom",
   US: "United States",
   JP: "Japan",
+  AU: "Australia",
 };
 
 // Tyre "195/50R16" -> rolling circumference in metres (geometry only: rim + two sidewalls).
@@ -67,32 +76,35 @@ const unique = (items) => [...new Set(items)];
 export function presetsFor(market) {
   return PRESETS.filter((p) => p.markets.includes(market));
 }
-export function findPreset({ market, generation, engine, transmission }) {
-  return (
-    presetsFor(market).find(
-      (p) =>
-        p.generation === generation &&
-        p.engine === engine &&
-        p.transmission === transmission,
-    ) ?? null
+function modelFor(generation) {
+  return Object.keys(VEHICLE_MODELS).find((model) => VEHICLE_MODELS[model].includes(generation));
+}
+export function findPreset({ market, generation, engine, transmission, drive, version }) {
+  let matching = presetsFor(market).filter(
+    (p) => p.generation === generation && p.engine === engine && p.transmission === transmission,
   );
+  if (unique(matching.map((p) => p.drive)).length > 1) matching = matching.filter((p) => p.drive === drive);
+  // Several outputs of one engine (a Mazda2 1.5 manual with 75, 90 or 115 PS): the version is the preset id.
+  if (matching.length > 1) matching = matching.filter((p) => p.id === version);
+  return matching.length === 1 ? matching[0] : null;
 }
 export function presetById(id) {
   return PRESETS.find((p) => p.id === id) ?? null;
 }
-// Options left for each choice once the earlier ones are fixed; invalid choices fall back to the first option.
+// Options left after the earlier selections. Require an explicit choice when multiple drivetrains or versions match.
 export function resolveChoices(choices) {
   const c = { ...choices };
-  if (!MARKETS.includes(c.market)) c.market = MARKETS[0];
   const pick = (key, list) => {
     if (!list.includes(c[key])) c[key] = list[0];
     return list;
   };
-  let pool = presetsFor(c.market);
-  const options = {
-    market: MARKETS,
-    generation: pick("generation", unique(pool.map((p) => p.generation))),
-  };
+  const options = {};
+  c.model ??= modelFor(c.generation);
+  options.model = pick("model", Object.keys(VEHICLE_MODELS));
+  let pool = PRESETS.filter((p) => modelFor(p.generation) === c.model);
+  options.market = pick("market", MARKETS.filter((market) => pool.some((p) => p.markets.includes(market))));
+  pool = pool.filter((p) => p.markets.includes(c.market));
+  options.generation = pick("generation", unique(pool.map((p) => p.generation)));
   pool = pool.filter((p) => p.generation === c.generation);
   options.engine = pick("engine", unique(pool.map((p) => p.engine)));
   pool = pool.filter((p) => p.engine === c.engine);
@@ -100,14 +112,22 @@ export function resolveChoices(choices) {
     "transmission",
     unique(pool.map((p) => p.transmission)),
   );
+  pool = pool.filter((p) => p.transmission === c.transmission);
+  options.drive = unique(pool.map((p) => p.drive).filter(Boolean));
+  if (options.drive.length === 1) c.drive = options.drive[0];
+  else if (!options.drive.includes(c.drive)) c.drive = undefined;
+  if (options.drive.length > 1) pool = pool.filter((p) => p.drive === c.drive);
+  options.version = pool.length > 1 ? pool.map((p) => p.id) : [];
+  if (!options.version.includes(c.version)) c.version = undefined;
   const preset = findPreset(c);
   options.body = pick("body", preset?.bodies ?? []);
   options.tyre = pick("tyre", preset?.tyres ?? []);
-  const units = { ...MARKET_UNITS[c.market], ...(c.units ?? {}) };
+  const savedUnits = c.market === choices.market ? c.units : null;
+  const units = { ...MARKET_UNITS[c.market], ...savedUnits };
   for (const [k, list] of Object.entries(unitChoices))
     if (!list.includes(units[k])) units[k] = MARKET_UNITS[c.market][k];
   c.units = units;
-  c.margin = MARGINS.includes(Number(c.margin)) ? Number(c.margin) : DEFAULT_MARGIN;
+  c.margin = marginOf(c.margin);
   return { choices: c, options, preset };
 }
 // Choices that describe a vehicle profile, for prefilling the dialog.
@@ -117,6 +137,8 @@ export function choicesFromVehicle(v) {
     market: MARKETS.includes(v.market) ? v.market : "EU",
     generation: preset?.generation ?? v.generation,
     engine: preset?.engine ?? v.engine,
+    drive: preset?.drive,
+    version: preset?.id,
     transmission: preset?.transmission ?? v.transmission,
     body: v.body === "rf" ? "RF" : v.body,
     tyre: v.tyre ?? null,
@@ -158,14 +180,19 @@ export function presetValues(preset, { body, tyre }) {
 // Write a preset into project.vehicle. Units go through setUnits so custom scales are converted.
 // Unknown preset values keep the current value and are marked assumed.
 export function applyPreset(project, preset, choices) {
+  const market = MARKETS.includes(choices.market) ? choices.market : MARKETS[0];
+  if (!preset.markets.includes(market))
+    throw Error(preset.label + " is not listed for " + market);
   const { choices: c } = resolveChoices({
     ...choices,
+    market,
+    model: modelFor(preset.generation),
     generation: preset.generation,
     engine: preset.engine,
     transmission: preset.transmission,
+    drive: preset.drive,
+    version: preset.id,
   });
-  if (!preset.markets.includes(c.market))
-    throw Error(preset.label + " is not listed for " + c.market);
   const v = project.vehicle,
     values = presetValues(preset, c),
     assumed = [];
@@ -239,20 +266,36 @@ const fmt = (field, value, units) => {
   return value + ({ circumference: " m", mass: " kg" }[field] ?? "");
 };
 
+const SETUP_STEPS = ["model", "market", "car", "units"];
+
 // The dialog. api: { command(name, fn) (inline errors), lastError(), vehicle(), preferences, openDialog(id), notify(text) }
 export class CarSetup {
   constructor(api) {
     this.api = api;
     this.$ = (id) => document.getElementById(id);
-    this.step = 1;
+    this.step = 0;
     this.firstRun = false;
     this.choices = null;
     const $ = this.$;
-    for (const key of ["market", "generation", "engine", "transmission", "body", "tyre"])
+    this.cards = {};
+    for (const key of ["model", "market"]) {
+      this.cards[key] = [...$("setup-step-" + key).querySelectorAll('input[type="radio"]')];
+      for (const input of this.cards[key]) {
+        input.onchange = () => {
+          this.choices[key] = input.value;
+          if (key === "market") this.choices.units = null;
+          this.choices.drive = this.choices.version = undefined;
+          this.render();
+        };
+      }
+    }
+    for (const key of ["generation", "engine", "transmission", "drive", "version", "body", "tyre"])
       $("setup-" + key).onchange = () => {
         this.choices[key] = $("setup-" + key).value;
-        // A new region brings its own default units.
-        if (key === "market") this.choices.units = null;
+        if (["generation", "engine", "transmission"].includes(key))
+          this.choices.drive = undefined;
+        if (["generation", "engine", "transmission", "drive"].includes(key))
+          this.choices.version = undefined;
         this.render();
       };
     const host = $("setup-unit-fields");
@@ -277,23 +320,27 @@ export class CarSetup {
             String(m),
           ),
       ),
+      new Option("Custom…", "custom"),
     );
     $("setup-margin").onchange = () => {
-      this.choices.margin = Number($("setup-margin").value);
+      this.customMargin = $("setup-margin").value === "custom";
+      if (!this.customMargin) this.choices.margin = Number($("setup-margin").value);
+      this.render();
+      if (this.customMargin) $("setup-margin-custom").focus();
+    };
+    $("setup-margin-custom").max = String(MAX_MARGIN);
+    $("setup-margin-custom").onchange = () => {
+      this.choices.margin = marginOf($("setup-margin-custom").value);
       this.render();
     };
     $("setup-form").onsubmit = (e) => {
       e.preventDefault();
-      if (this.step === 1) {
-        this.step = 2;
-        this.render();
-        $("setup-unit-speed").focus();
-      } else this.apply();
+      if ($("setup-next").disabled) return;
+      if (this.customMargin) this.choices.margin = marginOf($("setup-margin-custom").value);
+      if (this.step === SETUP_STEPS.length - 1) this.apply();
+      else this.showStep(this.step + 1);
     };
-    $("setup-back").onclick = () => {
-      this.step = 1;
-      this.render();
-    };
+    $("setup-back").onclick = () => this.showStep(this.step - 1);
     // Leaving the first run without a choice keeps the profile and is not asked again.
     // Remembered right away (the close event comes a task later, after a quick reload could already have happened).
     const dismiss = () => {
@@ -312,11 +359,12 @@ export class CarSetup {
   }
   open({ firstRun = false } = {}) {
     this.firstRun = firstRun;
-    this.step = 1;
+    this.step = 0;
+    this.customMargin = false;
     this.choices = choicesFromVehicle(this.api.vehicle());
     this.$("setup-error").textContent = "";
     this.$("setup-intro").textContent = firstRun
-      ? "Which MX-5 do you have? The designer fills in its rev limits, gearing and tyre size, and the units you prefer. You can change this later under Project → Car setup."
+      ? "Which car do you have? The designer fills in its rev warnings, gearing and tyre size, and the units you prefer. You can change this later under Project → Car setup."
       : "Choose your car to replace the vehicle settings of this project. Undo brings the previous ones back.";
     this.$("setup-skip").textContent = firstRun
       ? "Keep the default settings"
@@ -324,8 +372,14 @@ export class CarSetup {
     this.render();
     this.api.openDialog("setup-dialog");
   }
+  showStep(step) {
+    this.step = step;
+    this.render();
+    this.$("setup-title").focus();
+  }
   render() {
     const $ = this.$,
+      stage = SETUP_STEPS[this.step],
       { choices, options, preset } = resolveChoices(this.choices);
     this.choices = choices;
     this.preset = preset;
@@ -335,39 +389,73 @@ export class CarSetup {
       el.value = choices[key] ?? "";
       el.disabled = list.length < 2;
     };
-    fill("market", options.market, (m) => MARKET_NAMES[m] ?? m);
+    for (const [key, cards] of Object.entries(this.cards)) {
+      for (const input of cards) {
+        input.checked = input.value === choices[key];
+        input.disabled = !options[key].includes(input.value);
+        input.parentElement.hidden = input.disabled;
+      }
+    }
     fill("generation", options.generation, (g) => {
-      const years = PRESETS.filter((p) => p.generation === g).flatMap(
+      const years = presetsFor(choices.market).filter((p) => p.generation === g).flatMap(
           (p) => p.years ?? [],
         ),
         from = Math.min(...years.filter(Number.isInteger)),
         to = Math.max(...years.filter(Number.isInteger));
-      return Number.isFinite(from)
-        ? `${g} (${from}–${to >= new Date().getFullYear() ? "" : to})`
-        : g;
+      if (!Number.isFinite(from)) return g;
+      if (from === to) return `${g} (${from})`;
+      return `${g} (${from}–${to >= new Date().getFullYear() ? "" : to})`;
     });
-    fill("engine", options.engine, (e) => e + " L");
+    fill("engine", options.engine, (engine) => ENGINE_NAMES[engine]);
     fill("transmission", options.transmission, (t) =>
       t === "manual" ? "Manual (6-speed)" : "Automatic (6-speed)",
     );
-    fill("body", options.body, (b) => (b === "RF" ? "RF (retractable fastback)" : "Roadster"));
+    fill("drive", options.drive);
+    $("setup-drive").parentElement.hidden = options.drive.length === 0;
+    if (options.drive.length > 1) {
+      $("setup-drive").prepend(new Option("Choose drivetrain", ""));
+      $("setup-drive").value = choices.drive ?? "";
+    }
+    fill("version", options.version, (id) => presetById(id)?.version ?? presetById(id)?.label ?? id);
+    $("setup-version").parentElement.hidden = options.version.length === 0;
+    if (options.version.length > 1) {
+      $("setup-version").prepend(new Option("Choose version", ""));
+      $("setup-version").value = choices.version ?? "";
+    }
+    const bodyNames = { roadster: "Roadster", RF: "RF (retractable fastback)", sedan: "Sedan", hatchback: "Hatchback", suv: "SUV" };
+    fill("body", options.body, (body) => bodyNames[body]);
     fill("tyre", options.tyre);
     for (const [k, u] of Object.entries(choices.units))
       $("setup-unit-" + k).value = u;
-    $("setup-margin").value = String(choices.margin);
-    $("setup-car").hidden = this.step !== 1;
-    $("setup-intro").hidden = this.step !== 1;
-    $("setup-units").hidden = this.step !== 2;
-    $("setup-back").hidden = this.step !== 2;
-    $("setup-next").textContent = this.step === 1 ? "Next" : "Apply";
-    $("setup-next").disabled = !preset;
-    $("setup-title").textContent =
-      this.step === 1 ? "Your car" : "Units and summary";
-    if (!preset) {
-      $("setup-error").textContent = "No preset for this combination yet.";
-      return;
-    }
+    const custom = this.customMargin || !MARGINS.includes(choices.margin);
+    $("setup-margin").value = custom ? "custom" : String(choices.margin);
+    $("setup-margin-custom-field").hidden = !custom;
+    $("setup-margin-custom").value = String(choices.margin);
+    for (const section of SETUP_STEPS) $("setup-step-" + section).hidden = stage !== section;
+    $("setup-preset").hidden = !preset?.drive;
+    $("setup-preset").textContent = preset?.label ?? "";
+    $("setup-intro").hidden = stage !== "model";
+    $("setup-back").hidden = stage === "model";
+    $("setup-next").textContent = stage === "units" ? "Apply" : "Next";
+    const needsPreset = stage === "car" || stage === "units";
+    $("setup-next").disabled = needsPreset && !preset;
+    const marketName = MARKET_NAMES[choices.market];
+    const titles = {
+      model: "Choose your car",
+      market: "Market for " + choices.model,
+      car: choices.model + " · " + marketName,
+      units: "Units and summary",
+    };
+    $("setup-title").textContent = titles[stage];
     $("setup-error").textContent = "";
+    if (needsPreset && !preset)
+      $("setup-error").textContent =
+        options.drive.length > 1 && !choices.drive
+          ? "Choose FWD or AWD."
+          : options.version.length > 1
+            ? "Choose the engine version."
+            : "No preset for this combination yet.";
+    if (stage !== "units" || !preset) return;
     const values = presetValues(preset, choices),
       warnings = warningRpm(
         values["rpm.limit"].value ?? this.api.vehicle().rpm.limit,
@@ -386,7 +474,7 @@ export class CarSetup {
         return tr;
       },
       rows = SPEC_FIELDS.flatMap((f) => [
-        row(f, values[f].value, values[f].sourced ? "sourced" : "assumed"),
+        row(f, values[f].value, values[f].sourced ? (f === "circumference" ? "calculated" : "sourced") : "assumed"),
         ...(f === "rpm.limit"
           ? WARNING_FIELDS.map((w) => row(w, warnings[w.slice(4)], "your margin"))
           : []),

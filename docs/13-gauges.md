@@ -254,6 +254,75 @@ For the Meters shift sound ([meters/README.md](../meters/README.md)). **Nothing 
   - Which other beep types the HMI accepts besides `"Short", "Touch"`.
 
   The style list's sound test settles the first two in the car.
+- **First car result (sound test, parked).** The sound files play, and are heard over Bluetooth audio and Android Auto, but
+  not over the FM radio. Likely reason (not measured): the radio reaches the speakers on its own path, which the
+  software mix of the browser does not join. The [audio paths stick](../audio-paths-stick/README.txt) plays a test
+  sound on each ALSA output of the unit with the radio on and asks the driver which ones were heard. That decides
+  whether a helper on the unit can play the files over the radio.
+- **Audio paths 0.1.0 result (FM on).** The probe played without an error on the first 16 outputs (`default`, the
+  `information*` and `telephonyPrompt*` outputs), and none was heard. So the output name is not what matters: the
+  audio manager decides what reaches the speakers while the tuner is the source. The public
+  [gartnera/headunit](https://github.com/gartnera/headunit) (AGPL-3.0) gets Android Auto audio through by asking
+  `com.xsembedded.service.AudioManagement` (`com.xsembedded.ServiceProvider.Request`) first: `openSession`,
+  `registerAudioStream` (stream `MLENT`, focus `transient` or `permanent`), `requestAudioFocus`, and later
+  `abandonAudioFocus` / `closeSession`.
+- **Audio paths 0.2.0 result.** The audio manager refused headunit's request: `registerAudioStream` answered
+  `Mandatory arg (streamType) missing`, so no turn was granted and nothing was really tested (none heard). Its stream
+  list shows the types this firmware uses: `Media` (FM is `5.Media.FM.gained.playing`), `InfoMix` (`NAVIVOL`, the
+  navigation voice), `InfoUser`, `LowAlert` (TA), `HighAlert`, `IncomingRg`, `Telephony`, `VR`, `AAMedia`,
+  `AAGuidance`, `AAGuidanceNoMix`, `AAVR` and the CarPlay types. Public serial logs show the unit's own services
+  registering with `streamName`, `streamModeName`, `streamType` and `focusType`. Another public app requests focus
+  with `"requestType":"request"` and reports `audioActive` `{"playing":true}`. Audio paths 0.3.0 does that with
+  transient turns of `InfoMix`, `AAGuidance`, `LowAlert` and `Media`.
+- **Audio paths 0.3.0 result.** Every turn was granted: the audio manager sent `audioFocusChangeEvent` gained and lost
+  for each stream. `InfoMix` and `AAGuidance` got a `mixId` with FM still playing. `LowAlert` put FM in
+  `temporarilyLost` and `Media` made FM `lost`: the radio went quiet and came back. The beeps were never heard, not
+  even while FM was muted. Likely (not proven): level and routing belong to the unit's known stream names
+  (`NAVIVOL`, `BTHFVOL`, `RINGTONEVOL` read like volume groups), so a stream of our own name stays silent. Audio
+  paths 0.4.0 borrows the existing `NAVIVOL` and `AAGuidance` sessions instead, as the public dump1090 app and
+  headunit reuse existing sessions. It skips a stream that is in use.
+- **Audio paths 0.4.0 result: first sound over FM.** Borrowing the unit's own `AAGuidance` session works. The audio
+  manager gave it the focus (`gained`, `focusType` `permanent`; the list showed `AAGuidance.gained.playing` with a
+  `mixId`, FM still `gained.playing`). The beeps on `androidautoAltAudio` and on `informationAndroidAutoAltAudVol` were
+  both heard, and the radio was lowered (ducked) during them, as for Android Auto directions. The first try on
+  `androidautoAltAudio` was repeated (AGAIN) before it was heard. Borrowing `NAVIVOL` gave the focus too, but nothing
+  was heard on `informationNavi`, `informationNaviVol` or `default`. Open: how soon after the request a beep can
+  start (the test waited 1 s), whether one turn can carry several beeps, and what happens when Android Auto itself is
+  connected and owns that session. Audio paths 0.5.0 measures the first two: waits of 1, 0.5, 0.2 and 0 s after the
+  turn, with the time of each call recorded, and three groups of beeps in one turn.
+- **Audio paths 0.5.0 result.** All three beeps were heard in every test, even with no wait after the turn, on both
+  outputs; one turn carried three groups of beeps, with the radio lowered the whole time. The calls cost the time:
+  `requestAudioFocus` took about 0.2 s and `audioActive` about 0.5 s, so a beep asked for at the shift point starts
+  about 0.75 s late. The ducking is the guidance stream's normal behaviour. The driver wants neither the delay nor the
+  ducking. Untested: whether the focus alone (without `audioActive`) is heard and ducks, whether holding the focus
+  ahead of the shift point keeps the radio at full volume, and the `alertGeneric` outputs that 0.1.0 never reached.
+  Audio paths 0.6.0 tests those three: `alertGeneric` and `alertGenericVol` without a turn, the `AAGuidance` focus
+  without `audioActive`, and that focus held 3 s silent before the beeps, asking each time whether the radio kept its
+  normal volume.
+- **Audio paths 0.6.0 result: heard without the dip.** `alertGeneric` and `alertGenericVol` without a turn: not
+  heard. The `AAGuidance` focus WITHOUT `audioActive`: all beeps heard on `androidautoAltAudio` and
+  `informationAndroidAutoAltAudVol`, and the radio kept its overall volume. The audio manager still listed the stream
+  as `gained.playing` with a `mixId`, so `audioActive` is not needed. What the driver hears: the guidance sound plays
+  on one speaker, and the radio goes quiet on that speaker only while the others keep playing, the same as the
+  car's lane-assist warning. `requestAudioFocus` took 0.20 to 0.45 s (the first one the slowest), and the play
+  started about 0.05 s after it. A focus held 3 s before the beeps carried both groups; the answer for the radio
+  during that wait was "lowered", but the driver reported one misclick, so that answer is not certain. So a beep
+  asked for at the shift point starts about 0.3 to 0.5 s late; a focus taken ahead of the shift point (for example
+  at the amber zone) leaves only the player's start.
+- **Radio shift beep: open question (not built).** Only a helper on the unit can make the beep heard over the
+  radio: it would borrow the idle `AAGuidance` session and play `shift.wav` on `androidautoAltAudio`, only on a
+  tuner source (Android Auto not connected). Two designs, and the choice is put to the users first:
+  - **Simple: beep at all times.** The collector already reads the rpm about 10 times a second. It plays one tone
+    shortly before the shift point, about 0.4 s early to cover the focus request, whatever is on screen. It is
+    switched on or off in the builder. About 40 lines in the collector, no signal from the page.
+  - **Only while Meters is open**, with the page's ticks and steady tone. The helper would hold the focus from the
+    amber zone to the upshift and needs a signal from the page, which runs in Opera and can neither start a program
+    nor write a file. Audio paths 0.7.0 is a read-only probe for that signal (built and checked on a fake car only,
+    not run in the car): it checks whether BusyBox `nc` can listen on 127.0.0.1 for a web request from the page,
+    whether opening Meters shows on the HMI D-Bus, whether the page's sound test shows in the ALSA playback state,
+    and which files Opera writes.
+
+  Without either, the shift sound stays as it is: heard over Bluetooth audio and Android Auto, silent over the radio.
 
 ## Sources
 - [Trevelopment/MZD_Speedometer](https://github.com/Trevelopment/MZD_Speedometer) (GPL-3.0; `speedometer.sh` read)

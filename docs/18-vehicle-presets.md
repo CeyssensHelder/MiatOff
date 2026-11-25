@@ -1,8 +1,8 @@
-# 18. Vehicle presets (MX-5 ND1 / ND2)
+# 18. Vehicle presets
 
 Source notes for `meters/designer/v3/presets.mjs`, the data behind the first-run "car setup" of the Meters Designer.
-Everything here was fetched from the public web on **2026-11-11** ("retrieved 2026-11-11"). A number without a source
-is written **unsourced (assumption)**. Nothing here was measured in a car.
+Source retrieval dates are **2026-11-11** for the MX-5 and **2026-11-18** for the Mazda3 and CX-5.
+Values without a source are marked as assumptions. The figures have yet to be verified in a car.
 
 ## ND1 and ND2 in this project
 
@@ -159,3 +159,103 @@ Retrieved 2026-11-11 unless noted. "Secondary" means not from the manufacturer.
 | S12 | Mazda UK Press Packs, MX-5 2015-2018 archive | https://mazdamediapacks.com/en/archive/mazda-mx-5-2015-2018.html |
 | S13 | Mazda Japan newsroom, Roadster launch release (2015-05-20) | https://newsroom.mazda.com/en/publicity/release/2015/201505/150520a.html |
 | S14 | roadster.blog, ND technical specification and gear ratio tables (**secondary**, no source cited for the ratio table) | https://www.roadster.blog/2015/11/mx-5-roadster-nd-technical-specification.html and https://www.roadster.blog/2015/03/mx-5-skyactiv-transmission.html |
+
+## Mazda3 and CX-5
+
+These presets cover the exact model year, trim and original sales market shown. See the
+[Mazda Connect coverage notes](19-mazda-connect-models.md) for head-unit evidence and how to check the car.
+Only forward ratios are used by Meters. Tyre circumference is calculated from the nominal tyre size.
+For the German and UK configurations below, 6,500 rpm is an assumed warning reference. The cited materials omit a redline.
+
+| Market and preset | 1st / 2nd / 3rd / 4th / 5th / 6th | Final drive | Tyres |
+|---|---|---:|---|
+| EU · 2017 CX-5 KF Center-Line (Germany), 2.0 petrol FWD 6MT | 3.700 / 1.947 / 1.300 / 1.029 / 0.837 / 0.680 | 4.388 | 225/65R17 |
+| EU · 2016 Mazda3 BM Center-Line hatchback (Germany), 2.0 petrol FWD 6MT | 3.700 / 1.947 / 1.300 / 1.029 / 0.837 / 0.680 | 3.619 | 205/60R16 |
+| UK · 2018 Mazda3 BN Sport Black hatchback, 2.0 petrol FWD 6MT | 3.700 / 1.947 / 1.300 / 1.029 / 0.837 / 0.680 | 3.619 | 215/45R18 |
+| US · 2018 Mazda3 BN Sport sedan, 2.0 petrol FWD 6MT | 3.363 / 1.947 / 1.300 / 1.029 / 0.837 / 0.680 | 3.850 | 205/60R16 |
+| US · 2019 CX-5 KF Sport, 2.5 petrol FWD 6AT | 3.552 / 2.022 / 1.452 / 1.000 / 0.708 / 0.599 | 4.325 | 225/65R17 |
+| US · 2019 CX-5 KF Sport, 2.5 petrol AWD 6AT | 3.552 / 2.022 / 1.452 / 1.000 / 0.708 / 0.599 | 4.624 | 225/65R17 |
+
+**Checked on 2026-11-18** against the linked public sources: every value of the UK and US Mazda3, US CX-5 and the
+additional market presets below matches its source. The two German presets could **not** be checked: both
+Mazda Germany links now redirect to the press-site login. Their values stay, but every field is marked assumed
+(the car setup tags them so). Public listings for the German CX-5 G165 give 210 Nm at 4,800 rpm and 1,435–1,486 kg,
+which differ from the figures below.
+
+- **German CX-5.** 165 PS at 6,000 rpm, 210 Nm at 4,000 rpm and minimum kerb mass of 1,360 kg without a driver. The 7-inch MZD Connect starts at Center-Line in the German launch press kit. [Mazda Germany CX-5 press kit, pp. 32–36 (press login)](https://de.mazda-press.com/api/assets/download/8bba40e3-8975-4266-9879-4233b31d8c40_Default?isDownload=false)
+- **German Mazda3.** 120 PS at 6,000 rpm, 210 Nm at 4,000 rpm and minimum kerb mass of 1,205 kg without a driver. [Mazda Germany technical specifications, pp. 18–19 (press login)](https://de.mazda-press.com/api/assets/download/3599c9d4-bd34-4904-b761-bec8865432ca_Default?isDownload=false)
+- **UK Mazda3.** 120 PS at 6,000 rpm and 210 Nm at 4,000 rpm. The release identifies the output in PS. Kerb mass of 1,205 kg is the published 1,280 kg less its 75 kg driver allowance. [Mazda UK Sport Black specifications](https://uk.mazda-press.com/news/2018/mazda3-sport-black-on-sale-from-3rd-april/)
+- **US Mazda3.** 155 hp at 6,000 rpm, 150 lb-ft at 4,000 rpm, 2,899 lb kerb mass and a 6,800 rpm redline. Stored as 157.15 PS, 203.37 Nm and 1,315 kg. [Mazda USA 2018 Mazda3 4-door Sport specifications](https://www.mazdausa.com/siteassets/pdf/owners-optimized/2018/mazda3-4door/2018-mazda3-4d-features-specs.pdf)
+- **US CX-5.** Both drivetrains use the naturally aspirated 2.5 petrol rated at 187 hp at 6,000 rpm and 186 lb-ft at 4,000 rpm, with a 6,500 rpm redline. Stored as 189.59 PS and 252.18 Nm. Kerb mass is 3,541 lb FWD or 3,679 lb AWD, stored as 1,606 or 1,669 kg. [Mazda USA 2019 CX-5 Sport specifications](https://www.mazdausa.com/siteassets/pdf/owners-optimized/2019/cx-5/2019-mazda-cx-5-features-specs.pdf)
+
+## European Mazda2, Mazda6 and CX-3
+
+Added 2026-11-18 so European owners of these cars find a preset. Mazda publishes no gear ratios or final drives
+for them: the price lists give power and torque with their rpm, kerb weight and tyres, and only those are marked
+sourced. The gearing is Mazda's figure for the same engine and gearbox in another market (for the Mazda2 manual, a
+secondary table for the Mazda-built Toyota Yaris iA) and is marked **assumed**, as is the 6,500 rpm redline. Kerb
+mass is the German list's minimum (it includes a 75 kg driver) less 75 kg; the UK guides only give a maximum.
+Where two presets share engine size, gearbox and drivetrain, the car setup asks for the **Version** (engine output).
+
+| Market and preset | Power · torque | Kerb mass | Tyres | Gearing taken from (assumed) |
+|---|---|---:|---|---|
+| EU, UK · 2022 Mazda2 DJ 1.5 75 PS 6MT | 75 PS at 6,000 · 143 Nm at 3,500 | 1,021 kg | 185/65R15 | Yaris iA 6MT (secondary), final 4.105 |
+| EU, UK · 2022 Mazda2 DJ 1.5 90 PS M Hybrid 6MT | 90 PS at 6,000 · 151 Nm at 3,500 | 1,035 kg | 185/65R15, 185/60R16 | Yaris iA 6MT (secondary), final 4.105 |
+| EU, UK · 2022 Mazda2 DJ 1.5 115 PS M Hybrid 6MT | 115 PS at 6,000 · 151 Nm at 3,500 | 1,042 kg | 185/60R16 | Yaris iA 6MT (secondary), final 4.105 |
+| EU, UK · 2022 Mazda2 DJ 1.5 90 PS 6AT | 90 PS at 6,000 · 151 Nm at 3,500 | 1,037 kg | 185/65R15, 185/60R16 | Australian Mazda2 6AT, final 4.060 |
+| EU, UK · Mazda6 GL 2.0 145 PS 6MT | 145 PS at 6,000 · 213 Nm at 4,000 | 1,391 kg | 225/55R17, 225/45R19 | US Mazda6 6MT, final 4.105 |
+| EU, UK · Mazda6 GL 2.0 165 PS 6MT | 165 PS at 6,000 · 213 Nm at 4,000 | 1,391 kg | 225/55R17, 225/45R19 | US Mazda6 6MT, final 4.105 |
+| EU · Mazda6 GL 2.0 165 PS 6AT | 165 PS at 6,000 · 213 Nm at 4,000 | 1,423 kg | 225/55R17, 225/45R19 | Australian Mazda6 2.5 6AT, final 4.325 |
+| UK · Mazda6 GL 2.0 145 PS 6AT | 145 PS at 6,000 · 213 Nm at 4,000 | 1,487 kg (UK maximum) | 225/55R17, 225/45R19 | Australian Mazda6 2.5 6AT, final 4.325 |
+| EU, UK · Mazda6 GL 2.5 194 PS 6AT | 194 PS at 6,000 · 258 Nm at 4,000 | 1,462 kg | 225/55R17, 225/45R19 | Australian Mazda6 2.5 6AT, final 4.325 |
+| EU · 2019 CX-3 DK 2.0 121 PS FWD 6MT | 121 PS at 6,000 · 207 Nm at 2,800 | 1,184 kg | 215/60R16, 215/50R18 | Mazda 2.0 6MT ratios, Portuguese CX-3 FWD final 3.850 |
+| EU · 2019 CX-3 DK 2.0 121 PS FWD 6AT | 121 PS at 6,000 · 207 Nm at 2,800 | 1,213 kg | 215/60R16, 215/50R18 | US CX-3 6AT, final 4.325 |
+| EU · 2019 CX-3 DK 2.0 150 PS AWD 6MT | 150 PS at 6,000 · 207 Nm at 2,800 | 1,256 kg | 215/60R16, 215/50R18 | Mazda 2.0 6MT ratios, Portuguese CX-3 AWD final 4.105 |
+| EU · 2019 CX-3 DK 2.0 150 PS AWD 6AT | 150 PS at 6,000 · 207 Nm at 2,800 | 1,288 kg | 215/60R16, 215/50R18 | US CX-3 6AT, final 4.325 |
+
+- **Mazda2.** [Mazda Germany price list, 1 December 2022 (dealer copy), pp. 12–13](https://www.sueverkruep.de/mazda/wp-content/uploads/sites/5/2023/01/01-12-2022_preisliste_mazda2_0_kl.pdf)
+  and [Mazda UK price and specification guide, September 2022](https://media-assets.mazda.eu/raw/upload//mazdauk/globalassets/uk/pdfs/fy157/p2/sept-pricing/mazda2-price--specs.pdf)
+  agree on output and torque. Both list Mazda Connect with an 8-inch screen, which on the Mazda2 is still the
+  original system. Gearing: [TrueCar, Toyota Yaris iA manual (secondary)](https://www.truecar.com/toyota/yaris-ia/manual/specs/).
+- **Mazda6.** [Mazda Germany price list, 3 June 2019 (dealer copy), pp. 10–11](https://www.sueverkruep.de/mazda/wp-content/uploads/sites/5/2019/08/Mazda-6-Preisliste.pdf)
+  and [Mazda UK price and specification guide, October 2022](https://s3-eu-west-2.amazonaws.com/2021.mazda.epa.epresspacks.com/epa/2cf9a00fc9c4a9e4/documents/Mazda6-Price-and-Spec-Guide-sept-22.pdf),
+  saloon. Both list Mazda Connect with an 8-inch screen.
+- **CX-3.** [Mazda Germany price list, 3 June 2019 (dealer copy), pp. 8–9](https://www.sueverkruep.de/mazda/wp-content/uploads/sites/5/2019/08/Mazda-CX-3-Preisliste.pdf):
+  Mazda Connect with the 7-inch screen from Center-Line; Prime-Line has none.
+
+## Fiat and Abarth 124 Spider
+
+Added 2026-11-18. All from Fiat's own documents. The Fiat and Abarth share the 1.4 MultiAir turbo, so the car setup
+asks for the **Version**. Power is stored in PS (125 kW = 169.95 PS, 160 hp = 162.22 PS, 164 hp = 166.27 PS).
+
+| Market and preset | Power · torque | Limit | Ratios 1st–6th · final | Mass | Tyres |
+|---|---|---:|---|---:|---|
+| EU, UK · Fiat 124 Spider 1.4 6MT | 140 CV at 5,000 · 240 Nm at 2,250 | 6,500 | 4.363 / 2.348 / 1.647 / 1.262 / 1.000 / 0.844 · 3.454 | 1,050 kg | 195/50R16, 205/45R17 |
+| EU, UK · Fiat 124 Spider 1.4 6AT | as the manual | 6,500 | 3.530 / 2.060 / 1.400 / 1.000 / 0.710 / 0.580 · 3.583 (assumed, US) | not found | 195/50R16, 205/45R17 |
+| EU, UK, AU · Abarth 124 Spider 6MT | 125 kW at 5,500 · 250 Nm at 2,500 | 6,500 (assumed) | manual ratios · 3.454 (assumed, US) | 1,100 kg (tare) | 205/45R17 |
+| EU, UK, AU · Abarth 124 Spider 6AT | as the manual | 6,500 (assumed) | automatic ratios · 3.583 (assumed, US) | 1,110 kg (tare) | 205/45R17 |
+| US · Fiat 124 Spider Classica / Lusso 6MT | 160 hp at 5,500 · 184 lb-ft at 3,200 | 6,250 | manual ratios · 3.454 | 2,436 lb | 195/50R16, 205/45R17 |
+| US · Fiat 124 Spider Classica / Lusso 6AT | as the manual | 6,250 | automatic ratios · 3.583 | 2,476 lb | 195/50R16, 205/45R17 |
+| US · Fiat 124 Spider Abarth 6MT | 164 hp at 5,500 · 184 lb-ft at 2,500 | 6,250 | manual ratios · 3.454 | 2,477 lb | 205/45R17 |
+| US · Fiat 124 Spider Abarth 6AT | as the manual | 6,250 | automatic ratios · 3.583 | 2,516 lb | 205/45R17 |
+
+- **Europe.** [Fiat Italy technical sheet, 18 November 2015 (press copy)](https://www.motorinolimits.com/wp-content/uploads/2015/11/151118_Fiat_124-Spider_Scheda-Tecnica.pdf):
+  manual only, 6,500 rpm maximum engine speed, 1,050 kg in running order. That is taken as without a driver (the US
+  curb weight is 1,105 kg). UK cars are assumed to match.
+- **Abarth (Europe and Australia).** [Fiat Australia, Abarth 124 Spider Series 1 buyer's guide, October 2017, p. 6](https://tools.fiat.com.au/assets/ABARTH_124_SPIDER_S1%20v1-06aa34a539f56503988e2ecbfa2e5954.pdf):
+  the same 170 PS engine as in Europe; no final drive given. Stellantis' German data sheet exists but refuses
+  automated downloads.
+- **US.** [FCA US, 2018 Fiat 124 Spider specifications (press copy)](https://www.motorshow.me/uploadImages/GalleryDocs/Doc7209.pdf):
+  maximum engine speed 6,250 rpm (electronically limited); the final drive of each gearbox is the same for all trims.
+
+## Additional market configurations
+
+The [regional research and technical specifications](19-mazda-connect-models.md#technical-specifications-for-additional-configurations)
+list the manufacturer data for Australian Mazda2, Mazda6, CX-5 and CX-8, Portuguese CX-3, and US Mazda6, CX-3 and CX-9 presets.
+The Peruvian CX-3 remains a research record pending sourced drivetrain ratios. Use the displayed market and
+configuration labels to match a preset to the vehicle.
+
+The CX-9 and US Mazda6 turbo presets use the 87 AKI power rating. The Portuguese CX-3 diesel uses the upper end of the published
+peak-torque band, 2,500 rpm, for the simulator's single torque point. Where Mazda omits a redline, Car Setup marks the
+dashboard reference as assumed. Those references are 5,000 rpm for the diesels, 6,300 rpm for the Australian Mazda6
+turbo and 6,500 rpm for the remaining newly added petrol presets.

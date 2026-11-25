@@ -346,7 +346,7 @@ def run_builder(kit_factory, doc: str, argv: list) -> None:
 
 def designer_sources() -> list:
     """The web files of the Meters Designer, which the app serves to the browser on this PC."""
-    files = [p for p in (ROOT / "meters" / "designer").rglob("*") if p.is_file() and p.suffix in (".html", ".css", ".js", ".mjs")]
+    files = [p for p in (ROOT / "meters" / "designer").rglob("*") if p.is_file() and p.suffix in (".html", ".css", ".js", ".mjs", ".svg")]
     return sorted(p.relative_to(ROOT).as_posix() for p in files) + ["meters/js/designer-runtime.js"]
 
 

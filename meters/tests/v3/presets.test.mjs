@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import * as M from "../../designer/v3/model.mjs";
 import { CommandStore } from "../../designer/v3/commands.mjs";
-import { PRESETS, MARKETS, MARKET_UNITS } from "../../designer/v3/presets.mjs";
+import {
+  PRESETS, MARKETS, MARKET_UNITS, VEHICLE_MODELS, VEHICLE_ENGINES, VEHICLE_BODIES,
+} from "../../designer/v3/presets.mjs";
 import {
   applyPreset,
   circumferenceFor,
@@ -13,6 +15,7 @@ import {
   presetValues,
   warningRpm,
   MARGINS,
+  marginOf,
   SPEC_FIELDS,
 } from "../../designer/v3/car-setup.mjs";
 
@@ -28,14 +31,14 @@ test("presets are well formed and their sourced fields name a source", () => {
     assert.match(p.id, /^[a-z0-9-]{1,40}$/);
     assert.ok(!ids.has(p.id), "duplicate " + p.id);
     ids.add(p.id);
-    assert.ok(["ND1", "ND2"].includes(p.generation));
-    assert.ok(["1.5", "2.0"].includes(p.engine));
+    assert.ok(Object.values(VEHICLE_MODELS).flat().includes(p.generation));
+    assert.ok(VEHICLE_ENGINES.includes(p.engine));
     assert.ok(["manual", "automatic"].includes(p.transmission));
     assert.ok(p.markets.length && p.markets.every((m) => MARKETS.includes(m)));
-    assert.ok(p.bodies.length && p.bodies.every((b) => ["roadster", "RF"].includes(b)));
+    assert.ok(p.bodies.length && p.bodies.every((b) => VEHICLE_BODIES.includes(b)));
     for (const t of p.tyres) assert.ok(circumferenceFor(t), p.id + " tyre " + t);
     assert.deepEqual(Object.keys(p.rpm), ["limit"], p.id + " carries only the limiter");
-    assert.ok(Number.isInteger(p.rpm.limit) && p.rpm.limit > 5000, p.id + " limit");
+    assert.ok(Number.isInteger(p.rpm.limit) && p.rpm.limit > p.powerRpm, p.id + " limit");
     assert.equal(p.ratios.length, 6, p.id + " has six gears");
     const cited = new Set(p.sources.flatMap((s) => s.fields));
     for (const f of p.verified) {
@@ -57,6 +60,9 @@ test("each preset applied to a default project still validates", () => {
         const v = project.vehicle;
         assert.equal(v.preset, p.id);
         assert.equal(v.market, market);
+        const reopened = JSON.parse(JSON.stringify(project));
+        M.validate(reopened);
+        assert.equal(resolveChoices(choicesFromVehicle(reopened.vehicle)).preset.id, p.id);
         assert.equal(v.body, body);
         assert.equal(v.tyre, p.tyres[0] ?? null);
         if (p.tyres[0]) assert.equal(v.circumference, circumferenceFor(p.tyres[0]));
@@ -88,15 +94,48 @@ test("dashboard warnings come before the limiter so there is time to react", () 
   assert.doesNotMatch(project.vehicle.provenance, /edited by hand/);
 });
 
-test("choices only offer what exists for the region", () => {
-  for (const market of MARKETS) {
-    const { options } = resolveChoices({ market });
-    for (const g of options.generation)
-      assert.ok(PRESETS.some((p) => p.generation === g && p.markets.includes(market)));
+test("every model and market in the picker has a preset", () => {
+  for (const [model, generations] of Object.entries(VEHICLE_MODELS)) {
+    const { options } = resolveChoices({ model });
+    assert.ok(options.market.length, model);
+    for (const market of options.market) {
+      const details = resolveChoices({ model, market });
+      for (const generation of details.options.generation)
+        assert.ok(generations.includes(generation) &&
+          PRESETS.some((p) => p.generation === generation && p.markets.includes(market)));
+    }
   }
   const { choices, preset } = resolveChoices({ market: "EU", generation: "nope" });
   assert.ok(preset, "falls back to an existing preset");
   assert.equal(findPreset(choices), preset);
+});
+
+test("market and model filter the configurations and an ambiguous drivetrain needs a choice", () => {
+  const jp = resolveChoices({ market: "JP" });
+  assert.deepEqual(jp.options.model, Object.keys(VEHICLE_MODELS));
+  assert.deepEqual(jp.options.market, ["EU", "UK", "US", "JP"]);
+  const euMazda3 = resolveChoices({ market: "EU", model: "Mazda3" }).preset;
+  assert.equal(euMazda3.generation, "BM");
+  assert.equal(euMazda3.finalDrive, 3.619);
+  assert.deepEqual(resolveChoices({ model: "Mazda3" }).options.market, ["EU", "UK", "US"]);
+  const fallback = resolveChoices({ model: "CX-5", market: "UK", units: MARKET_UNITS.UK });
+  assert.deepEqual(fallback.options.market, ["EU", "US", "AU"]);
+  assert.equal(fallback.choices.market, "EU");
+  assert.deepEqual(fallback.choices.units, MARKET_UNITS.EU);
+  assert.deepEqual(fallback.options.engine, ["2.0"]);
+  assert.throws(() => applyPreset(M.defaults(), fallback.preset, { market: "UK" }), /not listed for UK/);
+  const us = resolveChoices({ market: "US", model: "CX-5" });
+  assert.deepEqual(us.options.engine, ["2.5"]);
+  assert.deepEqual(us.options.drive, ["FWD", "AWD"]);
+  assert.equal(us.preset, null);
+  for (const [drive, finalDrive] of [["FWD", 4.325], ["AWD", 4.624]]) {
+    const { preset } = resolveChoices({ ...us.choices, drive });
+    assert.equal(preset.finalDrive, finalDrive);
+    const project = M.defaults();
+    applyPreset(project, preset, { market: "US" });
+    assert.equal(project.vehicle.finalDrive, finalDrive);
+    assert.equal(choicesFromVehicle(project.vehicle).drive, drive);
+  }
 });
 
 test("applying a preset converts custom scales and undoes in one step", () => {
@@ -134,4 +173,62 @@ test("a hand edit of a preset value marks it assumed; the default profile maps b
   const choices = choicesFromVehicle(legacy);
   assert.equal(choices.market, "EU");
   assert.equal(choices.generation, "ND1");
+});
+
+test("outputs of one engine need an explicit version, like FWD or AWD", () => {
+  const base = { model: "Mazda2", market: "EU", generation: "DJ", engine: "1.5", transmission: "manual" };
+  let r = resolveChoices(base);
+  assert.equal(r.preset, null, "no silent pick between 75, 90 and 115 PS");
+  assert.deepEqual(r.options.version, [
+    "mazda2-dj-2022-eu-g75-mt", "mazda2-dj-2022-eu-g90-mt", "mazda2-dj-2022-eu-g115-mt",
+  ]);
+  r = resolveChoices({ ...base, version: "mazda2-dj-2022-eu-g115-mt" });
+  assert.equal(r.preset.ratedPower, 115);
+  assert.deepEqual(r.options.tyre, ["185/60R16"]);
+  r = resolveChoices({ ...base, transmission: "automatic" });
+  assert.equal(r.preset.id, "mazda2-dj-2022-eu-g90-at");
+  assert.deepEqual(r.options.version, []);
+  r = resolveChoices({ model: "CX-3", market: "EU", generation: "DK", engine: "2.0", transmission: "manual" });
+  assert.equal(r.preset, null, "drivetrain first");
+  assert.deepEqual(r.options.version, []);
+  r = resolveChoices({ model: "CX-3", market: "EU", generation: "DK", engine: "2.0", transmission: "manual", drive: "AWD" });
+  assert.equal(r.preset.ratedPower, 150);
+});
+
+test("every family offers a European market", () => {
+  for (const model of Object.keys(VEHICLE_MODELS)) {
+    if (["CX-8", "CX-9"].includes(model)) continue; // not sold in Europe
+    const markets = new Set(PRESETS.filter((p) => VEHICLE_MODELS[model].includes(p.generation)).flatMap((p) => p.markets));
+    assert.ok(markets.has("EU"), model);
+  }
+});
+
+test("the Fiat and Abarth 124 Spider share the 1.4 turbo and are told apart by version", () => {
+  const eu = { model: "124 Spider", market: "EU", generation: "348", engine: "1.4T", transmission: "manual" };
+  let r = resolveChoices(eu);
+  assert.equal(r.preset, null);
+  assert.deepEqual(r.options.version, ["fiat124-348-eu-mt", "abarth124-348-mt"]);
+  r = resolveChoices({ ...eu, version: "abarth124-348-mt" });
+  assert.equal(r.preset.ratedTorque, 250);
+  assert.deepEqual(r.options.body, ["roadster"]);
+  r = resolveChoices({ ...eu, market: "AU" });
+  assert.equal(r.preset.id, "abarth124-348-mt", "only the Abarth was sold in Australia");
+  r = resolveChoices({ ...eu, market: "US", version: "fiat124-348-us-mt" });
+  assert.equal(r.preset.rpm.limit, 6250);
+});
+
+test("a custom margin is any 0-2000 rpm in steps of 50 and survives reopening", () => {
+  assert.equal(marginOf(1210), 1200);
+  assert.equal(marginOf("875"), 900);
+  assert.equal(marginOf(5000), 2000);
+  assert.equal(marginOf(-10), 0);
+  assert.equal(marginOf(null), 500);
+  assert.equal(marginOf("x"), 500);
+  assert.equal(resolveChoices({ market: "EU", margin: 1200 }).choices.margin, 1200);
+  const project = M.defaults(),
+    p = PRESETS.find((x) => x.rpm.limit === 5000);
+  applyPreset(project, p, { market: p.markets[0], margin: 2000 });
+  const r = project.vehicle.rpm;
+  assert.ok(1000 < r.amber && r.amber <= r.red && r.red <= r.shift && r.shift <= r.limit && r.limit <= r.max, JSON.stringify(r));
+  assert.equal(choicesFromVehicle(project.vehicle).margin, 2000);
 });

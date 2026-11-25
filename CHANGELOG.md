@@ -2,7 +2,55 @@
 
 Each release on the [Releases page](https://github.com/CeyssensHelder/MiatOff/releases) takes its notes from the section
 with its version below. Everything is for the **MX-5 ND1 and ND2** with Mazda Connect on firmware **74.00.324A** only;
-the tools check the car first and change nothing they do not recognise.
+the tools check the car first and change nothing they do not recognise. The Meters Designer's car setup also offers
+other cars with the same head unit (from v1.0.2-rc.2 on), to fit the gauges to them. The installer was built and
+tested on the MX-5; it never looks at the model, only at the firmware and the file hashes.
+
+## Unreleased
+
+### Changed
+
+- **Other Mazdas in the app and README:** *Will this work on my car?* and the support table no longer turn away the
+  other cars with the original Mazda Connect on 74.00.324A (Mazda2, Mazda3, Mazda6, CX-3, CX-5, CX-8, CX-9, Fiat /
+  Abarth 124 Spider). The installer itself is unchanged: it already acted on any car whose firmware and files it
+  recognises, and refuses the rest. Not tried in any of these cars.
+
+## v1.0.2-rc.2
+
+Pre-release for testing more cars in the car setup, the Commander fix and the POWER page in other units. It also has
+the permissions fix from v1.0.2-rc.1. Only the Commander fix has been tried in a car (our ND1). Update Meters from the
+app (*Update*, then **REPAIR** in the car) to get the Meters changes.
+
+### New
+
+- **More cars in the Meters car setup** (experimental): besides the MX-5, the car setup offers the Mazda2, Mazda3,
+  Mazda6, CX-3, CX-5, CX-8 and CX-9 with the original Mazda Connect, and the **Fiat / Abarth 124 Spider**, which has
+  the same head unit. Each preset fills in the rev warnings, gearing, tyre size, power and weight from the maker's own
+  data; values without a public source are marked *assumed* in the summary. European presets for the Mazda2, Mazda6
+  and CX-3. Not tried in any of these cars; whether a car can be updated is still decided by **Check your car**.
+- **Version** choice in the car setup where one engine comes in several outputs (for example the Mazda2 1.5 with 75,
+  90 or 115 PS, or Fiat versus Abarth).
+- **Custom warning margin:** *Turn the gauges red* has a **Custom** option, from 0 to 2000 rpm before the limiter.
+
+### Changed
+
+- The car setup window has a blueprint look, with drawings of each car traced from photos at true scale. The
+  *Continental Europe* market is now called *Europe*.
+- All presets were checked against the sources they cite; the two whose source is no longer public are now marked
+  *assumed*.
+- The built-in driving simulator of the Meters page (`?src=sim`, for previews on a PC) drives with the gearing and rev
+  limits of the car setup instead of always those of the ND1 1.5.
+
+### Fixed
+
+- **POWER page in hp, kW or lb-ft:** the chart was still numbered in PS and Nm. It now has a power axis on the left and
+  a torque axis on the right, each in the chosen unit, and the legend and factory figures are converted too. With PS
+  and Nm the page looks as before. Not tried in a car yet.
+- **Commander knob turns ignored in Meters after touching the screen:** after a tap or swipe, turning the knob did
+  nothing until you left Meters and opened it again (tilting and pressing still worked). Turns now keep working after
+  touch. Tested in our ND1; not yet confirmed on the ND2 where it was reported.
+- **"has unexpected permissions" on a unit that had other tweaks** (from v1.0.2-rc.1): stock files owned by root
+  (`775 0 0`) are accepted when the content is the known stock file.
 
 ## v1.0.2-rc.1
 

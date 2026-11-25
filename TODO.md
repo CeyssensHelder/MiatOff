@@ -15,9 +15,9 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
 - [ ] **Day mode in the car app.** The designer already has one; the car draws the night styling only.
 - [ ] **Car setup presets:** the JP-only 1.5 automatic and the 2024 update
   ([docs/18](docs/18-vehicle-presets.md)).
-- [ ] **Other Mazda cars.** Let the car setup offer other Mazdas with a compatible Mazda Connect unit, not only the
-  MX-5: sourced presets per model, and a vehicle profile that allows their models and engines (today the validators
-  accept only ND1/ND2 with a 1.5 or 2.0).
+- [ ] **Other Mazda cars in a real car.** The car setup offers them and the installer has no model check, but nobody has
+  run **Check your car** on one yet. Collect a `SUMMARY.txt` from another model: if its stock files hash differently
+  from our ND1, pin those hashes too (and their `SM_TABLE` variants) so the tweaks can run there.
 - [ ] **One designer layout.** Give the Home designer the Meters designer's editing detail levels, project dialog and
   phone sheets (Tools / Properties) instead of panels below the canvas on narrow windows.
 - [ ] **One look for the app's design pages.** *Design your Meters* and *Design your menu* get the same cards, the same
