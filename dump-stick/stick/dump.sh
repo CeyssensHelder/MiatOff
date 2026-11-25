@@ -804,7 +804,8 @@ if ! mkdir "$MO_GUARD" 2>/dev/null; then
         exit 0
     fi
     log "stale guard (pid ${old_pid:-?} gone); taking over"
-    rm -f "$MO_GUARD/pid"
+    # A run cut off without its cleanup can also leave the staged Commander helper behind.
+    rm -f "$MO_GUARD/pid" "$MO_GUARD/miatoff-commander"
     rmdir "$MO_GUARD" 2>/dev/null
     mkdir "$MO_GUARD" 2>/dev/null || { log "ERROR: cannot take guard $MO_GUARD"; exit 1; }
 fi

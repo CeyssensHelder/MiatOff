@@ -247,6 +247,13 @@ exit "$result"
           f"qualified unit: the knob answers the check prompt ({cmd} {tch} {new})")
     check(not guard.exists(), "the staged helper and the guard are cleaned up")
 
+    guard.mkdir()
+    (guard / "pid").write_text("999999\n")
+    (guard / "miatoff-commander").write_bytes(helper)
+    r, new, cmd, tch = run(main="1", **good)
+    check(r.returncode == 0 and len(new) == 1 and cmd == ["012|MIATOFF DUMP|FULL"] and not guard.exists(),
+          "a stale guard holding a staged helper (run killed before cleanup) is taken over")
+
     r, new, cmd, tch = run(main="2", more="0", **good)
     check(r.returncode == 0 and cmd == ["012|MIATOFF DUMP|FULL", "01|MIATOFF CALIBRATION|CALIBRATE"] and not tch
           and len(new) == 1 and "-calibrate-" in new[0], f"MORE > CALIBRATE by knob ({cmd} {new})")
