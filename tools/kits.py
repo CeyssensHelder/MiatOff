@@ -281,6 +281,10 @@ def dump_kit() -> stickkit.Kit:
         id_bytes=stickkit.lf_bytes(DUMP_STICK / "MIATOFF.ID"),
         script="dump.sh",
         script_bytes=stickkit.lf_bytes(DUMP_STICK / "dump.sh"),
+        extra={
+            "miatoff-commander": commander_helper(),
+            "miatoff-commander.COPYRIGHT": (INSTALL_STICK / "miatoff-commander.COPYRIGHT").read_bytes(),
+        },
     )
 
 

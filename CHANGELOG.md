@@ -6,6 +6,15 @@ the tools check the car first and change nothing they do not recognise. The Mete
 other cars with the same head unit (from v1.0.2-rc.2 on), to fit the gauges to them. The installer was built and
 tested on the MX-5; it never looks at the model, only at the firmware and the file hashes.
 
+## Unreleased
+
+### New
+
+- **Commander knob in the check prompts** too: the *Check your car* stick (dump 1.5.0) carries the same helper and
+  profile, so **FULL**, **SNAPSHOT**, **MORE** and the calibration prompt answer the knob; **Back** cancels with nothing
+  dumped. Same rules as the install prompts: touch-only on any unit that does not match. Covered by the host tests
+  only; not yet run in the car.
+
 ## v1.0.2
 
 The install prompts in the car now work with the Commander knob, the Meters car setup offers more cars, and the app

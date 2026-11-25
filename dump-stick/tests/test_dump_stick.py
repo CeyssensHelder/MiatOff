@@ -142,12 +142,15 @@ DEGRADE_SCRIPT = (
 PROBE_ENV = {"MO_PROBE_ROUNDS": "2", "MO_PROBE_GAP_S": "0", "MO_PROBE_FAST_S": "1", "MO_DBUS_MONITOR_S": "1", "MO_CAL_S": "2"}
 
 
-def run_launcher(root: Path, action: str, guard: Path):
+def run_launcher(root: Path, action: str, guard: Path, overrides: Path = None):
     command = bs.launcher_name()[2:-4]  # strip "$(" and ").up"
     if not DOCKER_IMAGE:
         env = dict(os.environ, MO_ROOT=root.as_posix(), HOME="/root", MO_TEST="1",
                    MO_ACTION=action, MO_GUARD=guard.as_posix(), **PROBE_ENV)
+        if overrides:
+            env["MO_TEST_OVERRIDES"] = overrides.as_posix()
         return subprocess.run(["sh", "-c", command], env=env, capture_output=True, text=True, timeout=300)
+    over = ["-e", "MO_TEST_OVERRIDES=/w/" + overrides.name] if overrides else []
     # Mount the fixture's parent at /w; root and guard are its children.
     work = root.parent
     strip = "".join(f"rm -f /bin/{a} /usr/bin/{a}; " for a in DOCKER_STRIP)
@@ -157,7 +160,7 @@ def run_launcher(root: Path, action: str, guard: Path):
         ["docker", "run", "--rm", "-v", f"{work}:/w",
          "-e", "MO_ROOT=/w/" + root.name, "-e", "HOME=/root", "-e", "MO_TEST=1",
          "-e", f"MO_ACTION={action}", "-e", "MO_GUARD=/w/" + guard.name,
-         *[a for k, v in PROBE_ENV.items() for a in ("-e", f"{k}={v}")],
+         *[a for k, v in PROBE_ENV.items() for a in ("-e", f"{k}={v}")], *over,
          DOCKER_IMAGE, "sh", "-c", strip + command],
         capture_output=True, text=True, timeout=300)
 
@@ -165,6 +168,103 @@ def run_launcher(root: Path, action: str, guard: Path):
 def dumps(stick: Path):
     base = stick / "miatoff-dumps"
     return sorted(p.name for p in base.iterdir()) if base.is_dir() else []
+
+
+def sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def shell_value(script: str, name: str) -> str:
+    for line in script.splitlines():
+        if line.startswith(name + "="):
+            return line.split("=", 1)[1].strip("'")
+    return ""
+
+
+def test_commander(tmp: Path):
+    """The knob in the check stick's prompts: the install stick's helper, the same profile, touch as fallback."""
+    payload = bs.payload()
+    dump_sh = payload["dump.sh"].decode()
+    aa_sh = (HERE.parent.parent / "aa-touch-stick/stick/aa-touch.sh").read_text(encoding="utf-8")
+    for name in ("COMMANDER_SHA256", "COMMANDER_PROFILES"):
+        check(shell_value(dump_sh, name) and shell_value(dump_sh, name) == shell_value(aa_sh, name),
+              f"dump.sh {name} is the same as in aa-touch.sh")
+    check(sha(payload.get("miatoff-commander", b"")) == shell_value(aa_sh, "COMMANDER_SHA256")
+          and "miatoff-commander.COPYRIGHT" in payload, "check stick carries the pinned Commander helper")
+    if DEGRADED:
+        return   # no sha256 tool: the helper can never verify, the prompts stay on touch
+
+    root = tmp / "croot"
+    guard = tmp / "cguard"
+    make_fixture(root)
+    with (root / "jci/version.ini").open("a", encoding="ascii", newline="\n") as version:
+        version.write('JCI_SW_FLAVOR="cmu150_EU"\n')
+    stick = root / "tmp/mnt/sda1"
+    bs.build(stick)
+    dialog = write(root, "jci/tools/jci-dialog", """#!/bin/sh
+usb="$MO_ROOT/tmp/mnt/sda1"
+for a; do case "$a" in --title=*) echo "${a#--title=}" >> "$usb/dialog-calls" ;; esac; done
+read -r result < "$usb/dialog-answer" || result=1
+exit "$result"
+""")
+    dialog.chmod(0o755)
+    helper = b'''#!/bin/sh
+[ "$1" != "--check-runtime" ] || exit 0
+usb=${2%/*}
+printf '%s|%s|%s\n' "$5" "$6" "$8" >> "$usb/commander-calls"
+case "$6" in "MIATOFF DUMP") f=main ;; *) f=more ;; esac
+read -r result < "$usb/answer-$f"
+exit "$result"
+'''
+    (stick / "miatoff-commander").write_bytes(helper)
+    calls, touch, log = stick / "commander-calls", stick / "dialog-calls", stick / "miatoff-dump.log"
+    profile = f"'cmu150_EU {sha(dialog.read_bytes())} 0003:0000:0000:0000 + 01 012'"
+
+    def run(main=None, more=None, dialog_answer="1", **values):
+        for f in (calls, touch):
+            f.unlink(missing_ok=True)
+        (stick / "dialog-answer").write_bytes(dialog_answer.encode() + b"\n")
+        for name, value in (("main", main), ("more", more)):
+            if value is not None:
+                (stick / f"answer-{name}").write_bytes(value.encode() + b"\n")
+        values = {"COMMANDER_TEST_DIALOGS": "1", **values}
+        ov = tmp / "overrides.sh"
+        ov.write_text("".join(f"{k}={v}\n" for k, v in values.items()), newline="\n")
+        before = dumps(stick)
+        r = run_launcher(root, "unused", guard, ov)
+        new = [n for n in dumps(stick) if n not in before]
+        return r, new, calls.read_text().splitlines() if calls.exists() else [], \
+            touch.read_text().splitlines() if touch.exists() else []
+
+    r, new, cmd, tch = run(main="0")
+    check(r.returncode == 0 and not cmd and tch == ["MIATOFF DUMP"] and len(new) == 1 and "-snapshot-" in new[0],
+          f"an unqualified jci-dialog keeps the check prompt on touch ({cmd} {tch} {new})")
+
+    good = {"COMMANDER_PROFILES": profile, "COMMANDER_SHA256": sha(helper)}
+    r, new, cmd, tch = run(main="1", **good)
+    check(r.returncode == 0 and cmd == ["012|MIATOFF DUMP|FULL"] and not tch and len(new) == 1
+          and "-snapshot-" in new[0] and "Commander: knob enabled" in log.read_text(),
+          f"qualified unit: the knob answers the check prompt ({cmd} {tch} {new})")
+    check(not guard.exists(), "the staged helper and the guard are cleaned up")
+
+    r, new, cmd, tch = run(main="2", more="0", **good)
+    check(r.returncode == 0 and cmd == ["012|MIATOFF DUMP|FULL", "01|MIATOFF CALIBRATION|CALIBRATE"] and not tch
+          and len(new) == 1 and "-calibrate-" in new[0], f"MORE > CALIBRATE by knob ({cmd} {new})")
+
+    r, new, cmd, tch = run(main="3", **good)
+    check(r.returncode == 0 and len(cmd) == 1 and not tch and not new and "action: cancel" in log.read_text(),
+          "Back (or the timeout) on the check prompt cancels; nothing is dumped")
+    r, new, cmd, tch = run(main="2", more="3", **good)
+    check(r.returncode == 0 and len(cmd) == 2 and not new, "Back in the calibration prompt cancels")
+
+    r, new, cmd, tch = run(main="5", dialog_answer="1", **good)
+    check(r.returncode == 0 and len(cmd) == 1 and tch == ["MIATOFF DUMP"] and len(new) == 1
+          and "Commander unavailable (5); using touch" in log.read_text(),
+          "a helper that cannot show the prompt hands it to touch")
+
+    r, new, cmd, tch = run(main="1", COMMANDER_PROFILES=profile, COMMANDER_SHA256="0" * 64)
+    check(r.returncode == 0 and not cmd and tch == ["MIATOFF DUMP"] and "could not be verified" in log.read_text(),
+          "a helper that does not match the pinned hash is not run")
 
 
 def main():
@@ -341,6 +441,8 @@ def main():
         check(len(dumps(stick)) == 2, "foreign ID: launcher does not run")
 
         check(tree_digest(root, stick) == before, "nothing outside the stick changed")
+
+        test_commander(tmp)
     finally:
         shutil.rmtree(bs.long_path(tmp), ignore_errors=True)
 
