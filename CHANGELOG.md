@@ -15,7 +15,8 @@ Update Meters from the app (*Update*, then **REPAIR** in the car) to get the Met
 ### New
 
 - **Commander knob in the install prompts** (EU 74.00.324A): turn the knob to move the brackets to a button, press it
-  to choose, or press **Back** to cancel. Touch still works on every prompt. While a prompt is open, the knob does not
+  to choose, or press **Back** to cancel. This is for a car whose touchscreen is broken: the whole installer can now
+  be used without touching the screen. Touch still works on every prompt. While a prompt is open, the knob does not
   also move the Mazda screen behind it. The knob is used only when the firmware, Mazda's dialog program and the knob's
   input device match the profile measured in our ND1; on any other unit the prompts stay touch-only, as before. With
   the knob on, a prompt left alone for two minutes closes and the run ends with nothing changed. Tested in our ND1:
