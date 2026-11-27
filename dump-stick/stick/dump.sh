@@ -14,7 +14,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # The USB launch mechanism follows TouchTune (GPL-3.0-or-later).
 
-MO_VERSION=1.5.0
+MO_VERSION=1.5.1
 R="${MO_ROOT:-}"                        # test hook: fixture root; empty on the CMU
 MO_TEST="${MO_TEST:-0}"                 # test hook: 1 = no dialogs
 MO_ACTION="${MO_ACTION:-full}"          # test hook: full | snapshot | cancel
@@ -40,6 +40,11 @@ COMMON_TOUCHTUNE_SHA256=019eba18e8d629ddb1d55563aab138ce1eb3329fab67b71d9b417837
 COMMANDER_SHA256=997befa17f61657a482850cc2159dfcd21804732cb0bfc17cb9199fba66c6e57
 COMMANDER_PROFILES='cmu150_EU 864ff455c75a2739fcda8286cf2d7f478dba38b25fb48e78c546cbde2b453051 0003:0000:0000:0000 + 01 012'
 COMMANDER_TEST_DIALOGS=0               # test hook: 1 = run the prompts with fake dialogs
+# Touch-free test sticks (tools/kits.py hands_free_check_kit()): the builder rewrites these two lines. The normal
+# stick keeps them as they are. CHECK_ACTION (full | snapshot) skips the prompt. COMMANDER_FORCE=1 tries the knob with
+# the EU mapping on any unit, and falls back to SNAPSHOT (never to a prompt only touch can answer) when it cannot.
+CHECK_ACTION=
+COMMANDER_FORCE=0
 if [ "$MO_TEST" = 1 ] && [ -n "${MO_TEST_OVERRIDES:-}" ]; then
     . "$MO_TEST_OVERRIDES" || exit 1    # test hook: fixture values for the lines above
 fi
@@ -85,6 +90,11 @@ ask_touch() {
 # or show the dialog (4, 5) hands the prompt to touch.
 ask() {
     local code
+    if [ -z "$COMMANDER_HELPER" ] && [ "$COMMANDER_FORCE" = 1 ]; then
+        log "Commander helper not ready; no prompt can be answered here" >&2
+        echo unavailable
+        return 0
+    fi
     if [ -n "$COMMANDER_HELPER" ]; then
         if [ "$#" = 5 ]; then
             "$COMMANDER_HELPER" "$COMMANDER_DIALOG" "$USB_MARKER" "$COMMANDER_DEVICE" "$COMMANDER_SIGN" \
@@ -96,7 +106,14 @@ ask() {
         code=$?
         case "$code" in
             0|1|2) echo "$code"; return 0 ;;
-            4|5|126|127) log "Commander unavailable ($code); using touch" >&2 ;;
+            4|5|126|127)
+                # A forced knob on a unit with a broken screen has no touch to fall back on.
+                if [ "$COMMANDER_FORCE" = 1 ]; then
+                    log "Commander unavailable ($code); no prompt can be answered here" >&2
+                    echo unavailable
+                    return 0
+                fi
+                log "Commander unavailable ($code); using touch" >&2 ;;
             *) echo dismiss; return 0 ;;
         esac
         [ -f "$USB_MARKER" ] || { echo dismiss; return 0; }
@@ -110,6 +127,9 @@ choose_action() {
         printf '%s\n' "$MO_ACTION"
         return 0
     fi
+    case "$CHECK_ACTION" in
+        full|snapshot) log "no prompt on this stick: $CHECK_ACTION" >&2; echo "$CHECK_ACTION"; return 0 ;;
+    esac
     a=$(ask FULL SNAPSHOT MORE "MIATOFF DUMP" \
         "Read-only: NOTHING is changed.\nFULL = status + vehicle data + files\nSNAPSHOT = status only (fast)\nMORE = calibration or cancel") ||
         return 1
@@ -117,6 +137,7 @@ choose_action() {
         0) echo full ;;
         1) echo snapshot ;;
         2) choose_more ;;
+        unavailable) echo snapshot ;;
         *) echo cancel ;;
     esac
 }
@@ -355,9 +376,34 @@ nvram_dump() {
     done
 }
 
+# What it takes to add a unit to COMMANDER_PROFILES: its firmware flavor, the stock jci-dialog hash and the Virtual
+# Keyboard's bus:vendor:product:version. A unit the knob does not work on is reported with these three values.
+commander_facts() {
+    local flavor hash id
+    flavor=$(grep '^JCI_SW_FLAVOR=' "$R/jci/version.ini" 2>/dev/null | cut -d'"' -f2 | tr -d '\r')
+    hash=-
+    [ -x "$COMMANDER_DIALOG" ] && hash=$(sha256_of "$COMMANDER_DIALOG")
+    id=$(awk '/^I: / { bus = $2; vendor = $3; product = $4; version = $5
+            sub(/^[^=]*=/, "", bus); sub(/^[^=]*=/, "", vendor); sub(/^[^=]*=/, "", product); sub(/^[^=]*=/, "", version) }
+        /^N: Name="Virtual Keyboard"/ { print bus ":" vendor ":" product ":" version }' \
+        "$R/proc/bus/input/devices" 2>/dev/null | tr '\n' ' ')
+    printf 'flavor=%s\n' "${flavor:-unknown}"
+    printf 'jci-dialog sha256=%s\n' "$hash"
+    printf 'Virtual Keyboard id=%s\n' "${id:-none}"
+    if printf '%s\n' "$COMMANDER_PROFILES" | awk -v region="$flavor" -v sum="$hash" '
+            $1 == region && $2 == sum && NF == 6 { found = 1 } END { exit !found }'; then
+        echo 'knob profile: yes (the knob answers the prompts)'
+    else
+        echo 'knob profile: no (the prompts are touch only)'
+    fi
+}
+
 snapshot() {
     local d=runtime f
     log "runtime snapshot"
+    cap "$d/input-devices.txt" cat "$R/proc/bus/input/devices"
+    cap "$d/input-nodes.txt" ls -l "$R/dev/input"
+    commander_facts > "$OUT/$d/commander-facts.txt" 2>>"$OUT/errors.txt"
     for f in uptime loadavg meminfo cpuinfo mounts modules interrupts stat cmdline version; do
         grab "$d/proc-$f.txt" "/proc/$f"
     done
@@ -550,14 +596,22 @@ research() {
 # listed in COMMANDER_PROFILES; anything else, or a helper that does not verify, leaves the prompts on touch.
 prepare_commander() {
     local flavor hash profile file="$MO_GUARD/miatoff-commander"
-    [ -n "$COMMANDER_PROFILES" ] && [ -x "$COMMANDER_DIALOG" ] || return 0
-    flavor=$(grep '^JCI_SW_FLAVOR=' "$R/jci/version.ini" 2>/dev/null | cut -d'"' -f2 | tr -d '\r')
-    [ -n "$flavor" ] || return 0
-    hash=$(sha256_of "$COMMANDER_DIALOG")
-    profile=$(printf '%s\n' "$COMMANDER_PROFILES" | awk -v region="$flavor" -v sum="$hash" '
-        $1 == region && $2 == sum && NF == 6 { line = $0; count++ }
-        END { if (count == 1) print line }')
-    [ -n "$profile" ] || return 0
+    [ -x "$COMMANDER_DIALOG" ] || return 0
+    if [ "$COMMANDER_FORCE" = 1 ]; then
+        # Test stick: the EU mapping on whatever unit this is. Nothing here is qualified; the log says so.
+        flavor=$(grep '^JCI_SW_FLAVOR=' "$R/jci/version.ini" 2>/dev/null | cut -d'"' -f2 | tr -d '\r')
+        profile="${flavor:-unknown} - 0003:0000:0000:0000 + 01 012"
+        log "Commander: FORCED on flavor '${flavor:-unknown}', jci-dialog $(sha256_of "$COMMANDER_DIALOG") (not qualified)"
+    else
+        [ -n "$COMMANDER_PROFILES" ] || return 0
+        flavor=$(grep '^JCI_SW_FLAVOR=' "$R/jci/version.ini" 2>/dev/null | cut -d'"' -f2 | tr -d '\r')
+        [ -n "$flavor" ] || return 0
+        hash=$(sha256_of "$COMMANDER_DIALOG")
+        profile=$(printf '%s\n' "$COMMANDER_PROFILES" | awk -v region="$flavor" -v sum="$hash" '
+            $1 == region && $2 == sum && NF == 6 { line = $0; count++ }
+            END { if (count == 1) print line }')
+        [ -n "$profile" ] || return 0
+    fi
     read -r flavor hash COMMANDER_DEVICE COMMANDER_SIGN COMMANDER_ORDER2 COMMANDER_ORDER3 <<EOF
 $profile
 EOF
@@ -863,4 +917,8 @@ summary "$ACTION"
 sync
 log "done: $OUT"
 popup "MiatOff dump finished.\n\nFolder: miatoff-dumps/${OUT##*/}\nYou can now remove the USB."
+# A unit with a broken screen cannot tap the message away: the touch-free sticks close it by themselves.
+if [ "$MO_TEST" != 1 ] && { [ -n "$CHECK_ACTION" ] || [ "$COMMANDER_FORCE" = 1 ]; }; then
+    ( cd / && sleep 60 && killall -q jci-dialog ) >/dev/null 2>&1 &
+fi
 exit 0

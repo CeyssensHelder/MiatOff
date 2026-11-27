@@ -19,7 +19,10 @@ Commander knob: turn to move the brackets, press to choose, **Back** to cancel. 
 install stick's `miatoff-commander` helper; `dump.sh` checks it against the same pinned hash and profile as
 `aa-touch.sh` (see [the Commander notes](../aa-touch-stick/commander/README.md)), runs it from its guard in `/tmp`,
 and stays touch-only on any unit that does not match. The helper only reads the knob and shows Mazda's dialog; the
-dump stays read-only.
+dump stays read-only. A snapshot records the firmware flavor, the `jci-dialog` hash and the input devices
+(`runtime/commander-facts.txt`, `input-devices.txt`), which is what a profile for another unit is made of. For a car
+whose screen is broken and that has no profile there are touch-free variants of this stick, see
+[the Commander notes](../aa-touch-stick/commander/README.md#touch-free-test-sticks-a-car-with-a-broken-screen).
 
 ## What `dump.sh` does and does not do
 **Does:** read, and write to `miatoff-dumps/NNN-<mode>-up<uptime>s/` on the stick.

@@ -6,6 +6,23 @@ the tools check the car first and change nothing they do not recognise. The Mete
 other cars with the same head unit (from v1.0.2-rc.2 on), to fit the gauges to them. The installer was built and
 tested on the MX-5; it never looks at the model, only at the firmware and the file hashes.
 
+## Unreleased
+
+For a car whose touchscreen is broken and whose knob is not in the measured profile (issue #31, a Mazda 2 on the
+Asian 74.00.324A): four test sticks that need no tap, to find out what that unit does. Nothing for the MX-5 changes.
+
+### Added
+
+- **Touch-free test sticks** (`aa-touch-stick/commander/build_touchfree_sticks.py`): a check with no prompt, the knob
+  test, the knob test with the opposite direction, and the real check stick with the knob forced on. Every dialog
+  closes by itself and nothing changes the unit.
+- **The check stick's snapshot records what a knob profile needs:** firmware flavor, `jci-dialog` hash, the
+  `Virtual Keyboard` ID and the input devices (check stick 1.5.1).
+
+### Changed
+
+- The knob test no longer stops at the first prompt that gets no answer, and no longer refuses another firmware.
+
 ## v1.0.3
 
 Bug fix: the Commander knob now also works on the *Check your car* stick, not only on the install stick. Nothing

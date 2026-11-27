@@ -38,6 +38,31 @@ under `sh -c`, because the helper refuses a parent with PID 1), it also runs the
 evdev devices named and shaped like the six on the car. The AA-touch simulator also exercises the installer dialog
 wrapper against synthetic results.
 
+## Touch-free test sticks (a car with a broken screen)
+
+A unit outside the measured profile (another firmware flavor or `jci-dialog`, as in
+[issue #31](https://github.com/CeyssensHelder/MiatOff/issues/31): a Mazda 2 from the Philippines on 74.00.324A) keeps
+every prompt on touch, so a car whose screen is broken cannot even start a check. To find out what such a car does,
+build four sticks that need no tap at all (every dialog closes by itself, every prompt times out, nothing changes the
+unit):
+
+```bash
+python aa-touch-stick/commander/build_touchfree_sticks.py dist/check-sticks
+```
+
+Each ZIP has a `README.txt` for the person in the car. Try them in this order, on a blank FAT32 stick each time:
+
+| ZIP | What it tells us |
+|---|---|
+| `1-check-no-touch` | A SNAPSHOT with no prompt. `runtime/commander-facts.txt` has the three values a profile needs (firmware flavor, stock `jci-dialog` sha256, the `Virtual Keyboard` ID) and `input-devices.txt` lists every input device. |
+| `2-knob-test` | The probe (below) with the EU mapping, in a form that never stops: three prompts of up to two minutes, each runs whatever the one before did, the end screen lists how each ended. The log has every input event. |
+| `3-knob-test-reversed` | The same with the opposite rotary direction and button order, for when the brackets moved the wrong way. |
+| `4-check-knob-forced` | The real check stick with the knob forced on with the EU mapping. A helper that cannot run gives a SNAPSHOT, never a prompt only touch can answer; Back or two minutes without an answer still cancels. |
+
+`CHECK_ACTION` and `COMMANDER_FORCE` in `dump.sh` are the settings these variants rewrite
+(`tools/kits.py hands_free_check_kit`); the normal check stick keeps them off. If the knob turns out to work, add a
+profile row from the facts file to `COMMANDER_PROFILES` after the checks below.
+
 ## Qualify a parked head unit
 
 1. Run `python aa-touch-stick/commander/build_probe.py miatoff-commander-probe.zip`. Extract the ZIP to the root of

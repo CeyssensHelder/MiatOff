@@ -12,7 +12,7 @@ import kits
 import stickkit
 
 
-def probe_kit(polarity="+", order_two="01", order_three="012") -> stickkit.Kit:
+def probe_kit(polarity="+", order_two="01", order_three="012", readme=None) -> stickkit.Kit:
     if (polarity not in ("+", "-") or sorted(order_two) != list("01")
             or sorted(order_three) != list("012")):
         raise ValueError("Invalid Commander control mapping")
@@ -30,6 +30,7 @@ def probe_kit(polarity="+", order_two="01", order_three="012") -> stickkit.Kit:
             "miatoff-commander": kits.commander_helper(),
             "miatoff-commander.COPYRIGHT": (kits.INSTALL_STICK / "miatoff-commander.COPYRIGHT").read_bytes(),
             "LICENSE": (kits.INSTALL_DIR / "LICENSE").read_bytes(),
+            **({"README.txt": readme} if readme else {}),
         },
     )
 

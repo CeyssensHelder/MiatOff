@@ -273,6 +273,51 @@ exit "$result"
     check(r.returncode == 0 and not cmd and tch == ["MIATOFF DUMP"] and "could not be verified" in log.read_text(),
           "a helper that does not match the pinned hash is not run")
 
+    # What a unit with a broken screen needs: no prompt only touch can answer.
+    r, new, cmd, tch = run(CHECK_ACTION="snapshot")
+    check(r.returncode == 0 and not cmd and not tch and len(new) == 1 and "-snapshot-" in new[0],
+          f"CHECK_ACTION=snapshot: no prompt at all, not even a touch one ({cmd} {tch} {new})")
+    r, new, cmd, tch = run(CHECK_ACTION="calibrate")
+    check(r.returncode == 0 and tch == ["MIATOFF DUMP"], "an unknown CHECK_ACTION is ignored: the prompt stays")
+
+    forced = {"COMMANDER_PROFILES": "''", "COMMANDER_SHA256": sha(helper), "COMMANDER_FORCE": "1"}
+    r, new, cmd, tch = run(main="1", **forced)
+    check(r.returncode == 0 and cmd == ["012|MIATOFF DUMP|FULL"] and not tch and len(new) == 1
+          and "-snapshot-" in new[0] and "Commander: FORCED on flavor 'cmu150_EU'" in log.read_text(),
+          f"forced knob: the EU mapping on a unit without a profile ({cmd} {tch} {new})")
+    r, new, cmd, tch = run(main="3", **forced)
+    check(r.returncode == 0 and not new and "action: cancel" in log.read_text(),
+          "forced knob: Back or the timeout still cancels")
+    r, new, cmd, tch = run(main="5", **forced)
+    check(r.returncode == 0 and len(cmd) == 1 and not tch and len(new) == 1 and "-snapshot-" in new[0]
+          and "action: snapshot" in log.read_text(),
+          f"forced knob, helper cannot show the prompt: a SNAPSHOT, never a touch prompt ({cmd} {tch} {new})")
+    r, new, cmd, tch = run(main="1", **{**forced, "COMMANDER_SHA256": "0" * 64})
+    check(r.returncode == 0 and not cmd and not tch and len(new) == 1 and "-snapshot-" in new[0],
+          "forced knob, helper that does not verify: a SNAPSHOT, never a touch prompt")
+
+    # The facts a profile for another unit is made of.
+    write(root, "proc/bus/input/devices", """I: Bus=0019 Vendor=0000 Product=0001 Version=0000
+N: Name="Power Button"
+
+I: Bus=0003 Vendor=0000 Product=0000 Version=0000
+N: Name="Virtual Keyboard"
+""")
+    run(CHECK_ACTION="snapshot", COMMANDER_PROFILES=profile)
+    facts = sorted((stick / "miatoff-dumps").glob("*/runtime/commander-facts.txt"))[-1].read_text()
+    check("flavor=cmu150_EU" in facts and f"jci-dialog sha256={sha(dialog.read_bytes())}" in facts
+          and "Virtual Keyboard id=0003:0000:0000:0000 " in facts and "knob profile: yes" in facts,
+          f"the snapshot records flavor, dialog hash and keyboard id, and whether the knob is enabled ({facts!r})")
+    check(sorted((stick / "miatoff-dumps").glob("*/runtime/input-devices.txt")) != [],
+          "the snapshot lists the input devices")
+    run(CHECK_ACTION="snapshot", COMMANDER_PROFILES="''")
+    check("knob profile: no" in sorted((stick / "miatoff-dumps").glob("*/runtime/commander-facts.txt"))[-1].read_text(),
+          "a unit without a profile is reported as touch only")
+
+    # The builder rewrites exactly the two settings lines, so the normal stick is not affected.
+    check(shell_value(dump_sh, "CHECK_ACTION") == "" and shell_value(dump_sh, "COMMANDER_FORCE") == "0",
+          "the normal check stick has the hands-free settings off")
+
 
 def main():
     check(bs.posix_cksum(b"touchtune-oss-v2\n") == 745427070, "cksum matches TouchTune's known value")

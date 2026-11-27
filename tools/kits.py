@@ -288,6 +288,28 @@ def dump_kit() -> stickkit.Kit:
     )
 
 
+def hands_free_check_kit(action=None, knob=False, readme=None) -> stickkit.Kit:
+    """A check stick for a unit nobody can touch (a broken screen), to find out what that unit does.
+
+    action ("snapshot" or "full") skips the prompt. knob tries the Commander with the EU mapping on any unit and
+    falls back to a SNAPSHOT when the helper cannot run, so no variant ever waits for a tap. Both are read-only, like
+    the normal check stick. readme is an optional README.txt for the reporter."""
+    if action not in (None, "snapshot", "full") or not (action or knob):
+        raise ValueError("a hands-free check stick needs an action or the knob")
+    base = dump_kit()
+    script = base.script_bytes
+    for old, new in ((b"\nCHECK_ACTION=\n", f"\nCHECK_ACTION={action or ''}\n".encode()),
+                     (b"\nCOMMANDER_FORCE=0\n", f"\nCOMMANDER_FORCE={int(knob)}\n".encode())):
+        if script.count(old) != 1:
+            raise StickError("ERROR: dump.sh does not have the hands-free settings this builder rewrites")
+        script = script.replace(old, new)
+    extra = dict(base.extra) if knob else {}
+    if readme:
+        extra["README.txt"] = readme
+    return stickkit.Kit(id_name=base.id_name, id_bytes=base.id_bytes, script=base.script, script_bytes=script,
+                        extra=extra)
+
+
 def commander_helper() -> bytes:
     data = (INSTALL_STICK / "miatoff-commander").read_bytes()
     if sha256(data) != pinned("COMMANDER_SHA256"):
