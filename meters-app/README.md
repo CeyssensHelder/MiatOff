@@ -8,7 +8,7 @@ Puts **Meters** under **Applications** in the Mazda menu and shows the gauges fr
 ## Components
 | Path in this folder | On the unit | What |
 |---|---|---|
-| `userjs/miatoff-apps.js` | `/jci/opera/opera_dir/userjs-miatoff/` | Userscript: adds the item and borrows the disabled app *Drive Record* (`vdt`) |
+| `userjs/miatoff-apps.js` | `/jci/opera/opera_dir/userjs/` (shared with other tools) | Userscript: adds the item and borrows the disabled app *Drive Record* (`vdt`) |
 | `app/js/miatoffApp.js`, `app/css/` | `/jci/gui/apps/miatoff/` | The Mazda app `miatoff` with a single context `Start` |
 | `app/templates/MiatoffMeters/` | `/jci/gui/apps/miatoff/templates/` | Template: a full-screen iframe with `meters/index.html?src=poll:live.txt` |
 | (from `meters/`) | `/jci/gui/apps/miatoff/meters/` | The Meters page (without `overview.html`) |
@@ -17,8 +17,10 @@ Puts **Meters** under **Applications** in the Mazda menu and shows the gauges fr
 `/jci/gui/apps/miatoff/meters/live.txt` is a symlink to `/tmp/miatoff/live.txt`, the collector's file.
 
 In addition the stick changes two stock files, each hash-checked and with a stock copy:
-- `/jci/opera/opera_home/opera.ini`: `User JavaScript=1`, `Allow File XMLHttpRequest=1`, and
-  `User JavaScript File` to the own folder `userjs-miatoff/` (so the stock `fps.js` stays off);
+- `/jci/opera/opera_home/opera.ini`: `User JavaScript=1` and `Allow File XMLHttpRequest=1` (the same two lines
+  Kansei Link writes; the folder stays Opera's stock `userjs/`, where the stock `fps.js` is renamed to
+  `fps.js.miatoff-off` while Meters is on). Meters 1.0 pointed Opera at its own folder `userjs-miatoff/` instead,
+  which hid every other tool's scripts; REPAIR moves such a unit to the shared folder;
 - `/jci/scripts/stage_gap2.sh`: one comment line and one line that starts the collector.
 
 ## How it works
@@ -29,7 +31,13 @@ In addition the stick changes two stock files, each hash-checked and with a stoc
    events from `miatoff` go back to the MMUI as *Drive Record*.
 3. Unlike MZD-AIO it **wraps** `selectCallback`, `routeMmuiMsg` and `sendEventToMmui`: the original function
    always runs, only the parameters are adjusted while Meters is open. After leaving, everything is stock.
-4. **Controls:** the page has its own menu (style → previews → gauge). Turning = `MiatoffMeters.next()` /
+4. **Next to another tool's loader** (Kansei Link's `additionalApps.js` in the same folder): that loader takes a
+   *Drive Record* launch from Applications for its own row unless the focussed row is one that carries
+   `SelectDriveRecord`. So while Meters is launched (from the list or from the Home menu), its row is the focussed one
+   and carries that event; both are put back right after. Its loader then sees a stock *Drive Record* launch and
+   passes it on. On v74 it borrows a visible stock app first (Drive Record is hidden), so the two do not compete for
+   the same app. Read from its documented behaviour; not tested in the car.
+5. **Controls:** the page has its own menu (style → previews → gauge). Turning = `MiatoffMeters.next()` /
    `prev()`, pressing = `select()` (on release). **Back:** v74's `Common` sends `Global.GoBack` to the MMUI
    before the template sees the key. Therefore, while Meters is open, the userscript first asks the page
    (`back()`): if that returns exactly `true`, the page went up one level and the MMUI hears nothing. On `false`

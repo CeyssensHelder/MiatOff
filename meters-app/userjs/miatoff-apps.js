@@ -1,9 +1,9 @@
 /*
  * MiatOff: adds "Meters" to Applications on Mazda Connect 74.00.324A.
  *
- * Opera runs this userscript in every page it loads (opera.ini: User JavaScript
- * File points to this folder only). In the HMI it waits for the system app,
- * then:
+ * Opera runs this userscript in every page it loads (it lives in the stock
+ * userjs/ folder, next to other tools' scripts such as Kansei Link's
+ * additionalApps.js). In the HMI it waits for the system app, then:
  *  - adds an item to the Applications list;
  *  - when that item is chosen, asks MMUI for a disabled stock app instead
  *    ("vdt", Drive Record, event SelectDriveRecord), and routes the messages
@@ -75,6 +75,45 @@
         return !!(t && typeof t.miatoffBack === "function" && t.miatoffBack() === true);
     }
 
+    // While Meters is launched, its row of the shown Applications list is the focussed row and carries
+    // the borrowed app's event. Another tool's loader in the same userjs/ folder (Kansei Link's
+    // additionalApps.js) then sees a stock Drive Record launch and passes it on, instead of taking the
+    // launch for its own row (it does when the focussed row is not one carrying SelectDriveRecord).
+    // Both are put back right after the launch. Returns the function that puts them back.
+    function presentLaunch(ctrl) {
+        var rows, i, row = null, at = -1, oldFocus, oldEvent;
+        try {
+            rows = ctrl && ctrl.dataList && ctrl.dataList.items;
+            for (i = 0; rows && i < rows.length; i++) {
+                if (rows[i] && rows[i].appData && rows[i].appData.appName === APP) {
+                    row = rows[i];
+                    at = i;
+                    break;
+                }
+            }
+            if (!row) {
+                return function () {};
+            }
+            oldFocus = ctrl.focussedItem;
+            oldEvent = row.appData.mmuiEvent;
+            ctrl.focussedItem = at;
+            row.appData.mmuiEvent = BORROWED_EVENT;
+        } catch (e) {
+            warn("presentLaunch: " + e);
+            return function () {};
+        }
+        return function () {
+            try {
+                row.appData.mmuiEvent = oldEvent;
+                if (ctrl.focussedItem === at) {
+                    ctrl.focussedItem = oldFocus;
+                }
+            } catch (e) {
+                warn("presentLaunch undo: " + e);
+            }
+        };
+    }
+
     function install() {
         var fw = W.framework, sys, list, origSelect, origRoute, origSend, names;
         if (state.done || typeof fw !== "object" || !fw || fw._currentAppUiaId !== "system" ||
@@ -112,10 +151,17 @@
         list = sys._contextTable[CATEGORY].controlProperties.List2Ctrl;
         origSelect = list.selectCallback;
         list.selectCallback = function (listCtrlObj, appData, params) {
+            var undo;
             if (appData && appData.appName === APP) {
                 state.active = true;
                 state.context = "Start";
                 appData = { appName : BORROWED_APP, isVisible : true, audioSourceId : "None", mmuiEvent : BORROWED_EVENT };
+                undo = presentLaunch(listCtrlObj);
+                try {
+                    return origSelect.call(this, listCtrlObj, appData, params);
+                } finally {
+                    undo();
+                }
             }
             return origSelect.call(this, listCtrlObj, appData, params);
         };

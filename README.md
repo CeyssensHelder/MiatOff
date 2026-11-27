@@ -130,12 +130,21 @@ To run from source instead (for developers): install Python 3 with Tk, clone thi
 
 ### Going back
 
-- Choose **Remove** for the tweak and build a new stick; every change is restored byte for byte.
+- Choose **Remove** for the tweak and build a new stick; every change is restored byte for byte. One exception:
+  while another tool (such as Kansei Link) still uses Opera's user scripts, removing Meters leaves the two
+  `opera.ini` lines that switch them on, and the stock `fps.js` off, for that tool.
 - If the Mazda menu misbehaves after Meters or the startup-warning tweak: put an empty file named `MIATOFF-RESTORE`
   in the root of the stick and plug it in. It puts those two back without any dialog.
 - Last resort: reflash the official EU 74.00.324A firmware.
 
 Details per stick, including exactly which files change on the car: [aa-touch-stick/README.md](aa-touch-stick/README.md).
+
+### Next to Kansei Link
+
+Meters can be installed on a car that has [Kansei Link](https://kanseilink.com) (a separate, paid gauge app), before
+or after it. Both put their scripts in Opera's shared user script folder and switch user scripts on with the same two
+lines, and MiatOff never touches Kansei Link's files. Use a separate USB stick for each, and never plug both in at
+once. MiatOff waits while Kansei Link's installer runs. Not yet tested in a car with Kansei Link installed.
 
 ## Is it safe?
 

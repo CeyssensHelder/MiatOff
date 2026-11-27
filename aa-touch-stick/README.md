@@ -147,18 +147,31 @@ is in [meters-app/README.md](../meters-app/README.md), the research in [docs/13]
 | On the unit | Change |
 |---|---|
 | `/jci/gui/apps/miatoff/` | New folder: the app, the Meters page, the collector, and the symlink `meters/live.txt` → `/tmp/miatoff/live.txt` |
-| `/jci/opera/opera_dir/userjs-miatoff/` | New folder: the userscript `miatoff-apps.js` |
-| `/jci/opera/opera_home/opera.ini` | `User JavaScript=0` → `=1`, below it `Allow File XMLHttpRequest=1`, and `User JavaScript File` to `userjs-miatoff/` |
+| `/jci/opera/opera_dir/userjs/` | Opera's stock user script folder, **shared with other tools**: our userscripts `miatoff-apps.js` (and with a Home menu `miatoff-home.js`, `miatoff-home-design.js`) are added; the stock `fps.js` (an FPS counter) is renamed to `fps.js.miatoff-off` |
+| `/jci/opera/opera_home/opera.ini` | `User JavaScript=0` → `=1`, below it `Allow File XMLHttpRequest=1` (the folder line stays stock) |
 | `/jci/scripts/stage_gap2.sh` | One comment line and one line that starts the collector (only if it exists) |
 | `/data_persist/miatoff/aa-touch/` | Stock copies `opera.ini.stock` and `stage_gap2.sh.stock` |
 
 - **Same safety as the rest:** `opera.ini` and `stage_gap2.sh` must be exactly the stock files (sha256),
-  the result exactly the expected one, each with one atomic `mv`. The app files are listed with their sha256 in
-  `miatoff-app/MANIFEST` on the stick and are checked before and after copying. A folder is staged next to its target
-  (`.miatoff.new`) and put in place with `mv`.
-- **Order:** first the app, then the userscript, then `stage_gap2.sh`, last `opera.ini` (only then does Opera load
-  the script). Removing goes in reverse. An aborted run gives the state *incomplete*; the stick then offers
-  **REPAIR** or **REMOVE**. An error during installing puts everything back to stock.
+  the result exactly the expected one, each with one atomic `mv`. The patched `opera.ini` has no hash of its own: it
+  is recognised by taking the two lines back out, which must give exactly the stock file. The app files and
+  userscripts are listed with their sha256 in `miatoff-app/MANIFEST` on the stick and are checked before and after
+  copying. The app folder is staged next to its target (`.miatoff.new`) and put in place with `mv`; each userscript is
+  staged as `.miatoff-<name>.js.miatoff.new` (a name Opera does not run) and renamed.
+- **Order:** first the app, then the userscripts, `fps.js` off, then `stage_gap2.sh`, last `opera.ini` (only then
+  does Opera load the scripts). Removing goes in reverse. An aborted run gives the state *incomplete*; the stick then
+  offers **REPAIR** or **REMOVE**. An error during installing puts everything back to stock.
+- **Next to other tools (Kansei Link and MZD-AIO style apps):** only `miatoff-*` names in `userjs/` are ours; other
+  tools' files there (Kansei Link's `additionalApps.js` and `.json`, its `fps.js.mzg-off`) are never touched. Kansei
+  Link writes the same two `opera.ini` lines, so either order works. While another tool still has a script in
+  `userjs/`, **REMOVE** leaves the two lines in `opera.ini` and `fps.js` off for it; once that tool is gone too, Meters
+  shows *incomplete* and REMOVE takes them back to stock. If Kansei Link is removed while Meters is on, it puts back the
+  `fps.js` it had renamed; Meters then shows *incomplete* and **REPAIR** turns it off again. A run while Kansei Link's installer is busy
+  (`/tmp/mzg-installer.guard`) changes nothing. The state file names the other tools it sees (`other tools:`,
+  `user scripts: also used by`).
+- **From Meters 1.0:** 1.0 kept its userscript in its own folder `userjs-miatoff/` and pointed `opera.ini` there, which
+  hid every other tool's scripts. That layout shows as *incomplete*: **REPAIR** moves it to the shared folder (the
+  `opera.ini` switch is the one atomic step) and removes `userjs-miatoff/`; **REMOVE** takes it straight to stock.
 - **Updating:** if the stick holds a newer Meters than the unit, the state is also *incomplete*;
   **REPAIR** puts the new version on.
 - **Custom pages:** the pages selected under Design your Meters in the app are part of the Meters payload
@@ -332,7 +345,10 @@ Among other things, the test checks:
 - the handover to the **real** TouchTune 1.2.1 (in its own test mode) from `touchtune/`: step 1, step 2,
   removing AA while keeping TouchTune, then REMOVE TT, and that TouchTune is not offered twice or too early;
 - Meters (only under BusyBox in Docker, because it needs real symlinks): installing (`opera.ini` and
-  `stage_gap2.sh` exactly patched, the folders exactly the stick files, the stock `fps.js` left alone), together with
+  `stage_gap2.sh` exactly patched, the app and userscripts exactly the stick files, the stock `fps.js` renamed off),
+  next to a stand-in for Kansei Link in either order (its files untouched; REMOVE leaves the user scripts on while it
+  needs them, then byte-exact stock once it is gone), the Meters 1.0 layout (REPAIR moves it, REMOVE to stock), a busy
+  Kansei Link installer, a conflicting `fps.js`, together with
   AA touch, the trim and the warning patch, removing to a byte-exact stock tree, a power loss at
   every step of installing and removing (Meters then becomes *incomplete*, AA touch is left alone), an error (back to stock), a damaged stick file, a modified `opera.ini`, updating to
   a newer version, REPAIR and REMOVE while the collector is running (stopped, no open deleted file,

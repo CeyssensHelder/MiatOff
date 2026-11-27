@@ -34,7 +34,11 @@ FILES = {
     "sys_stock": b"sys stock", "sys_patched": b"sys patched", "sys_menu": b"sys menu", "sys_patched_menu": b"sys patched menu",
     "xml_stock": b"xml stock", "xml_patched": b"xml patched",
     "ucp_stock": b"ucp stock", "ucp_patched": b"ucp patched",
-    "opera_stock": b"opera stock", "opera_patched": b"opera patched",
+    # opera.ini in its real shape: the patched file is recognised by undoing the two flag lines (no pin of its own)
+    "opera_stock": b"[User Prefs]\nUser JavaScript File=$OPERA_DIR/userjs/\nUser JavaScript=0\n",
+    "opera_patched": b"[User Prefs]\nUser JavaScript File=$OPERA_DIR/userjs/\nUser JavaScript=1\nAllow File XMLHttpRequest=1\n",
+    "opera_legacy": b"[User Prefs]\nUser JavaScript File=/jci/opera/opera_dir/userjs-miatoff/\nUser JavaScript=1\n"
+                    b"Allow File XMLHttpRequest=1\n",
     "gap2_stock": b"gap2 stock", "gap2_patched": b"gap2 patched",
     "sm_stock": b"sm stock", "sm_patched": b"sm patched", "sm_trim": b"sm trim", "sm_aa_trim": b"sm aa trim",
     "sm_trim_aha": b"sm trim aha", "sm_aa_trim_aha": b"sm aa trim aha", "sm_custom": b"sm custom",
@@ -51,7 +55,7 @@ for pin_name, key in (("COMMON_STOCK", "common_stock"), ("COMMON_PATCHED", "comm
                       ("SYS_STOCK", "sys_stock"), ("SYS_PATCHED", "sys_patched"),
                       ("XML_STOCK", "xml_stock"), ("XML_PATCHED", "xml_patched"),
                       ("UCP_STOCK", "ucp_stock"), ("UCP_PATCHED", "ucp_patched"),
-                      ("OPERA_STOCK", "opera_stock"), ("OPERA_PATCHED", "opera_patched"),
+                      ("OPERA_STOCK", "opera_stock"), ("OPERA_LEGACY", "opera_legacy"),
                       ("GAP2_STOCK", "gap2_stock"), ("GAP2_PATCHED", "gap2_patched"),
                       ("SM_STOCK", "sm_stock"), ("SM_PATCHED", "sm_patched"),
                       ("LIST_STOCK", "list_stock"), ("LIST_PATCHED", "list_patched")):
@@ -214,6 +218,17 @@ def main():
         v = verdict(make_dump(base / "snap", mode="snapshot"))
         check(v["overall"] == "incomplete" and set(states(v).values()) == {"not checked"},
               "a snapshot dump is incomplete, nothing is guessed")
+
+        # Meters and the shared user scripts (opera.ini): another tool's flags, the 1.0 layout, an edited file
+        v = verdict(make_dump(base / "m1", opera=FILES["opera_patched"]))
+        check(states(v)["meters"] == "available", "opera.ini flags from another tool (Kansei Link): Meters available")
+        v = verdict(make_dump(base / "m2", opera=FILES["opera_legacy"], gap2=FILES["gap2_patched"]))
+        check(states(v)["meters"] == "installed" and "1.0" in v["components"]["meters"]["detail"],
+              "Meters 1.0 layout: installed, with the note that installing again moves it")
+        v = verdict(make_dump(base / "m3", opera=FILES["opera_patched"] + b"Other=1\n"))
+        check(states(v)["meters"] == "blocked", "an otherwise edited opera.ini blocks Meters")
+        v = verdict(make_dump(base / "m4", opera=FILES["opera_legacy"]))
+        check(states(v)["meters"] == "partial", "1.0 opera.ini without the collector line: partial")
 
         # deterministic: same input, same text; the fingerprint follows the evidence
         d = make_dump(base / "det")

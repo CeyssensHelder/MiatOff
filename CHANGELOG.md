@@ -6,6 +6,32 @@ the tools check the car first and change nothing they do not recognise. The Mete
 other cars with the same head unit (from v1.0.2-rc.2 on), to fit the gauges to them. The installer was built and
 tested on the MX-5; it never looks at the model, only at the firmware and the file hashes.
 
+## Unreleased
+
+Meters can now live next to other tools that use Opera's user scripts, such as Kansei Link. Write the install stick
+again from this version; a car with Meters already on shows it as *incomplete*, and **REPAIR** moves it over.
+
+### Changed
+
+- **Meters userscripts in Opera's shared folder (install stick 1.8.0):** Meters 1.0 pointed `opera.ini` at its own
+  folder `userjs-miatoff/`, and Opera reads only one folder, so every other tool's scripts (Kansei Link, MZD-AIO style
+  apps) stopped loading. The userscripts are now `miatoff-*.js` in the stock `userjs/` folder, the stock `fps.js` is
+  renamed to `fps.js.miatoff-off` while Meters is on, and `opera.ini` gets only the two flag lines (the same bytes
+  Kansei Link writes). Other tools' files are never touched.
+- **REMOVE next to another tool:** while another tool still has a script in `userjs/`, removing Meters leaves those two
+  lines and `fps.js` off for it; when it is gone too, Meters shows *incomplete* and REMOVE gives stock.
+- **Kansei Link's installer:** a MiatOff run while it is busy changes nothing. The state file names Kansei Link and
+  its version when it is installed.
+- **Launching Meters next to Kansei Link's loader:** while Meters is launched, its row is the focussed one and carries
+  the Drive Record event, so that loader does not open Kansei Link instead.
+- **Check your car:** user scripts already on from another tool count as *Available* for Meters, and the Meters 1.0
+  layout as *Installed*.
+
+### Tested
+
+- In the simulator only (BusyBox): both install orders next to a stand-in for Kansei Link, the Meters 1.0 layout,
+  power loss at every new step. **Not tested in a car**, with or without Kansei Link.
+
 ## v1.0.3
 
 Bug fix: the Commander knob now also works on the *Check your car* stick, not only on the install stick. Nothing

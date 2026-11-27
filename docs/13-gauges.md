@@ -202,9 +202,12 @@ There is **no ready-made open-source project** that adds an own app to the menu 
 `Allow File XMLHttpRequest`.
 
 **Built for MiatOff (28-10-2026, not yet tested in the car)** — [meters-app/](../meters-app/README.md), installation via the AA-touch stick (EXTRA → METERS, [README](../aa-touch-stick/README.md#meters-menu-extra--meters)):
-- `opera.ini`: `User JavaScript=1`, `User JavaScript File` to an **own folder** (so the stock `fps.js` does not
-  run along and does not need renaming) and `Allow File XMLHttpRequest=1` (for `live.txt`). No
-  watchdog changes.
+- `opera.ini`: `User JavaScript=1` and `Allow File XMLHttpRequest=1` (for `live.txt`). No watchdog changes.
+  *Changed in installer 1.8.0 (27-11-2026):* 1.0 also pointed `User JavaScript File` at an **own folder**, so that
+  the stock `fps.js` would not run along. But Opera reads one folder only, so that hid every other tool's scripts
+  (Kansei Link, MZD-AIO style apps in the stock `userjs/`). Our userscripts now live in the stock folder as
+  `miatoff-*.js`, `fps.js` is renamed off (as Kansei Link does), and REMOVE keeps the two lines while another tool
+  still uses user scripts ([aa-touch-stick/README](../aa-touch-stick/README.md#meters-menu-extra--more--meters)).
 - One own userscript modelled on AIO's, but which **wraps** the original framework functions instead of
   replacing them (AIO's `sendEventToMmui` omits the stock logic).
 - A small Mazda app `/jci/gui/apps/miatoff/` that shows the Meters page full screen, and the collector as a service

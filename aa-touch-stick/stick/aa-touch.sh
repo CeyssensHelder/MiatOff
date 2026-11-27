@@ -20,8 +20,10 @@
 # variants (AA off/on x trim 0/1/2); each action changes only its own part.
 # The startup warning (menu EXTRA -> WARNING) is a fixed edit of
 # /jci/gui/apps/system/js/systemApp.js that skips the Disclaimer screen.
-# Meters (menu EXTRA -> METERS) adds two folders (/jci/gui/apps/miatoff,
-# /jci/opera/opera_dir/userjs-miatoff) and edits opera.ini and stage_gap2.sh.
+# Meters (menu EXTRA -> METERS) adds the folder /jci/gui/apps/miatoff and its
+# userscripts (miatoff-*.js) to the shared /jci/opera/opera_dir/userjs, where
+# other tools (Kansei Link, MZD-AIO style apps) keep theirs, turns the stock
+# fps.js off by a rename, and edits opera.ini and stage_gap2.sh.
 # Shorter list delay (menu EXTRA -> MORE -> DELAY) is a fixed edit of four
 # autoscroll timings in /jci/gui/common/controls/List2/js/List2Ctrl.js (after
 # MZD-AIO "Shorter Delay Mod"). Camera text (menu EXTRA -> MORE -> CAMERA)
@@ -53,7 +55,7 @@
 # 1.2.1 (GPL-3.0-or-later). libpatch-blmjciaapa.so is oem-aa-mod 0.10.0 by
 # Vitaliy Kurokhtin (AGPL-3.0); see NOTICE on this stick.
 
-MO_VERSION=1.7.0
+MO_VERSION=1.8.0
 R="${MO_ROOT:-}"                        # test hook: fixture root; empty on the CMU
 MO_TEST="${MO_TEST:-0}"                 # test hook: 1 = no dialogs, remount, watchdog or reboot
 MO_ACTION="${MO_ACTION:-}"              # test hook: install | disable | enable | remove | cancel
@@ -213,7 +215,10 @@ UCP_PATCHED=8ff4fb4186036221e234ee05d9d99e11368728d7217e8c44a438e1cf4aace3e6
 SHIM_SHA256=a6b87f72ae31429cebe14eea5c6d3a4a2749d4ea643a8c73303b3437533ad5b5 # oem-aa-mod 0.10.0 libpatch-blmjciaapa.so
 CONF_SHA256=8868e35a8fb2fae27c114e2a5e74e68edd336703f8218d811a1aea080a5b67f8 # stick/libpatch.conf
 OPERA_STOCK=a6db0eb9a67198dd0c55cae34ad7459a42241392421710196acba6313a2a988e    # opera.ini (docs/13)
-OPERA_PATCHED=981d24bc756682830315edc5dde9fd30111a53f5d3eff66f7bdf207f546666a6  # opera.ini, MiatOff userscripts on
+OPERA_LEGACY=981d24bc756682830315edc5dde9fd30111a53f5d3eff66f7bdf207f546666a6   # opera.ini of Meters 1.0 (own userjs-miatoff folder)
+# The patched opera.ini (the two flag lines, stock folder) has no pin of its own: it is exactly
+# opera_transform(stock), so it is recognised by undoing the edit, checking the result against
+# OPERA_STOCK and redoing it byte for byte (opera_flags_ok). Kansei Link makes the same file.
 GAP2_STOCK=2ec71fc955d0107a6e90d1ab4e6f00c9438b56d3e621ef018d57c8ef07bfae7f     # stage_gap2.sh (empty stage)
 GAP2_PATCHED=449c4bfccc8a32b88639abd499aa5ed8e83cbf551b0a2d54c65dfebdb896430e   # stage_gap2.sh, starts the collector
 SYS_STOCK=23106b04bd6bad514dd879b217a34a0f0289d58f86a0ae022488be6a022ca8e1      # systemApp.js (docs/05)
@@ -372,16 +377,21 @@ AHA_STAGES='stage_gap2 stage_vr stage_wifi'
 # stock "IntroAnimation") that agrees at once, after MZD-AIO "No More
 # Disclaimer". If the screen were still shown after 3.5 s, the stock timeout
 # ends it. Exact lines, verified by hash; Common.js (TouchTune) is not touched.
-# Meters (menu EXTRA -> METERS, docs/13): Opera loads user scripts from MiatOff's
-# own folder (the stock fps.js stays inactive), may read local files (for
-# live.txt), and stage_gap2.sh starts the collector at boot. The app and the
-# userscript are two new folders; their files are listed with sha256 in
-# miatoff-app/MANIFEST on the stick.
+# Meters (menu EXTRA -> METERS, docs/13): Opera runs the user scripts of its
+# stock folder userjs/ and may read local files (for live.txt); stage_gap2.sh
+# starts the collector at boot. The app is a new folder; our userscripts are
+# the miatoff-*.js files in userjs/, next to other tools' scripts. Both are
+# listed with sha256 in miatoff-app/MANIFEST on the stick. The stock fps.js
+# (an FPS counter) is renamed to fps.js.miatoff-off while Meters is on, as
+# Kansei Link does with its own name. opera.ini gets the same two flag lines
+# Kansei Link writes; REMOVE leaves them (and fps.js off) while another tool
+# still has a script in userjs/. Meters 1.0 pointed Opera at its own folder
+# userjs-miatoff/ (OPERA_LEGACY); REPAIR and REMOVE take that layout back.
 OPERA_JS_OFF='User JavaScript=0'
 OPERA_JS_ON='User JavaScript=1'
 OPERA_XHR='Allow File XMLHttpRequest=1'
 OPERA_DIR_STOCK='User JavaScript File=$OPERA_DIR/userjs/'
-OPERA_DIR_OURS='User JavaScript File=/jci/opera/opera_dir/userjs-miatoff/'
+OPERA_DIR_OURS='User JavaScript File=/jci/opera/opera_dir/userjs-miatoff/'   # Meters 1.0 only
 GAP2_LINE1='# MiatOff: start the Meters collector (docs/13); it writes /tmp/miatoff/live.txt.'
 GAP2_LINE2='[ -f /jci/gui/apps/miatoff/collector/miatoff-collector.sh ] && /bin/sh /jci/gui/apps/miatoff/collector/miatoff-collector.sh </dev/null >/dev/null 2>&1 &'
 LIVE_LINK_TARGET=/tmp/miatoff/live.txt
@@ -559,7 +569,11 @@ OPERA_INI="$R/jci/opera/opera_home/opera.ini"
 GAP2="$R/jci/scripts/stage_gap2.sh"
 MAPP_DIR="$R/jci/gui/apps/miatoff"           # the Meters app (+ page, + collector)
 COLLECTOR_PIDFILE="$R/tmp/miatoff/collector.pid"
-MJS_DIR="$R/jci/opera/opera_dir/userjs-miatoff"
+USERJS="$R/jci/opera/opera_dir/userjs"       # Opera's stock user script folder, shared with other tools
+FPS="$USERJS/fps.js"                         # stock FPS counter
+FPS_OFF="$USERJS/fps.js.miatoff-off"         # fps.js while Meters has it off
+MJS_LEGACY="$R/jci/opera/opera_dir/userjs-miatoff"   # Meters 1.0's own folder
+KANSEI_GUARD="$R/tmp/mzg-installer.guard"    # Kansei Link's installer is running (never touched)
 STICK_MAPP="$USB/miatoff-app"                # app/, userjs/ and MANIFEST on the stick
 MANIFEST="$STICK_MAPP/MANIFEST"
 RESTORE="$USB/MIATOFF-RESTORE"               # emergency: revert the HMI changes without a dialog
@@ -747,7 +761,7 @@ cfg_sha() {    # cfg_sha <key> <stock|patched>
         ucp:stock) echo "$UCP_STOCK" ;; ucp:patched) echo "$UCP_PATCHED" ;;
         sys:stock) echo "$SYS_STOCK" ;; sys:patched) echo "$SYS_PATCHED" ;;
         list:stock) echo "$LIST_STOCK" ;; list:patched) echo "$LIST_PATCHED" ;;
-        opera:stock) echo "$OPERA_STOCK" ;; opera:patched) echo "$OPERA_PATCHED" ;;
+        opera:stock) echo "$OPERA_STOCK" ;; opera:legacy) echo "$OPERA_LEGACY" ;;   # opera:patched: opera_flags_ok
         gap2:stock) echo "$GAP2_STOCK" ;; gap2:patched) echo "$GAP2_PATCHED" ;;
     esac
 }
@@ -843,7 +857,11 @@ file_state() {
         d=$(sha256_of "$2") || { echo unknown; return 0; }
         if [ "$d" = "$(cfg_sha "$1" stock)" ]; then
             s=stock
-        elif [ "$d" = "$(cfg_sha "$1" patched)" ]; then
+        elif [ "$1" != opera ] && [ "$d" = "$(cfg_sha "$1" patched)" ]; then
+            s=patched
+        elif [ "$1" = opera ] && [ "$d" = "$OPERA_LEGACY" ]; then
+            s=legacy
+        elif [ "$1" = opera ] && opera_flags_ok "$2"; then
             s=patched
         else
             echo unknown
@@ -855,7 +873,28 @@ file_state() {
 }
 
 # Hash only, for copies in the backup (mode 444) and staging files.
-content_is() { [ "$(sha256_of "$2" 2>/dev/null)" = "$(cfg_sha "$1" "$3")" ]; }
+content_is() {
+    if [ "$1:$3" = opera:patched ]; then
+        opera_flags_ok "$2"
+        return
+    fi
+    [ "$(sha256_of "$2" 2>/dev/null)" = "$(cfg_sha "$1" "$3")" ]
+}
+
+# opera_flags_ok <file>: the file is exactly the stock opera.ini with our two flag lines (Kansei
+# Link writes the same bytes). Undo the edit, the result must be OPERA_STOCK, and redoing it must
+# give the file back byte for byte. Scratch files in the guard folder (RAM). No logs: used in $(...).
+opera_flags_ok() {
+    local a="$MO_GUARD/opera.a" b="$MO_GUARD/opera.b" d ok=1
+    is_file "$1" || return 1
+    d=$(sha256_of "$1") || return 1
+    if opera_transform "$1" "$a" remove 2>/dev/null && [ "$(sha256_of "$a")" = "$OPERA_STOCK" ] &&
+        opera_transform "$a" "$b" install 2>/dev/null && [ "$(sha256_of "$b")" = "$d" ]; then
+        ok=0
+    fi
+    rm -f "$a" "$b"
+    return $ok
+}
 
 sm_transform() {    # sm_transform <src> <dst> <install|remove>
     awk -v mode="$3" -v stock="$SM_LINE_STOCK" -v patched="$SM_LINE_PATCHED" -v env="$SM_ENV_LINE" '
@@ -1033,17 +1072,21 @@ delay_transform() { # delay_transform <src> <dst> <install|remove>: the four tim
         END { for (k in map) if (done[k] != 1) exit 1; exit 0 }' "$1" > "$2"
 }
 
-opera_transform() { # opera_transform <src> <dst> <install|remove>
+# opera_transform <src> <dst> <install|remove|unlegacy>: install turns user scripts on and allows
+# file XHR (the XHR line right below, as Kansei Link inserts it); remove takes both back; unlegacy
+# takes back Meters 1.0's edit (both flags and the own folder). The folder line stays stock otherwise.
+opera_transform() {
     awk -v mode="$3" -v off="$OPERA_JS_OFF" -v on="$OPERA_JS_ON" -v xhr="$OPERA_XHR" \
         -v dstock="$OPERA_DIR_STOCK" -v dours="$OPERA_DIR_OURS" '
+        BEGIN { want_b = mode == "unlegacy" ? 1 : 0 }
         mode == "install" && $0 == off { print on; print xhr; a++; next }
-        mode == "install" && $0 == dstock { print dours; b++; next }
         mode == "install" && $0 == xhr { bad = 1 }
-        mode == "remove" && $0 == on { print off; a++; skip = 1; next }
-        mode == "remove" && skip { skip = 0; if ($0 == xhr) next; bad = 1 }
-        mode == "remove" && $0 == dours { print dstock; b++; next }
+        mode != "install" && $0 == on { print off; a++; skip = 1; next }
+        skip { skip = 0; if ($0 == xhr) next; bad = 1 }
+        mode == "unlegacy" && $0 == dours { print dstock; b++; next }
+        $0 == dours { bad = 1 }
         { print }
-        END { exit (a == 1 && b == 1 && !bad) ? 0 : 1 }' "$1" > "$2"
+        END { exit (a == 1 && b == want_b && !skip && !bad) ? 0 : 1 }' "$1" > "$2"
 }
 
 gap2_transform() {  # gap2_transform <src> <dst> <install|remove>
@@ -1084,6 +1127,8 @@ make_stock() {
         sys_build "$live" "$(sys_variant "$live")" "$dst" 00 || return 1
     elif content_is "$key" "$live" stock; then
         cp "$live" "$dst" || return 1
+    elif [ "$key" = opera ] && content_is opera "$live" legacy; then
+        opera_transform "$live" "$dst" unlegacy || return 1
     elif content_is "$key" "$live" patched; then
         cfg_transform "$key" "$live" "$dst" remove || return 1
     else
@@ -1192,9 +1237,12 @@ cfg_leftovers() {
 # Meters' own leftovers: they make Meters "partial", not AA touch.
 meters_leftovers() {
     local d
-    for d in "$MAPP_DIR" "$MJS_DIR"; do
+    for d in "$MAPP_DIR" "$MJS_LEGACY"; do
         exists "$d.miatoff.new" && echo "$d.miatoff.new"
         exists "$d.miatoff.old" && echo "$d.miatoff.old"
+    done
+    for d in "$USERJS"/.miatoff-*.miatoff.new; do
+        exists "$d" && echo "$d"
     done
     cfg_leftovers opera gap2
 }
@@ -1441,7 +1489,12 @@ describe_state() {
     printf 'list delay:   %s (patched = shorter)\n' "$S_DELAY"
     printf 'camera text:  %s (patched = blank safety text)\n' "$S_SAFETY"
     printf 'sensors:      %s (patched = semi-transparent parking sensors)\n' "$S_SENSORS"
-    printf 'meters:       %s (app %s, userscript %s)\n' "$S_METERS" "$(area_state app)" "$(area_state userjs)"
+    printf 'meters:       %s (app %s, userscripts %s, opera.ini %s, fps.js %s%s)\n' "$S_METERS" "$(area_state app)" \
+        "$(userjs_state)" "$(file_state opera "$OPERA_INI")" "$(fps_state)" "$(exists "$MJS_LEGACY" && echo ', 1.0 folder present')"
+    f=$(userjs_consumers)
+    [ -z "$f" ] || printf 'user scripts: also used by %s\n' "$(echo $f)"
+    f=$(other_tools)
+    [ -z "$f" ] || printf 'other tools:  %s\n' "$f"
     if exists "$BACKUP/$SM_OTHER"; then
         printf 'NOTE:         the backup was made while the unit ran %s; it now runs %s.\n' "$SM_OTHER" "${SM_NAME:-?}"
         printf '              Nothing is changed. Switch wireless CarPlay back, run REMOVE, then switch again.\n'
@@ -1450,7 +1503,7 @@ describe_state() {
     [ -z "$LEFTOVERS" ] || printf 'leftovers:    %s\n' $LEFTOVERS
     f=$(meters_leftovers)
     [ -z "$f" ] || printf 'meters left:  %s\n' $f
-    for f in "$SM" "$XML" "$UCP" "$BLM" "$AAP" "$SHIM" "$SHIM_OFF" "$CONF" "$COMMON" "$SYSAPP" "$LIST2" "$OPERA_INI" "$GAP2"; do
+    for f in "$SM" "$XML" "$UCP" "$BLM" "$AAP" "$SHIM" "$SHIM_OFF" "$CONF" "$COMMON" "$SYSAPP" "$LIST2" "$OPERA_INI" "$GAP2" "$FPS" "$FPS_OFF"; do
         exists "$f" || continue
         printf '  %s  %s  %s\n' "$(sha256_of "$f" || echo -)" "$(attrs_of "$f")" "${f#"$R"}"
     done
@@ -1599,19 +1652,23 @@ do_trim() {         # do_trim <boot trim char: see SM_TABLE>
 }
 
 # ---------------------------------------------------------------- Meters
-# Two folders (the app with the page and the collector, and the userscript),
-# copied from the stick and checked file by file against miatoff-app/MANIFEST
-# ("<sha256>  <area>/<path>", area app or userjs), then two one-line edits.
-# Install order: folders, stage_gap2.sh, opera.ini last (that turns it on);
-# removal in reverse. Every state in between boots to a stock HMI.
+# The app folder (the page and the collector) and our userscripts (miatoff-*.js
+# in Opera's shared userjs/ folder), copied from the stick and checked file by
+# file against miatoff-app/MANIFEST ("<sha256>  <area>/<path>", area app or
+# userjs), the stock fps.js renamed off, then two one-line edits.
+# Install order: app folder, userscripts, fps.js, stage_gap2.sh, opera.ini last
+# (that turns user scripts on, unless another tool already did); then Meters
+# 1.0's own folder goes. Removal in reverse. Every state in between boots.
+# Other tools' files in userjs/ (Kansei Link's additionalApps.js and .json,
+# its fps.js.mzg-off) are never touched: only miatoff-* names are ours.
 
-meters_area_dir() { case "$1" in app) echo "$MAPP_DIR" ;; userjs) echo "$MJS_DIR" ;; esac; }
+meters_area_dir() { case "$1" in app) echo "$MAPP_DIR" ;; esac; }
 
 # remove_tree <dir>: only the MiatOff folders and their staging names.
 remove_tree() {
     case "$1" in
         "$MAPP_DIR"|"$MAPP_DIR.miatoff.new"|"$MAPP_DIR.miatoff.old"|\
-        "$MJS_DIR"|"$MJS_DIR.miatoff.new"|"$MJS_DIR.miatoff.old") ;;
+        "$MJS_LEGACY"|"$MJS_LEGACY.miatoff.new"|"$MJS_LEGACY.miatoff.old") ;;
         *) log "ERROR: refusing to remove $1"; return 1 ;;
     esac
     exists "$1" || return 0
@@ -1619,13 +1676,15 @@ remove_tree() {
 }
 
 # manifest_ok: the stick's manifest is sane and every listed file matches it.
+# Userscripts are single files named miatoff-*.js (our names in the shared folder).
 manifest_ok() {
     local sum rel extra n=0
     is_file "$MANIFEST" || return 1
     while read -r sum rel extra; do
         [ -n "$sum" ] || continue
         [ -z "$extra" ] || return 1
-        case "$rel" in app/?*|userjs/?*) ;; *) return 1 ;; esac
+        case "$rel" in app/?*|userjs/miatoff-?*.js) ;; *) return 1 ;; esac
+        case "$rel" in userjs/*/*) return 1 ;; esac
         case "$rel" in *..*|*//*|*/) return 1 ;; esac
         [ "$(sha256_of "$STICK_MAPP/$rel")" = "$sum" ] || return 1
         n=$((n + 1))
@@ -1653,19 +1712,86 @@ area_state() {
     echo ours
 }
 
-meters_state() {    # off | on | partial | unknown
-    local o g a j
+# userjs_state: absent (no miatoff-* entry in userjs/) | ours (exactly the manifest's userscripts) | other
+userjs_state() {
+    local e sum rel extra m=0 n=0
+    for e in "$USERJS"/miatoff-*; do
+        exists "$e" || continue
+        is_file "$e" || { echo other; return 0; }
+        m=$((m + 1))
+    done
+    [ "$m" -gt 0 ] || { echo absent; return 0; }
+    is_file "$MANIFEST" || { echo other; return 0; }
+    while read -r sum rel extra; do
+        case "$rel" in userjs/*) ;; *) continue ;; esac
+        [ "$(sha256_of "$USERJS/${rel#userjs/}" 2>/dev/null)" = "$sum" ] || { echo other; return 0; }
+        n=$((n + 1))
+    done < "$MANIFEST"
+    [ "$n" = "$m" ] || { echo other; return 0; }
+    echo ours
+}
+
+# userjs_consumers: the other tools' user scripts in userjs/ (*.js that are neither the stock
+# fps.js nor ours), one name per line, nothing when none. While there is one, REMOVE leaves the
+# opera.ini flags on and fps.js off for it. No logs: used in $(...).
+userjs_consumers() {
+    local e n
+    for e in "$USERJS"/*.js; do
+        exists "$e" || continue
+        n=${e##*/}
+        case "$n" in fps.js|miatoff-*) continue ;; esac
+        printf '%s\n' "$n"
+    done
+    return 0
+}
+
+# fps_state: on (fps.js active) | off (renamed off by Meters) | none (neither: absent, or another
+# tool renamed it under its own name) | conflict (both, or not plain files)
+fps_state() {
+    local a=0 b=0
+    if exists "$FPS"; then is_file "$FPS" || { echo conflict; return 0; }; a=1; fi
+    if exists "$FPS_OFF"; then is_file "$FPS_OFF" || { echo conflict; return 0; }; b=1; fi
+    case "$a$b" in 10) echo on ;; 01) echo off ;; 00) echo none ;; *) echo conflict ;; esac
+}
+
+# other_tools: other tools that share opera.ini and userjs/ (report only; never changed). No logs.
+other_tools() {
+    local v
+    if exists "$R/jci/gui/apps/_mzgauge" || grep -q '"_mzgauge"' "$USERJS/additionalApps.json" 2>/dev/null; then
+        v=$(sed -n 's/^VERSION=//p' "$R/data/mzgauge/state/installed.env" 2>/dev/null | head -n 1 | tr -cd 'A-Za-z0-9.+_-')
+        printf 'Kansei Link (%s)\n' "${v:-version unknown}"
+    fi
+    return 0
+}
+
+# meters_state: off | on | partial | unknown
+#   off:     nothing of Meters, and opera.ini stock, or flag-only while another tool has a script
+#            in userjs/ (it may be Kansei Link's edit, or ours left on for it at REMOVE)
+#   on:      app and userscripts exactly the stick's, stage_gap2.sh and opera.ini patched, fps.js not active
+#   unknown: opera.ini or stage_gap2.sh not a known file, or fps.js in a conflicting state
+meters_state() {
+    local o g f a j
     o=$(file_state opera "$OPERA_INI")
     g=$(file_state gap2 "$GAP2")
-    case "$o $g" in *unknown*) echo unknown; return 0 ;; esac
+    f=$(fps_state)
+    case "$o $g $f" in *unknown*|*conflict*) echo unknown; return 0 ;; esac
     a=$(area_state app)
-    j=$(area_state userjs)
+    j=$(userjs_state)
     [ -z "$(meters_leftovers)" ] || { echo partial; return 0; }
-    case "$o $g $a $j" in
-        "stock stock absent absent") echo off ;;
-        "patched patched ours ours") echo on ;;
-        *) echo partial ;;
-    esac
+    exists "$MJS_LEGACY" && { echo partial; return 0; }
+    if [ "$a $j $g" = "absent absent stock" ]; then
+        case "$o:$f" in
+            stock:on|stock:none) echo off; return 0 ;;
+            patched:*)
+                [ -n "$(userjs_consumers)" ] && { echo off; return 0; }
+                # nobody uses user scripts: ours to take back, unless Meters never touched opera.ini
+                [ "$f" != off ] && ! exists "$(cfg_backup opera)" && { echo off; return 0; } ;;
+        esac
+        echo partial
+        return 0
+    fi
+    [ "$a $j $g $o" = "ours ours patched patched" ] && [ "$f" != on ] && { echo on; return 0; }
+    echo partial
 }
 
 # install_area <area>: build the folder beside its place, verify, swap it in.
@@ -1706,9 +1832,101 @@ remove_area() {
     fsync_path "${dir%/*}"
 }
 
+# install_userjs: each of the stick's userscripts staged beside its place in userjs/ (a name that
+# ends in .new, so Opera never runs it), verified, renamed; then our miatoff-* files the stick no
+# longer lists (an older Home design) go. Nothing else in the folder is touched.
+install_userjs() {
+    local sum rel extra name new e
+    [ -d "$USERJS" ] && [ ! -L "$USERJS" ] || { log "ERROR: ${USERJS#"$R"} is not a folder"; return 1; }
+    while read -r sum rel extra; do
+        case "$rel" in userjs/*) ;; *) continue ;; esac
+        name=${rel#userjs/}
+        if exists "$USERJS/$name"; then
+            is_file "$USERJS/$name" || { log "ERROR: ${USERJS#"$R"}/$name is not a file"; return 1; }
+            [ "$(sha256_of "$USERJS/$name")" = "$sum" ] && continue
+        fi
+        new="$USERJS/.$name.miatoff.new"
+        rm -f "$new" || return 1
+        cp "$STICK_MAPP/$rel" "$new" && chmod 644 "$new" || return 1
+        [ "$(sha256_of "$new")" = "$sum" ] || { log "ERROR: copy of $rel failed verification"; return 1; }
+        fsync_path "$new" || return 1
+        fault rename-userjs || return 1
+        mv -f "$new" "$USERJS/$name" || return 1
+    done < "$MANIFEST"
+    for e in "$USERJS"/miatoff-*; do
+        exists "$e" || continue
+        awk -v r="userjs/${e##*/}" '$2 == r { f = 1 } END { exit f ? 0 : 1 }' "$MANIFEST" && continue
+        is_file "$e" || { log "ERROR: ${e#"$R"} is not a file"; return 1; }
+        rm -f "$e" || return 1
+        log "removed ${e#"$R"} (not on this stick)"
+    done
+    fsync_path "$USERJS" || return 1
+    [ "$(userjs_state)" = ours ] || { log "ERROR: the userscripts in ${USERJS#"$R"} failed read-back"; return 1; }
+    log "installed the userscripts in ${USERJS#"$R"}"
+}
+
+# remove_userjs: our miatoff-* files and their staging copies, nothing else of userjs/.
+remove_userjs() {
+    local e
+    for e in "$USERJS"/miatoff-* "$USERJS"/.miatoff-*.miatoff.new; do
+        exists "$e" || continue
+        if [ -d "$e" ] && [ ! -L "$e" ]; then
+            log "ERROR: refusing to remove the folder ${e#"$R"}"
+            return 1
+        fi
+        rm -f "$e" || return 1
+    done
+    [ -d "$USERJS" ] || return 0
+    fsync_path "$USERJS"
+}
+
+# fps_off / fps_on: the stock fps.js renamed to fps.js.miatoff-off and back (the content never
+# changes). Absent, or renamed by another tool under its own name: nothing to do.
+fps_off() {
+    case "$(fps_state)" in
+        off|none) return 0 ;;
+        on)
+            fault rename-fps || return 1
+            mv "$FPS" "$FPS_OFF" && fsync_path "$USERJS" || return 1
+            log "renamed ${FPS#"$R"} -> ${FPS_OFF##*/}" ;;
+        *) log "ERROR: ${FPS#"$R"} and ${FPS_OFF##*/} are in a conflicting state"; return 1 ;;
+    esac
+}
+fps_on() {
+    case "$(fps_state)" in
+        on|none) return 0 ;;
+        off)
+            fault rename-fps || return 1
+            mv "$FPS_OFF" "$FPS" && fsync_path "$USERJS" || return 1
+            log "renamed ${FPS_OFF#"$R"} -> ${FPS##*/}" ;;
+        *) log "ERROR: ${FPS#"$R"} and ${FPS_OFF##*/} are in a conflicting state"; return 1 ;;
+    esac
+}
+
+# remove_legacy: Meters 1.0's own userscript folder (only once opera.ini no longer points at it).
+remove_legacy() {
+    exists "$MJS_LEGACY" || return 0
+    remove_tree "$MJS_LEGACY" || return 1
+    fsync_path "${MJS_LEGACY%/*}" || return 1
+    log "removed ${MJS_LEGACY#"$R"} (Meters 1.0 layout)"
+}
+
+# meters_off_steps: user scripts off first (opera.ini stock), unless another tool still has a
+# script in userjs/: then opera.ini keeps (or gets) the two flags and fps.js stays off for it.
 meters_off_steps() {
-    publish_cfg opera stock && publish_cfg gap2 stock &&
-        remove_area userjs && remove_area app && remove_rootfs_leftovers
+    local others
+    others=$(userjs_consumers)
+    if [ -n "$others" ]; then
+        log "user scripts stay on for $(echo $others): opera.ini keeps its flags, fps.js stays off"
+        publish_cfg opera patched || return 1
+    else
+        publish_cfg opera stock || return 1
+    fi
+    publish_cfg gap2 stock && remove_userjs && remove_legacy || return 1
+    if [ -z "$others" ]; then
+        fps_on || return 1
+    fi
+    remove_area app && remove_rootfs_leftovers
 }
 
 # stop_collector: the collector started at boot runs from the app folder, and
@@ -1746,8 +1964,8 @@ do_meters() {       # do_meters <on | off>
         ensure_file_backup opera && ensure_file_backup gap2 || return 1
         stop_collector
         root_rw || return 1
-        if ! { remove_rootfs_leftovers && install_area app && install_area userjs &&
-               publish_cfg gap2 patched && publish_cfg opera patched; }; then
+        if ! { remove_rootfs_leftovers && install_area app && install_userjs && fps_off &&
+               publish_cfg gap2 patched && publish_cfg opera patched && remove_legacy; }; then
             log "Meters install failed; rolling back"
             meters_off_steps || log "ERROR: Meters rollback incomplete"
             root_ro
@@ -2364,7 +2582,7 @@ plan_blockers() {   # plan_blockers <state>: why a wanted step cannot run now, o
         echo "The parking sensor images are not a known version."
     fi
     if [ "$(plan_get meters)" != keep ] && [ "$S_METERS" = unknown ]; then
-        echo "opera.ini or stage_gap2.sh is not a known version (Meters)."
+        echo "opera.ini, stage_gap2.sh or fps.js is not a known version (Meters)."
     fi
     if [ "$S_TRIM" = unknown ]; then
         for g in dvdtv sirius pandora stitcher aha; do
@@ -2539,7 +2757,7 @@ choose_meters() {
             a=$(ask REPAIR REMOVE CANCEL "Meters is incomplete or older than\nthis stick.\n\nREPAIR = install from this stick\nREMOVE = remove everything of Meters") || return 1
             case "$a" in 0) echo meters_on ;; 1) echo meters_off ;; *) echo cancel ;; esac ;;
         *)
-            popup "opera.ini or stage_gap2.sh is not the analysed file.\n\nNothing was changed."
+            popup "opera.ini, stage_gap2.sh or fps.js is not\nthe analysed file.\n\nNothing was changed."
             echo cancel ;;
     esac
 }
@@ -2659,7 +2877,8 @@ safe_reboot() {
 # ---------------------------------------------------------------- main
 
 clear_guard() {
-    rm -f "$MO_GUARD/pid" "$MO_GUARD/sm.a" "$MO_GUARD/sm.b" "$MO_GUARD/images" "$MO_GUARD/miatoff-commander"
+    rm -f "$MO_GUARD/pid" "$MO_GUARD/sm.a" "$MO_GUARD/sm.b" "$MO_GUARD/images" "$MO_GUARD/miatoff-commander" \
+        "$MO_GUARD/opera.a" "$MO_GUARD/opera.b"
     rmdir "$MO_GUARD" 2>/dev/null
 }
 
@@ -2713,6 +2932,15 @@ if ! mkdir "$MO_GUARD" 2>/dev/null; then
 fi
 GUARD_CREATED=1
 echo $$ > "$MO_GUARD/pid"
+
+# Kansei Link's installer shares opera.ini and userjs/ with Meters: never run at the same time.
+# (It waits for TouchTune's guard; it does not know ours.) /tmp is RAM, so a guard left by a
+# power cut is gone after the restart.
+if exists "$KANSEI_GUARD"; then
+    log "Kansei Link's installer is running ($KANSEI_GUARD); exiting without changes"
+    popup "Kansei Link is installing.\n\nNothing was changed.\nPlug this USB in again when it is done."
+    exit 0
+fi
 
 if [ -z "$OPENSSL" ] && [ "$HAVE_SHA256SUM" = 0 ]; then
     log "ERROR: no sha256 tool (openssl)"

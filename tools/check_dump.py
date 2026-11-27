@@ -149,6 +149,11 @@ class Dump:
             return row["sha256"]
         return None
 
+    def data(self, unit_path: str):
+        """The bytes of a file of the unit when the dump copied it, else None."""
+        copy = self.path / "static" / "files" / unit_path.lstrip("/")
+        return copy.read_bytes() if copy.is_file() else None
+
     def attrs(self, unit_path: str):
         row = self.keyfiles.get(unit_path)
         return row["attrs"] if row else None
@@ -156,6 +161,39 @@ class Dump:
     def text(self, rel: str) -> str:
         path = self.path / rel
         return path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
+
+
+# opera.ini: the two flag lines Meters writes (Kansei Link writes the same bytes). The patched file has no pin of its own:
+# as in aa-touch.sh (opera_flags_ok) it is the stock file with those lines, so it is recognised by undoing them.
+OPERA_PATH = "/jci/opera/opera_home/opera.ini"
+OPERA_JS_OFF, OPERA_JS_ON, OPERA_XHR = b"User JavaScript=0", b"User JavaScript=1", b"Allow File XMLHttpRequest=1"
+OPERA_DIR_OURS = b"User JavaScript File=/jci/opera/opera_dir/userjs-miatoff/"   # Meters 1.0 only
+
+
+def opera_flags_ok(data: bytes, stock_sha: str) -> bool:
+    """`data` is exactly the stock opera.ini (sha256 `stock_sha`) with the two flag lines."""
+    lines = data.split(b"\n")
+    if lines.count(OPERA_JS_ON) != 1 or lines.count(OPERA_XHR) != 1 or OPERA_JS_OFF in lines or OPERA_DIR_OURS in lines:
+        return False
+    i = lines.index(OPERA_JS_ON)
+    if i + 1 >= len(lines) or lines[i + 1] != OPERA_XHR:
+        return False
+    return bool(stock_sha) and hashlib.sha256(b"\n".join(lines[:i] + [OPERA_JS_OFF] + lines[i + 2:])).hexdigest() == stock_sha
+
+
+def opera_state(dump, pin: dict):
+    """stock | patched (the two flags, stock folder) | legacy (Meters 1.0, own folder) | unknown | not checked."""
+    digest = dump.sha(OPERA_PATH)
+    if digest is None:
+        return UNCHECKED
+    if digest == pin.get("OPERA_STOCK"):
+        return "stock"
+    if digest == pin.get("OPERA_LEGACY"):
+        return "legacy"
+    data = dump.data(OPERA_PATH)
+    if data is not None and opera_flags_ok(data, pin.get("OPERA_STOCK", "")):
+        return "patched"
+    return "unknown"
 
 
 def state_of(digest, stock: str, patched: str):
@@ -296,7 +334,7 @@ def check(dump_path: Path, pinned: dict = None) -> dict:
         else:
             comps[key] = {"state": PARTIAL, "detail": "some images replaced, some stock: run the stick's CAMERA again"}
 
-    opera = state_of(dump.sha("/jci/opera/opera_home/opera.ini"), pin.get("OPERA_STOCK"), pin.get("OPERA_PATCHED"))
+    opera = opera_state(dump, pin)
     gap2 = state_of(dump.sha("/jci/scripts/stage_gap2.sh"), pin.get("GAP2_STOCK"), pin.get("GAP2_PATCHED"))
     if UNCHECKED in (opera, gap2):
         comps["meters"] = {"state": UNCHECKED, "detail": "needs a FULL dump"}
@@ -304,8 +342,13 @@ def check(dump_path: Path, pinned: dict = None) -> dict:
         comps["meters"] = {"state": BLOCKED, "detail": "opera.ini or stage_gap2.sh is not a known version"}
     elif opera == gap2 == "stock":
         comps["meters"] = result(AVAILABLE, "opera.ini and stage_gap2.sh are stock")
-    elif opera == gap2 == "patched":
+    elif gap2 == "stock" and opera == "patched":
+        comps["meters"] = result(AVAILABLE, "user scripts are already on (another tool, such as Kansei Link, uses them)")
+    elif gap2 == "patched" and opera == "patched":
         comps["meters"] = result(INSTALLED, "installed")
+    elif gap2 == "patched" and opera == "legacy":
+        comps["meters"] = result(INSTALLED, "installed (the Meters 1.0 layout: installing again moves it to the "
+                                            "shared userjs folder)")
     else:
         comps["meters"] = {"state": PARTIAL, "detail": "half installed: run the stick's REPAIR/REMOVE"}
 

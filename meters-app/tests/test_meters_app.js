@@ -36,7 +36,7 @@ for (const [name, file] of Object.entries(FILES)) {
 // --- fake HMI
 function makeHmi(opts) {
     opts = opts || {};
-    const sent = [], routed = [], selected = [], listeners = [];
+    const sent = [], routed = [], selected = [], listeners = [], snaps = [];
     const sys = {
         _masterApplicationDataList: { items: [
             { appData: { appName: "vdt_settings", isVisible: false, mmuiEvent: "SelectVehicleTelemetryTransfer" }, disabled: true },
@@ -46,7 +46,12 @@ function makeHmi(opts) {
         _contextTable: { Applications: { controlProperties: { List2Ctrl: {} } } },
     };
     sys._contextTable.Applications.controlProperties.List2Ctrl.selectCallback =
-        function (ctrl, appData) { selected.push(appData); }.bind(sys);
+        function (ctrl, appData) {
+            selected.push(appData);
+            if (ctrl && ctrl.dataList) {
+                snaps.push({ focus: ctrl.focussedItem, events: ctrl.dataList.items.map(r => r.appData.mmuiEvent) });
+            }
+        }.bind(sys);
     if (opts.noVdt) sys._masterApplicationDataList.items.splice(1, 1);
     const fw = {
         _currentAppUiaId: opts.startApp || "system",
@@ -76,7 +81,7 @@ function makeHmi(opts) {
     vm.createContext(W);
     vm.runInContext(fs.readFileSync(FILES.userjs, "utf8"), W);
     const fire = () => listeners.forEach(([t, fn]) => t === "AfterEvent.load" && fn({}));
-    return { W, fw, sys, sent, routed, selected, listeners, fire, origRoute, origSend };
+    return { W, fw, sys, sent, routed, selected, listeners, snaps, fire, origRoute, origSend };
 }
 
 // 1. Install when the system app is there; once only.
@@ -100,6 +105,24 @@ check(h.selected[0].appName === "radio" && h.selected[0].mmuiEvent === "SelectRa
 select({}, { appName: "miatoff", mmuiEvent: "Selectmiatoff" }, {});
 check(h.selected[1].appName === "vdt" && h.selected[1].mmuiEvent === "SelectDriveRecord",
       "Meters selects the borrowed Drive Record app");
+
+// 2b. Next to another tool's loader (Kansei Link's additionalApps.js): while Meters is launched its row is the
+// focussed one and carries SelectDriveRecord, so that loader sees a stock Drive Record launch and does not take the
+// launch for its own row. Both are put back right after.
+const shown = { focussedItem: 0, dataList: { items: [
+    { appData: { appName: "_mzgauge", mmuiEvent: "SelectDriveRecord" } },
+    { appData: { appName: "miatoff", mmuiEvent: "Selectmiatoff" } },
+] } };
+select(shown, shown.dataList.items[1].appData, {});
+const snap = h.snaps[h.snaps.length - 1];
+check(snap && snap.focus === 1 && snap.events[1] === "SelectDriveRecord" && snap.events[0] === "SelectDriveRecord",
+      "during the launch our row is focussed and carries the borrowed event");
+check(shown.focussedItem === 0 && shown.dataList.items[1].appData.mmuiEvent === "Selectmiatoff",
+      "after the launch the focus and our row's event are back");
+const before = h.selected.length;
+select({ focussedItem: 0, dataList: { items: [] } }, { appName: "miatoff", mmuiEvent: "Selectmiatoff" }, {});
+check(h.selected.length === before + 1 && h.selected[before].appName === "vdt", "no shown row of ours: launch unchanged");
+h.selected.splice(2);
 
 // 3. MMUI -> GUI rewriting while active.
 h.fw.routeMmuiMsg({ msgType: "ctxtChg", uiaId: "vdt", ctxtId: "DriveChartDetails" });

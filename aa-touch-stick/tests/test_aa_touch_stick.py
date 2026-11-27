@@ -247,7 +247,8 @@ else:
     OPERA_STOCK_BYTES = (b"[User Prefs]\nUser JavaScript File=$OPERA_DIR/userjs/\nUser JavaScript=0\n"
                          b"User JavaScript on HTTPS=1\n\n[Network]\nPerson=0\n")
     GAP2_STOCK_BYTES = b"#!/bin/sh\n\n"
-OPERA_PATCHED_BYTES = meters_edit.patch_opera(OPERA_STOCK_BYTES)
+OPERA_PATCHED_BYTES = meters_edit.patch_opera(OPERA_STOCK_BYTES)          # the two flags (Kansei Link: the same)
+OPERA_LEGACY_BYTES = meters_edit.patch_opera_legacy(OPERA_STOCK_BYTES)    # Meters 1.0: flags and its own folder
 GAP2_PATCHED_BYTES = meters_edit.patch_gap2(GAP2_STOCK_BYTES)
 # Shorter list delay: List2Ctrl.js. Real file from the dump when present, else synthetic.
 LIST2 = "jci/gui/common/controls/List2/js/List2Ctrl.js"
@@ -405,7 +406,7 @@ def overrides(work: Path, root_in_sh: str, **extra) -> Path:
             LIST_STOCK=sha(LIST2_STOCK_BYTES), LIST_PATCHED=sha(LIST2_PATCHED_BYTES),
             SAFETY_TABLE="'" + "\n".join(f"{n} {sha(SAFETY_STOCK[n])} {sha(SAFETY_BLANK)}" for n in SAFETY_NAMES) + "'",
             SENSOR_TABLE="'" + "\n".join(f"{n} {sha(SENSOR_STOCK[n])} {sha(SENSOR_NEW[n])}" for n in SENSOR_NAMES) + "'",
-            OPERA_STOCK=sha(OPERA_STOCK_BYTES), OPERA_PATCHED=sha(OPERA_PATCHED_BYTES),
+            OPERA_STOCK=sha(OPERA_STOCK_BYTES), OPERA_LEGACY=sha(OPERA_LEGACY_BYTES),
             GAP2_STOCK=sha(GAP2_STOCK_BYTES), GAP2_PATCHED=sha(GAP2_PATCHED_BYTES))
     if REAL:
         # The real dump has no image files to copy (only their hashes), so the fixture's fake stock images
@@ -709,7 +710,7 @@ def main():
         check(all(sha(SM_VARIANTS[k]) == py_table[k] for k in SM_VARIANTS), "SM_VARIANTS agree with sm_table()")
         if (DUMP3 / OPERA).is_file():
             check(sha(OPERA_STOCK_BYTES) == bs.pinned("OPERA_STOCK"), "OPERA_STOCK matches the dump's opera.ini")
-            check(sha(OPERA_PATCHED_BYTES) == bs.pinned("OPERA_PATCHED"), "OPERA_PATCHED matches the Python edit")
+            check(sha(OPERA_LEGACY_BYTES) == bs.pinned("OPERA_LEGACY"), "OPERA_LEGACY matches the Python 1.0 edit")
             check(sha(GAP2_STOCK_BYTES) == bs.pinned("GAP2_STOCK"), "GAP2_STOCK matches the dump's stage_gap2.sh")
             check(sha(GAP2_PATCHED_BYTES) == bs.pinned("GAP2_PATCHED"), "GAP2_PATCHED matches the Python edit")
         if SYSAPP_REAL.is_file():
@@ -1260,7 +1261,7 @@ def main():
         else:
             payload = bs.payload()
             app_dir = "jci/gui/apps/miatoff"
-            js_dir = "jci/opera/opera_dir/userjs-miatoff"
+            js_dir = "jci/opera/opera_dir/userjs"
 
             def meters_files_ok(c):
                 ok = True
@@ -1280,7 +1281,8 @@ def main():
             check(car.read(OPERA) == OPERA_PATCHED_BYTES and car.read(GAP2) == GAP2_PATCHED_BYTES,
                   "opera.ini and stage_gap2.sh are exactly the patched files")
             check(meters_files_ok(car), "app and userscript folders hold exactly the stick's files")
-            check((car.root / "jci/opera/opera_dir/userjs/fps.js").exists(), "stock fps.js left alone")
+            check(not (car.root / js_dir / "fps.js").exists() and (car.root / js_dir / "fps.js.miatoff-off").is_file(),
+                  "the stock fps.js is renamed off while Meters is on")
             check(car.state() == "stock" and car.configs_are(STOCK), "Meters leaves AA touch and sm.conf alone")
             r = car.run("meters_on")
             check(r.returncode != 0, "INSTALL refused while Meters is on")
@@ -1289,6 +1291,152 @@ def main():
                 check(r.returncode == 0 and car.state("meters:") == "on", f"{action} keeps Meters ({r.returncode})")
             r = car.run("meters_off")
             check(r.returncode == 0 and car.digest() == stock_digest, "Meters off after everything: byte-exact stock")
+
+            # Next to Kansei Link (another tool in the shared userjs/ folder). The stand-in has Kansei's footprint:
+            # its loader and list in userjs/, fps.js under its own off-name, its app folder and state file, and the
+            # same two opera.ini flag lines Meters writes. Its files are never touched.
+            def stage_kansei(car):
+                k = car.tmp / "kansei"
+                k.mkdir(exist_ok=True)
+                (k / "additionalApps.js").write_bytes(b"/* stands in for another tool's loader */\n")
+                (k / "additionalApps.json").write_bytes(b'[\n  { "name": "_mzgauge", "label": "Kansei Link" }\n]\n')
+                (k / "index.js").write_bytes(b"/* its app */\n")
+                (k / "installed.env").write_bytes(b"STATE=installed\nVERSION=1.4.0+4658b10\n")
+                (k / "opera.stock").write_bytes(OPERA_STOCK_BYTES)
+                (k / "opera.flags").write_bytes(OPERA_PATCHED_BYTES)
+                (k / "opera.legacy").write_bytes(OPERA_LEGACY_BYTES)
+
+            USERJS_SH = 'U="$MO_ROOT/jci/opera/opera_dir/userjs"; O="$MO_ROOT/jci/opera/opera_home/opera.ini"; '
+            KANSEI_ON = USERJS_SH + (
+                'cp /w/kansei/additionalApps.js /w/kansei/additionalApps.json "$U/" && '
+                '{ [ ! -f "$U/fps.js" ] || mv "$U/fps.js" "$U/fps.js.mzg-off"; } && '
+                'mkdir -p "$MO_ROOT/jci/gui/apps/_mzgauge" "$MO_ROOT/data/mzgauge/state" && '
+                'cp /w/kansei/index.js "$MO_ROOT/jci/gui/apps/_mzgauge/" && '
+                'cp /w/kansei/installed.env "$MO_ROOT/data/mzgauge/state/" && '
+                '{ ! cmp -s "$O" /w/kansei/opera.stock || cp /w/kansei/opera.flags "$O"; }')
+            KANSEI_OFF = USERJS_SH + (     # Kansei's REMOVE: its files go; it leaves flags it found already on
+                'rm -rf "$U/additionalApps.js" "$U/additionalApps.json" "$MO_ROOT/jci/gui/apps/_mzgauge" '
+                '"$MO_ROOT/data/mzgauge" && { [ ! -f "$U/fps.js.mzg-off" ] || mv "$U/fps.js.mzg-off" "$U/fps.js"; }')
+
+            def kansei_files_ok(c):
+                return ((c.root / js_dir / "additionalApps.js").read_bytes() == (c.tmp / "kansei/additionalApps.js").read_bytes() and
+                        (c.root / js_dir / "additionalApps.json").read_bytes() == (c.tmp / "kansei/additionalApps.json").read_bytes() and
+                        (c.root / "jci/gui/apps/_mzgauge/index.js").is_file())
+
+            def report(c):
+                path = c.stick / "aa-touch-state.txt"
+                return path.read_text() if path.exists() else ""
+
+            # Kansei Link first, then Meters: INSTALL and REMOVE leave its files and its opera.ini as they were.
+            car = fresh(base, "meters-kansei-first")
+            stage_kansei(car)
+            car.run("cancel", pre=KANSEI_ON)
+            kansei_digest = car.digest()
+            check(car.state("meters:") == "off" and car.read(OPERA) == OPERA_PATCHED_BYTES,
+                  f"Kansei Link's opera.ini edit is the same file; Meters is off ({car.state('meters:')})")
+            check("Kansei Link (1.4.0+4658b10)" in report(car) and "also used by additionalApps.js" in report(car),
+                  "the state report names Kansei Link and its user script")
+            r = car.run("meters_on")
+            check(r.returncode == 0 and car.state("meters:") == "on" and car.read(OPERA) == OPERA_PATCHED_BYTES and
+                  meters_files_ok(car) and kansei_files_ok(car),
+                  f"Meters installs next to Kansei Link ({r.returncode}, {car.state('meters:')})")
+            check((car.root / js_dir / "fps.js.mzg-off").is_file() and not (car.root / js_dir / "fps.js.miatoff-off").exists(),
+                  "fps.js already off under Kansei's name: left as it is")
+            r = car.run("meters_off")
+            check(r.returncode == 0 and car.state("meters:") == "off" and car.digest() == kansei_digest,
+                  "Meters REMOVE next to Kansei Link: back to exactly the Kansei-only unit")
+            car.run("cancel", pre=KANSEI_OFF)
+            check(car.state("meters:") == "off", f"after Kansei's own REMOVE: Meters off ({car.state('meters:')})")
+
+            # Kansei Link removed while Meters is on: it puts back the fps.js it renamed (and keeps the flags for our
+            # script); Meters shows partial, REPAIR turns fps.js off again, REMOVE then gives byte-exact stock.
+            car = fresh(base, "meters-kansei-removed-first")
+            stage_kansei(car)
+            stock_digest = car.digest()
+            car.run("cancel", pre=KANSEI_ON)
+            car.run("meters_on")
+            car.run("cancel", pre=KANSEI_OFF)
+            check(car.state("meters:") == "partial" and (car.root / js_dir / "fps.js").is_file(),
+                  f"Kansei gone while Meters is on, fps.js back: partial ({car.state('meters:')})")
+            r = car.run("meters_on")
+            check(r.returncode == 0 and car.state("meters:") == "on" and
+                  (car.root / js_dir / "fps.js.miatoff-off").is_file() and not (car.root / js_dir / "fps.js").exists(),
+                  "REPAIR turns fps.js off again")
+            r = car.run("meters_off")
+            check(r.returncode == 0 and car.digest() == stock_digest, "then REMOVE gives byte-exact stock")
+
+            # Meters first, then Kansei Link: REMOVE keeps the user scripts on (flags, fps.js off) while Kansei needs
+            # them; once Kansei is gone too, Meters shows partial and REMOVE gives byte-exact stock.
+            car = fresh(base, "meters-kansei-after")
+            stage_kansei(car)
+            stock_digest = car.digest()
+            car.run("meters_on")
+            car.run("cancel", pre=KANSEI_ON)
+            check(car.state("meters:") == "on" and kansei_files_ok(car),
+                  f"Kansei Link added later: Meters still on ({car.state('meters:')})")
+            r = car.run("meters_off")
+            check(r.returncode == 0 and car.state("meters:") == "off" and car.read(OPERA) == OPERA_PATCHED_BYTES and
+                  (car.root / js_dir / "fps.js.miatoff-off").is_file() and not (car.root / js_dir / "fps.js").exists() and
+                  not list((car.root / js_dir).glob("miatoff-*")) and not (car.root / app_dir).exists() and
+                  kansei_files_ok(car),
+                  f"Meters REMOVE while Kansei needs user scripts: flags stay, fps.js stays off "
+                  f"({r.returncode}, {car.state('meters:')})")
+            check(car.read(GAP2) == GAP2_STOCK_BYTES, "stage_gap2.sh is stock again")
+            car.run("cancel", pre=KANSEI_OFF)
+            check(car.state("meters:") == "partial",
+                  f"Kansei gone too: the flags are Meters' to take back ({car.state('meters:')})")
+            r = car.run("meters_off")
+            check(r.returncode == 0 and car.digest() == stock_digest, "then REMOVE gives byte-exact stock")
+
+            # Meters 1.0 layout (userscripts in userjs-miatoff/, opera.ini pointing at it, fps.js untouched):
+            # REPAIR moves it to the shared folder, REMOVE takes it straight back to stock.
+            LEGACY_SH = USERJS_SH + (
+                'L="$MO_ROOT/jci/opera/opera_dir/userjs-miatoff"; mkdir "$L" && mv "$U"/miatoff-* "$L"/ && '
+                'mv "$U/fps.js.miatoff-off" "$U/fps.js" && cp /w/kansei/opera.legacy "$O"')
+            for then in ("meters_on", "meters_off"):
+                car = fresh(base, f"meters-legacy-{then}")
+                stage_kansei(car)
+                stock_digest = car.digest()
+                car.run("meters_on")
+                car.run("cancel", pre=LEGACY_SH)
+                legacy_dir = car.root / "jci/opera/opera_dir/userjs-miatoff"
+                check(car.read(OPERA) == OPERA_LEGACY_BYTES and legacy_dir.is_dir() and car.state("meters:") == "partial",
+                      f"Meters 1.0 layout recognised as partial ({car.state('meters:')})")
+                r = car.run(then)
+                if then == "meters_on":
+                    check(r.returncode == 0 and car.state("meters:") == "on" and not legacy_dir.exists() and
+                          car.read(OPERA) == OPERA_PATCHED_BYTES and meters_files_ok(car),
+                          f"REPAIR moves Meters 1.0 to the shared userjs/ folder ({r.returncode}, {car.state('meters:')})")
+                    r = car.run("meters_off")
+                check(r.returncode == 0 and car.digest() == stock_digest, f"Meters 1.0 layout, {then}: then byte-exact stock")
+
+            # Kansei Link's installer running: this run changes nothing.
+            car = fresh(base, "meters-kansei-busy")
+            write(car.root, "tmp/mzg-installer.guard/pid", "4242\n")
+            before = car.digest()
+            r = car.run("meters_on")
+            log = (car.stick / "miatoff-aa-touch.log").read_text()
+            check(r.returncode == 0 and car.digest() == before and "Kansei Link's installer is running" in log,
+                  "Kansei Link's installer running: nothing changed")
+
+            # fps.js and fps.js.miatoff-off both present: an unknown state, Meters refused.
+            car = fresh(base, "meters-fps-conflict")
+            write(car.root, js_dir + "/fps.js.miatoff-off", "// stock fps counter\n")
+            before = car.digest()
+            r = car.run("meters_on")
+            check(r.returncode != 0 and car.digest() == before and car.state("meters:") == "unknown",
+                  f"fps.js in a conflicting state: Meters refused ({car.state('meters:')})")
+
+            # Another tool's leftover flags with no script of anyone (and no Meters backup): Meters is off and installs.
+            car = fresh(base, "meters-flags-left")
+            write(car.root, OPERA, OPERA_PATCHED_BYTES)
+            r = car.run("cancel")
+            check(car.state("meters:") == "off", f"flags left by another tool, nothing uses them: off ({car.state('meters:')})")
+            r = car.run("meters_on")
+            check(r.returncode == 0 and car.state("meters:") == "on", "Meters installs over those flags")
+            r = car.run("meters_off")
+            check(r.returncode == 0 and car.read(OPERA) == OPERA_STOCK_BYTES and car.state("meters:") == "off",
+                  "REMOVE with nobody else using user scripts: opera.ini stock")
 
             # Updating: a newer page on the stick makes the install "partial"; REPAIR updates it.
             car = fresh(base, "meters-update")
@@ -1470,7 +1618,8 @@ def main():
             r = car.run("meters_on")
             check(r.returncode != 0 and car.digest() == stock_digest, "damaged Home menu design on the stick: refused")
 
-            for point in ("rename-app", "rename-userjs", "stage-gap2", "rename-gap2", "stage-opera", "rename-opera"):
+            for point in ("rename-app", "rename-userjs", "rename-fps", "stage-gap2", "rename-gap2", "stage-opera",
+                          "rename-opera"):
                 car = fresh(base, f"meters-kill-{point}")
                 stock_digest = car.digest()
                 car.run("meters_on", fault=f"kill:{point}")
@@ -1486,7 +1635,7 @@ def main():
                 check(r.returncode == 0 and car.digest() == stock_digest,
                       f"Meters power loss at {point}: then byte-exact stock")
 
-            for point in ("stage-opera", "rename-opera", "stage-gap2", "rename-gap2"):
+            for point in ("stage-opera", "rename-opera", "stage-gap2", "rename-gap2", "rename-fps"):
                 car = fresh(base, f"meters-off-kill-{point}")
                 stock_digest = car.digest()
                 car.run("meters_on")
