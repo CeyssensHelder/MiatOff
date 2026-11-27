@@ -269,6 +269,20 @@ test("the style menu's sound test plays the demo on the chosen route and switche
     expect(beeps.length).toBeGreaterThanOrEqual(6);   // four ticks and the 120 ms repeat for the shift tone
     expect(await page.evaluate(() => localStorage.getItem("miatoff.sound"))).toBe("beep");
     await expect.poll(() => drawn.includes("SHIFT SOUND: MAZDA BEEP")).toBe(true);
+    await clear(page);
+    await page.mouse.click(700, 30);   // within 4 s: the RX-7 buzzer, with no ticks
+    await page.waitForTimeout(1300);
+    expect(pattern(await tones(page))).toBe("rx7 stop");
+    expect(await page.evaluate(() => localStorage.getItem("miatoff.sound"))).toBe("rx7");
+    await expect.poll(() => drawn.includes("SHIFT SOUND: RX-7 BUZZER")).toBe(true);
+    await clear(page);
+    await page.mouse.click(700, 30);   // and once more round to the files
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => localStorage.getItem("miatoff.sound"))).toBe("file");
+    await page.mouse.click(700, 30);
+    await page.mouse.click(700, 30);
+    expect(await page.evaluate(() => localStorage.getItem("miatoff.sound"))).toBe("rx7");
+    await page.evaluate(() => localStorage.setItem("miatoff.sound", "beep"));
     // The choice is kept: after a reload the shift tone is the Mazda beep.
     await page.goto(`${served.url}/index.html?src=poll:/no-data.json&set=street`);
     await page.waitForTimeout(300);
@@ -332,10 +346,10 @@ test("without the shift sound the knob stops on the last style", async ({ page }
   }
 });
 
-test("the real tick.wav and shift.wav are served next to the page", async ({ request }) => {
+test("the real tick.wav, shift.wav and rx7.wav are served next to the page", async ({ request }) => {
   const served = await serveMeters();
   try {
-    for (const name of ["tick", "shift"]) {
+    for (const name of ["tick", "shift", "rx7"]) {
       const response = await request.get(`${served.url}/sounds/${name}.wav`);
       expect(response.headers()["content-type"]).toBe("audio/wav");
       expect((await response.body()).subarray(0, 4).toString()).toBe("RIFF");

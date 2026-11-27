@@ -557,8 +557,11 @@
         SOUND = true;
         shifter = new SS.Shifter();
         shiftPlayer = new SS.Player({ base: 'sounds/', win: W });
-        try { if (W.localStorage.getItem('miatoff.sound') === 'beep') soundRoute = 'beep'; } catch (e) { /* no storage */ }
-        if (soundRoute === 'file') shiftPlayer.load();
+        try {
+            var kept = W.localStorage.getItem('miatoff.sound');
+            if (kept === 'beep' || kept === 'rx7') soundRoute = kept;
+        } catch (e) { /* no storage */ }
+        if (soundRoute !== 'beep') shiftPlayer.load();
     })();
     var FX = W.MeterFX, lastGear;
     // The menu: first a style, then a page of that style (with live previews), then the gauge itself.
@@ -598,12 +601,13 @@
         var p = pages && pages[cur], s = p && p.vehicle && p.vehicle.rpm ? p.vehicle.rpm.amber : null;
         return typeof s === 'number' && isFinite(s) && s > 0 ? s : RPM.amber;
     }
-    // Sound test, top right of the style list: a tap plays the chosen route (ticks speeding up, then the shift tone);
-    // another tap within 4 s switches to the other route and plays that, so the driver keeps the one that was heard.
-    var SOUND_X = 520;
+    // Sound test, top right of the style list: a tap plays the chosen route (ticks speeding up, then the shift tone; the
+    // RX-7 buzzer alone); another tap within 4 s moves on to the next route (files, Mazda beep, RX-7 buzzer, files...)
+    // and plays that, so the driver keeps the one that was heard.
+    var SOUND_X = 520, SOUND_NEXT = { file: 'beep', beep: 'rx7', rx7: 'file' }, SOUND_NAME = { file: 'FILE', beep: 'MAZDA BEEP', rx7: 'RX-7 BUZZER' };
     function soundTest(now) {
         if (now - soundSaid < 4000) {
-            soundRoute = soundRoute === 'beep' ? 'file' : 'beep';
+            soundRoute = SOUND_NEXT[soundRoute] || 'file';
             try { W.localStorage.setItem('miatoff.sound', soundRoute); } catch (e) { /* no storage */ }
         }
         soundSaid = now;
@@ -614,9 +618,9 @@
         var said = now - soundSaid < 4000, last = shiftPlayer.last, sub;
         if (!said) sub = picked ? 'Press: test' : 'Tap: test';
         else if (last === 'none') sub = 'No sound available · tap: other';
-        else if (soundRoute === 'file' && last === 'beep') sub = 'File failed, Mazda beep used · tap: other';
+        else if (soundRoute !== 'beep' && last === 'beep') sub = 'File failed, Mazda beep used · tap: other';
         else sub = (last === 'file' ? 'File' : 'Mazda beep') + ' played · not heard? tap';
-        text(c, 'SHIFT SOUND: ' + (soundRoute === 'beep' ? 'MAZDA BEEP' : 'FILE'), 776, 20, 15, said || picked ? C.text : C.dim, 'right', true);
+        text(c, 'SHIFT SOUND: ' + (SOUND_NAME[soundRoute] || 'FILE'), 776, 20, 15, said || picked ? C.text : C.dim, 'right', true);
         text(c, sub, 776, 42, 13, C.dim, 'right', false);
     }
 

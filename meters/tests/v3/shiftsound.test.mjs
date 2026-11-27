@@ -190,6 +190,44 @@ test("the sound test plays ticks speeding up, then the steady tone, then stops",
   assert.equal(w.log.at(-1), "pause sounds/shift.wav");
 });
 
+test("the RX-7 buzzer: no ticks, the buzzer file at the shift point, pause to stop it", () => {
+  const S = load(), w = win(), p = new S.Player({ base: "sounds/", win: w });
+  assert.equal(p.tick("rx7"), "none", "no warning ticks on this route");
+  assert.deepEqual(w.log, [], "and nothing plays for them");
+  assert.equal(p.start("rx7"), "file");
+  p.stop();
+  assert.deepEqual(w.log, ["play sounds/rx7.wav", "pause sounds/shift.wav", "pause sounds/rx7.wav"]);
+  assert.equal(w.els.filter((el) => el.src.endsWith("shift.wav")).length, 1, "the steady tone is not played on this route");
+  // The buzzer file is only fetched once it is used: the other routes never create it.
+  const other = win(), q = new S.Player({ win: other });
+  q.tick("file"); q.start("file"); q.stop();
+  assert.equal(other.els.some((el) => el.src.endsWith("rx7.wav")), false);
+});
+
+test("the RX-7 buzzer falls back to the repeated Mazda beep when its file cannot play", () => {
+  const S = load();
+  const w = win({ playThrows: true }), p = new S.Player({ win: w });
+  assert.equal(p.start("rx7"), "beep");
+  assert.equal(w.timers.at(-1).ms, 120);
+  const none = win({ wav: "", beep: false }), q = new S.Player({ win: none });
+  assert.equal(q.start("rx7"), "none");
+  // A buzzer file that fails to load after play() gets the Mazda beep too.
+  const x = win(), r = new S.Player({ win: x });
+  assert.equal(r.start("rx7"), "file");
+  x.els.find((el) => el.src.endsWith("rx7.wav")).handlers.error();
+  assert.equal(r.last, "beep");
+});
+
+test("the sound test on the RX-7 route: the buzzer at once for 0.9 s, no ticks", () => {
+  const S = load(), w = win(), p = new S.Player({ win: w });
+  assert.equal(p.demo("rx7"), "file");
+  assert.deepEqual(w.timers.map((x) => x.ms), [900]);
+  assert.equal(p.last, "file", "the result is known at once, for the screen");
+  run(w);
+  assert.deepEqual(w.log.filter((l) => l.startsWith("play")), ["play sounds/rx7.wav"]);
+  assert.equal(w.log.at(-1), "pause sounds/rx7.wav");
+});
+
 test("no Audio at all and a parent that cannot be read", () => {
   const S = load(), w = {};
   Object.defineProperty(w, "parent", { get() { throw Error("cross-origin"); } });
@@ -197,4 +235,5 @@ test("no Audio at all and a parent that cannot be read", () => {
   assert.equal(p.tick("file"), "none");
   assert.equal(p.start("file"), "none");
   assert.equal(p.demo("file"), "none");
+  assert.equal(p.demo("rx7"), "none");
 });

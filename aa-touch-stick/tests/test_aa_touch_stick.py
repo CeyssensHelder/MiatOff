@@ -1409,7 +1409,7 @@ def main():
             sounds = Path(__file__).resolve().parents[2] / "meters/sounds"
             check(r.returncode == 0 and
                   all((car.root / app_dir / f"meters/sounds/{n}.wav").read_bytes() == (sounds / f"{n}.wav").read_bytes()
-                      for n in ("tick", "shift")) and
+                      for n in ("tick", "shift", "rx7")) and
                   (car.root / app_dir / "meters/js/shiftsound.js").is_file(),
                   "the shift sounds and their script are on the car, byte for byte")
             car = fresh(base, "meters-sound-bad")

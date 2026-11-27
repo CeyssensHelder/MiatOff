@@ -176,7 +176,7 @@ class CustomPagesBuildTests(unittest.TestCase):
         self.assertEqual(bs.car_profile_js({"shiftSound": ["track"]}), b'window.MeterCarProfile = {"shiftSound":["track"]};\n')
 
     def test_shift_sound_files_are_copied_byte_for_byte(self):
-        for name in ("tick", "shift"):   # the warning ticks and the steady tone at the shift point
+        for name in ("tick", "shift", "rx7"):   # the warning ticks, the steady tone and the RX-7 buzzer
             wav = (ROOT / f"meters/sounds/{name}.wav").read_bytes()
             self.assertTrue(wav.startswith(b"RIFF") and wav[8:12] == b"WAVE")
             self.assertEqual(bs.payload()[f"miatoff-app/app/meters/sounds/{name}.wav"], wav)

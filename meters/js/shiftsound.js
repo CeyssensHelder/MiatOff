@@ -13,6 +13,10 @@
  * Player: the WAVs of the Meters payload (sounds/tick.wav, sounds/shift.wav) through HTML5 audio, else the head unit's
  * own short beep (framework.common.beep of the Mazda HMI, which hosts this page in an iframe), repeated every 120 ms in
  * place of the steady tone. Neither route is tested in the car yet; the style menu's sound test lets the driver pick.
+ *
+ * Third route, 'rx7': the RX-7-style shift buzzer (sounds/rx7.wav) at the shift point, in place of the steady tone. Like
+ * the buzzer it imitates it has no warning ticks, so the ticks are silent on that route. A file that cannot play falls
+ * back to the repeated Mazda beep, as for the steady tone.
  */
 (function (W) {
     'use strict';
@@ -91,7 +95,7 @@
     function Player(opts) {
         this.win = opts.win || W;
         this.base = opts.base || 'sounds/';
-        this.el = null;           // { tick: Audio, shift: Audio } once loaded
+        this.el = null;           // { tick: Audio, shift: Audio } once loaded, and rx7 once the buzzer route is used
         this.fileBroken = false;
         this.pendingAt = 0;       // a file play that has not started yet: an error then still gets the Mazda beep
         this.repeat = null;       // the Mazda beep's repeat in place of the steady tone
@@ -142,8 +146,10 @@
         var self = this, el, p;
         this.load();
         if (this.fileBroken || !this.el) return false;
-        el = this.el[name];
         try {
+            // The buzzer is only fetched once the driver has chosen it (the sound test, or the choice kept from before).
+            if (name === 'rx7' && !this.el.rx7) this.el.rx7 = this.make(this.win.Audio, 'rx7');
+            el = this.el[name];
             try { el.currentTime = 0; } catch (e) { /* not seekable yet */ }
             this.pendingAt = this.now();
             p = el.play();
@@ -159,8 +165,10 @@
         }
     };
     // route 'beep': the Mazda beep only. Anything else: the files, and the Mazda beep when they cannot play.
+    // route 'rx7': no ticks at all (nothing plays, and what the last sound was stays).
     Player.prototype.tick = function (route) {
         var r = 'none';
+        if (route === 'rx7') return r;
         if (route !== 'beep' && this.file('tick')) r = 'file';
         else if (this.beep()) r = 'beep';
         this.last = r;
@@ -169,7 +177,7 @@
     Player.prototype.start = function (route) {
         var self = this, until, r = 'none';
         this.stop();
-        if (route !== 'beep' && this.file('shift')) r = 'file';
+        if (route !== 'beep' && this.file(route === 'rx7' ? 'rx7' : 'shift')) r = 'file';
         else if (this.beep()) {
             r = 'beep';
             until = this.now() + HOLD_MAX;
@@ -193,14 +201,19 @@
         if (this.el && this.el.shift) {
             try { this.el.shift.pause(); } catch (e) { /* nothing playing */ }
         }
+        if (this.el && this.el.rx7) {
+            try { this.el.rx7.pause(); } catch (e) { /* nothing playing */ }
+        }
     };
-    // The sound test: four ticks speeding up, then 0.6 s of the steady tone. Returns the route of the first tick.
+    // The sound test: four ticks speeding up, then 0.6 s of the steady tone. Returns the route of the first sound. On the
+    // rx7 route there are no ticks: the buzzer sounds at once for 0.9 s.
     Player.prototype.demo = function (route) {
-        var self = this, w = this.win, k, first, steps = [[380, 'tick'], [640, 'tick'], [840, 'tick'], [1000, 'start'], [1600, 'stop']];
+        var self = this, w = this.win, k, first, rx7 = route === 'rx7',
+            steps = rx7 ? [[900, 'stop']] : [[380, 'tick'], [640, 'tick'], [840, 'tick'], [1000, 'start'], [1600, 'stop']];
         for (k = 0; k < this.timers.length; k++) if (typeof w.clearTimeout === 'function') w.clearTimeout(this.timers[k]);
         this.timers = [];
         this.stop();
-        first = this.tick(route);
+        first = rx7 ? this.start(route) : this.tick(route);
         if (typeof w.setTimeout !== 'function') return first;
         for (k = 0; k < steps.length; k++) {
             (function (step) {
