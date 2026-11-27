@@ -79,6 +79,7 @@ METERS_FILES = {
     "app/meters/fonts/OFL-RussoOne.txt": "meters/fonts/OFL-RussoOne.txt",
     "app/meters/sounds/shift.wav": "meters/sounds/shift.wav",
     "app/meters/sounds/tick.wav": "meters/sounds/tick.wav",
+    "app/meters/sounds/rx7.wav": "meters/sounds/rx7.wav",
     "app/collector/miatoff-collector.sh": "collector/miatoff-collector.sh",
     "userjs/miatoff-apps.js": "meters-app/userjs/miatoff-apps.js",
 }

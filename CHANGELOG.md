@@ -6,6 +6,15 @@ the tools check the car first and change nothing they do not recognise. The Mete
 other cars with the same head unit (from v1.0.2-rc.2 on), to fit the gauges to them. The installer was built and
 tested on the MX-5; it never looks at the model, only at the firmware and the file hashes.
 
+## Unreleased
+
+### New
+
+- **RX-7-style shift buzzer** (experimental, not tried in a car): a third choice in the Meters sound test, next to the
+  files and the Mazda beep. A loud electrical buzzer at the shift point, with no warning ticks before it. Tap the sound
+  test again within 4 s to move on to it; the choice is kept. It is a synthesised sound, not a recording of any car,
+  and it needs the Meters payload of this version (write the install stick again).
+
 ## v1.0.3
 
 Bug fix: the Commander knob now also works on the *Check your car* stick, not only on the install stick. Nothing

@@ -28,8 +28,6 @@ in [CHANGELOG.md](CHANGELOG.md). Every change to the unit stays surgical and has
   already does.
 - [ ] **TPMS data.** Investigate whether the tyre pressures can be read and shown in Meters. Does the unit see them on
   the CAN bus or the MOST side, or does the car keep them to itself?
-- [ ] **RX-7 shift buzzer.** Add the classic RX-7 shift warning as one more shift-sound option, next to the existing
-  tick and shift tones ([docs/13](docs/13-gauges.md#sound-on-the-unit)).
 - [ ] **Fun car noises.** Investigate offering other sounds besides the shift tones: a Ferrari-style engine note, a UFO,
   and so on. First find out what the unit can play and how it mixes with music (same open question as the shift
   sound in the car, below).

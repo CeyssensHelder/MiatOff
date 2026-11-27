@@ -96,11 +96,18 @@ Off everywhere unless switched on. [js/shiftsound.js](js/shiftsound.js) decides 
 The sounds are `sounds/tick.wav` (1.6 kHz, 50 ms) and `sounds/shift.wav` (2.6 kHz), made by
 [tools/make_shift_sound.py](../tools/make_shift_sound.py); two pitches so the warning and the shift point sound
 different. If the page cannot play them, the head unit's own short beep (`framework.common.beep("Short", "Touch")` of
-the Mazda HMI that hosts the page) plays the ticks, and repeats every 120 ms in place of the steady tone. **Not tried in
-a car yet:** whether Opera on the unit plays the files, how quickly, and how either sound mixes with the music, is
+the Mazda HMI that hosts the page) plays the ticks, and repeats every 120 ms in place of the steady tone.
+
+A third choice, `sounds/rx7.wav`, is an **RX-7-style shift buzzer**: a loud, low electrical buzzer (about 220 Hz,
+soft-clipped so it sounds louder) that sounds at the shift point in place of the steady tone, with no ticks before it
+(the buzzer it imitates has none). It is synthesised by the same script, not a recording of any car. If its file cannot
+play, the repeated Mazda beep takes its place.
+
+**Not tried in a car yet:** whether Opera on the unit plays the files, how quickly, and how either sound mixes with the music, is
 unknown. To find out, the style list shows *SHIFT SOUND* top right when the sound is on for at least one style or page
-(touch only): tap it to hear a short demo of the chosen route (four ticks speeding up, then the steady tone), tap
-again within 4 s to switch between the files and the Mazda beep and hear that one. The last choice is kept.
+(touch only): tap it to hear a short demo of the chosen route (four ticks speeding up, then the steady tone; the buzzer
+alone for the RX-7 one), tap again within 4 s to go on to the next route (*File*, *Mazda beep*, *RX-7 buzzer*, and
+round again) and hear that one. The last choice is kept.
 
 **Hearing it on a PC** (no car, no revving): open the page with the built-in simulator and `&sound=`, which switches
 the sound on without a car file, for example `index.html?src=sim&set=track&sound=track`. The simulator drives a loop

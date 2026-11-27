@@ -239,7 +239,8 @@ userscript, and always with the DISABLE/REMOVE route of the stick.
 ## Sound on the unit
 For the Meters shift sound ([meters/README.md](../meters/README.md)). **Nothing here is tried in a car yet.**
 
-- **What the page can try.** HTML5 audio with the payload's `sounds/tick.wav` and `sounds/shift.wav`, or the HMI's
+- **What the page can try.** HTML5 audio with the payload's `sounds/tick.wav` and `sounds/shift.wav` (or `sounds/rx7.wav`,
+  the RX-7-style buzzer, as the third sound-test choice, played alone at the shift point), or the HMI's
   own `framework.common.beep("Short", "Touch")`. Our Home script already uses that beep for a tap. The Meters page sits in
   an iframe of the HMI template, so it calls the beep through `window.parent`.
 - **What the audio capture shows** (the private run of the [audio research stick](../audio-research-stick/README.txt),
