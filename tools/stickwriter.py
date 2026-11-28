@@ -226,11 +226,17 @@ def _remove_launchers(target: Path) -> None:
             _remove(target, name)
 
 
-def _remove_sidecars(target: Path) -> None:
-    """macOS may add ._ files next to the launcher. The car's scanner reads every *.up name, so none may stay."""
-    for name in os.listdir(long_path(target)):
-        if _sidecar(name) and (name.lower().endswith((".up", ".id")) or name == "._" + TRIGGER):
-            _remove(target, name)
+def _remove_sidecars(target: Path, kit) -> None:
+    """macOS adds a ._ file next to every file it writes on FAT, in subfolders too. The car's scanner reads every *.up
+    name on the root, and TouchTune refuses its folder with a second *.up in it, so none of these may stay."""
+    for folder in [""] + stickkit.kit_folders(kit.payload()):
+        try:
+            names = os.listdir(_path(target, folder))
+        except FileNotFoundError:
+            continue
+        for name in names:
+            if _sidecar(name) and (name.lower().endswith((".up", ".id")) or name == "._" + TRIGGER):
+                _remove(target, f"{folder}/{name}" if folder else name)
 
 
 def _remove_leftovers(target: Path) -> None:
@@ -289,7 +295,7 @@ def _write(kit, target: Path, plan, step) -> None:
 
     step("deactivate")
     _remove_launchers(target)
-    _remove_sidecars(target)
+    _remove_sidecars(target, kit)
     _remove(target, TRIGGER)
     _remove(target, PLAN_NAME)
     _remove_leftovers(target)
@@ -319,7 +325,7 @@ def _write(kit, target: Path, plan, step) -> None:
             raise StickError(f"ERROR: read-back verification failed for {name[:60]}. Try again, or use another stick.")
     _write_file(target, TRIGGER, payload[TRIGGER])
     _write_file(target, launcher, payload[launcher])
-    _remove_sidecars(target)
+    _remove_sidecars(target, kit)
     problems = kit.verify(target)
     if problems:
         _remove(target, launcher)
