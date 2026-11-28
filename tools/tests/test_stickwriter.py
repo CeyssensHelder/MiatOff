@@ -284,6 +284,42 @@ def test_sidecars():
         check("._photo.jpg" in names, "other attribute files are left alone")
     with_stick(run)
 
+    # A kit folder with its own launcher, as touchtune/ on the install stick: TouchTune refuses a second *.up there.
+    def nested_kit():
+        kit = install_kit()
+        kit.extra.update({"touchtune/tt-launcher.up": b"zip", "touchtune/TOUCHTUNE.ID": b"tt-id", "touchtune/" + TRIGGER: b""})
+        return kit
+
+    def planted(stick):
+        kit = nested_kit()
+        kit.build(stick)
+        for name in ("._tt-launcher.up", "._TOUCHTUNE.ID", "._" + TRIGGER, "._install-patches.sh"):
+            add(stick, "touchtune/" + name, b"attrs")
+        check(("CONFLICT", "touchtune/._tt-launcher.up") in kit.verify(stick),
+              "verify reports a macOS copy of a launcher inside a kit folder")
+        kit.build(stick)
+        names = os.listdir(long_path(stick / "touchtune"))
+        check(not [n for n in names if n.startswith("._") and n.lower().endswith((".up", ".id"))] and "._" + TRIGGER not in names,
+              "attribute files next to a launcher in a kit folder are removed")
+        check("._install-patches.sh" in names, "other attribute files in a kit folder are left alone")
+        check(kit.verify(stick) == [], "the rewritten stick verifies")
+    with_stick(planted)
+
+    # macOS itself: every file written on FAT gets a ._ copy beside it (com.apple.provenance), in subfolders too.
+    def like_macos(stick):
+        real = stickwriter._write_file
+
+        def write_with_sidecar(target, name, data):
+            real(target, name, data)
+            folder, _, base = name.rpartition("/")
+            add(Path(target), (folder + "/" if folder else "") + "._" + base, b"attrs")
+        with patch.object(stickwriter, "_write_file", write_with_sidecar):
+            nested_kit().build(stick)
+        left = [path for path in tree(stick) if path.rpartition("/")[2].startswith("._") and path.lower().endswith((".up", ".id"))]
+        check(left == [], "no attribute copy of a launcher or ID survives a write on macOS")
+        check(nested_kit().verify(stick) == [], "a stick written on macOS verifies")
+    with_stick(like_macos)
+
 
 def failing(name, stage_error):
     """Fail at every stage with an error the writer can report: the stick must end up inactive and be repairable."""

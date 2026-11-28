@@ -85,6 +85,11 @@ def long_path(path: Path) -> str:
     return text
 
 
+def kit_folders(payload) -> list:
+    """The folders below the stick root that hold payload files, e.g. touchtune and miatoff-app/app/js."""
+    return sorted({name.rsplit("/", 1)[0] for name in payload if "/" in name})
+
+
 class Kit:
     """One stick layout: an ID file, a script to run, and extra payload files."""
 
@@ -131,6 +136,16 @@ class Kit:
                 found.append(entry)
             if entry.endswith(".ID") and entry != self.id_name:
                 found.append(entry)
+        # A kit folder with its own launcher (TouchTune's) must hold no other *.up name, a macOS ._ copy included:
+        # TouchTune counts every *.up there, hidden ones too, and refuses to run with more than its own.
+        payload = self.payload()
+        for folder in kit_folders(payload):
+            try:
+                entries = os.listdir(long_path(Path(target) / folder))
+            except OSError:
+                continue
+            found += [f"{folder}/{entry}" for entry in entries
+                      if entry.lower().endswith(".up") and f"{folder}/{entry}" not in payload]
         return found
 
     def verify(self, target: Path) -> list:
